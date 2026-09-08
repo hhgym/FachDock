@@ -1,36 +1,44 @@
 # Installation
 
-> FachDock is under active development. These instructions describe the intended installation path for the first development release.
+> Version 0.1.x ist ein früher Teststand vor 1.0.0 und noch nicht für den produktiven Schulbetrieb vorgesehen.
 
-## Requirements
+## Voraussetzungen
 
 - PHP 8.3+
-- PHP extensions: PDO, pdo_mysql, JSON, mbstring, OpenSSL
-- MariaDB 10.6+ or MySQL 8.0+
-- Apache 2.4+ or nginx
-- HTTPS for production use
+- PHP-Erweiterungen: PDO, pdo_mysql, JSON, mbstring, OpenSSL, cURL, ZIP
+- MariaDB 10.6+ oder MySQL 8.0+
+- Apache 2.4+ oder nginx
+- HTTPS für produktionsnahe Tests
 
-The web server document root must point to `public/`.
+Der Document Root des Webservers muss auf `public/` zeigen. Anwendungsquellcode, lokale Konfiguration, `vendor/` und `storage/` liegen damit außerhalb des öffentlich erreichbaren Webroots.
 
-## Web installer
+## Web-Installer
 
-1. Create an empty database and a database user with privileges for that database.
-2. Extract a FachDock release package.
-3. Point the web server document root to `public/`.
-4. Ensure `config/` and `storage/` are writable by the PHP/web-server process during installation.
-5. Open FachDock in the browser. Uninstalled instances redirect to `/install`.
-6. Enter database, school and first-administrator details.
-7. The installer runs pending migrations and creates `config/app.local.php` and `config/secrets.local.php`.
+1. Eine leere Datenbank und einen Datenbankbenutzer mit Rechten für diese Datenbank anlegen.
+2. Das FachDock-Release-Paket entpacken.
+3. Den Document Root des Webservers auf `public/` setzen.
+4. `config/` und `storage/` für den PHP-/Webserver-Prozess beschreibbar machen.
+5. FachDock im Browser öffnen. Eine nicht installierte Instanz leitet automatisch auf `/install` weiter.
+6. Datenbankdaten, Schulname und das erste Administratorkonto eingeben.
+7. Der Installer führt alle ausstehenden Migrationen aus und erzeugt `config/app.local.php` sowie `config/secrets.local.php`.
 
-`config/secrets.local.php` must never be committed to Git.
+`config/secrets.local.php` darf niemals in Git eingecheckt werden.
+
+## Integrierte Updates
+
+Für den Update-Test muss zusätzlich das FachDock-Installationsverzeichnis für den Webserver-Prozess beschreibbar sein, weil Anwendungsdateien ersetzt werden. Lokale Konfiguration und `storage/` werden durch das Update nicht überschrieben.
+
+Administratoren finden die Updateprüfung unter **Updates**. FachDock berücksichtigt ausschließlich stabile GitHub Releases. Vor der Installation wird das Release-ZIP anhand der veröffentlichten SHA-256-Prüfsumme geprüft. Während des Dateiaustauschs und der Migrationen wird der Wartungsmodus aktiviert.
+
+Für produktive Installationen soll die spätere Betriebsdokumentation restriktivere Dateirechte und ein kontrolliertes Updateverfahren beschreiben; die derzeitige Schreibberechtigung des Installationsverzeichnisses dient ausdrücklich dem frühen Update-Test.
 
 ## Apache
 
-`public/.htaccess` contains the rewrite rules. `mod_rewrite` must be enabled and overrides must be allowed for the document root.
+`public/.htaccess` enthält die Rewrite-Regeln. `mod_rewrite` muss aktiviert sein und Overrides müssen für den Document Root erlaubt werden.
 
 ## nginx
 
-A minimal location block is:
+Ein minimaler Location-Block ist:
 
 ```nginx
 location / {
@@ -38,4 +46,4 @@ location / {
 }
 ```
 
-The PHP-FPM configuration is hosting-specific.
+Die PHP-FPM-Konfiguration ist hostingabhängig.
