@@ -25,6 +25,7 @@ final class StudentImportController
         private readonly PDO $pdo,
         private readonly CsvStudentParser $parser,
         private readonly StudentImportService $imports,
+        private readonly StudentImportProfileService $profiles,
         private readonly StaffSessionService $sessions,
         private readonly ViewRenderer $views,
         private readonly Csrf $csrf,
@@ -34,6 +35,7 @@ final class StudentImportController
     public function register(Router $router): void
     {
         $router->get('/admin/students', fn (Request $request): Response => $this->index($request));
+        $router->post('/admin/students/import/profiles', fn (Request $request): Response => $this->createProfile($request));
         $router->post('/admin/students/import/preview', fn (Request $request): Response => $this->preview($request));
         $router->post('/admin/students/import/commit', fn (Request $request): Response => $this->commit($request));
     }
@@ -53,6 +55,40 @@ final class StudentImportController
         );
     }
 
+    private function createProfile(Request $request): Response
+    {
+        $staff = $this->administrator();
+        if ($staff instanceof Response) {
+            return $staff;
+        }
+        if (!$this->csrf->verify($request->postString('_csrf'))) {
+            return $this->page($staff, null, ['Die Sitzung ist abgelaufen. Bitte erneut versuchen.'], false, 419);
+        }
+
+        try {
+            $this->profiles->create(
+                $request->postString('profile_name'),
+                $this->delimiter($request->postString('profile_delimiter', ';')),
+                '"',
+                $this->encoding($request->postString('profile_encoding', 'UTF-8')),
+                [
+                    'matrikelnummer' => $request->postString('header_matrikelnummer'),
+                    'first_name' => $request->postString('header_first_name'),
+                    'last_name' => $request->postString('header_last_name'),
+                    'class_name' => $request->postString('header_class_name'),
+                    'grade' => $request->postString('header_grade'),
+                    'email' => $request->postString('header_email'),
+                    'active' => $request->postString('header_active'),
+                ],
+            );
+            $this->csrf->rotate();
+
+            return Response::redirect('/admin/students');
+        } catch (Throwable $exception) {
+            return $this->page($staff, null, [$exception->getMessage()], false, 422);
+        }
+    }
+
     private function preview(Request $request): Response
     {
         $staff = $this->administrator();
@@ -70,13 +106,40 @@ final class StudentImportController
             }
             $file->assertValid();
 
-            $delimiter = $this->delimiter($request->postString('delimiter', ';'));
-            $encoding = $this->encoding($request->postString('encoding', 'UTF-8'));
+            $profileId = $this->positiveIntOrNull($request->postString('profile_id'));
+            $mapping = [];
+            $enclosure = '"';
+            if ($profileId !== null) {
+                $profile = $this->profiles->find($profileId);
+                $delimiter = $profile['delimiter'];
+                $enclosure = $profile['enclosure'];
+                $encoding = $profile['encoding'];
+                $mapping = $profile['mapping'];
+            } else {
+                $delimiter = $this->delimiter($request->postString('delimiter', ';'));
+                $encoding = $this->encoding($request->postString('encoding', 'UTF-8'));
+            }
+
             $fullImport = $request->postString('full_import') === '1';
-            $pending = $this->stage($file, $delimiter, $encoding, $fullImport);
-            $rows = $this->parser->parse($pending['path'], $delimiter, '"', $encoding);
-            $preview = $this->imports->preview($rows);
+            $pending = $this->stage(
+                $file,
+                $delimiter,
+                $enclosure,
+                $encoding,
+                $mapping,
+                $fullImport,
+                $profileId,
+            );
             $_SESSION[self::SESSION_PENDING] = $pending;
+
+            $rows = $this->parser->parse(
+                $pending['path'],
+                $pending['delimiter'],
+                $pending['enclosure'],
+                $pending['encoding'],
+                $pending['mapping'],
+            );
+            $preview = $this->imports->preview($rows);
 
             return $this->page($staff, $preview, [], false);
         } catch (Throwable $exception) {
@@ -102,7 +165,13 @@ final class StudentImportController
                 throw new RuntimeException('Die Importvorschau ist nicht mehr gültig.');
             }
 
-            $rows = $this->parser->parse($pending['path'], $pending['delimiter'], '"', $pending['encoding']);
+            $rows = $this->parser->parse(
+                $pending['path'],
+                $pending['delimiter'],
+                $pending['enclosure'],
+                $pending['encoding'],
+                $pending['mapping'],
+            );
             $preview = $this->imports->preview($rows);
             $result = $this->imports->commit(
                 $preview,
@@ -110,7 +179,11 @@ final class StudentImportController
                 $pending['filename'],
                 $pending['full_import'],
                 $request->postString('skip_invalid') === '1',
+                $pending['profile_id'],
             );
+            if ($pending['profile_id'] !== null) {
+                $this->profiles->markUsed($pending['profile_id']);
+            }
 
             $this->clearPending();
             $this->csrf->rotate();
@@ -150,23 +223,31 @@ final class StudentImportController
         bool $success,
         int $status = 200,
     ): Response {
-        $stats = $this->studentStats();
-        $pending = $this->pendingOrNull();
-
         return Response::html($this->views->render('students.php', [
             'staff' => $staff,
             'csrfToken' => $this->csrf->token(),
             'preview' => $preview,
-            'pending' => $pending,
+            'pending' => $this->pendingOrNull(),
+            'profiles' => $this->profiles->all(),
             'errors' => $errors,
             'success' => $success,
-            'stats' => $stats,
+            'stats' => $this->studentStats(),
         ]), $status);
     }
 
-    /** @return array{token:string,path:string,filename:string,delimiter:string,encoding:string,full_import:bool} */
-    private function stage(UploadedFile $file, string $delimiter, string $encoding, bool $fullImport): array
-    {
+    /**
+     * @param array<string, string> $mapping
+     * @return array{token:string,path:string,filename:string,delimiter:string,enclosure:string,encoding:string,mapping:array<string,string>,full_import:bool,profile_id:?int}
+     */
+    private function stage(
+        UploadedFile $file,
+        string $delimiter,
+        string $enclosure,
+        string $encoding,
+        array $mapping,
+        bool $fullImport,
+        ?int $profileId,
+    ): array {
         $directory = $this->root . '/storage/imports/pending';
         if (!is_dir($directory) && !mkdir($directory, 0770, true) && !is_dir($directory)) {
             throw new RuntimeException('Importverzeichnis konnte nicht angelegt werden.');
@@ -187,12 +268,15 @@ final class StudentImportController
             'path' => $target,
             'filename' => mb_substr(basename($file->name), 0, 255),
             'delimiter' => $delimiter,
+            'enclosure' => $enclosure,
             'encoding' => $encoding,
+            'mapping' => $mapping,
             'full_import' => $fullImport,
+            'profile_id' => $profileId,
         ];
     }
 
-    /** @return array{token:string,path:string,filename:string,delimiter:string,encoding:string,full_import:bool} */
+    /** @return array{token:string,path:string,filename:string,delimiter:string,enclosure:string,encoding:string,mapping:array<string,string>,full_import:bool,profile_id:?int} */
     private function pending(): array
     {
         $pending = $this->pendingOrNull();
@@ -203,26 +287,43 @@ final class StudentImportController
         return $pending;
     }
 
-    /** @return array{token:string,path:string,filename:string,delimiter:string,encoding:string,full_import:bool}|null */
+    /** @return array{token:string,path:string,filename:string,delimiter:string,enclosure:string,encoding:string,mapping:array<string,string>,full_import:bool,profile_id:?int}|null */
     private function pendingOrNull(): ?array
     {
         $pending = $_SESSION[self::SESSION_PENDING] ?? null;
         if (!is_array($pending)) {
             return null;
         }
-        foreach (['token', 'path', 'filename', 'delimiter', 'encoding'] as $key) {
-            if (!isset($pending[$key]) || !is_string($pending[$key])) {
+        foreach (['token', 'path', 'filename', 'delimiter', 'enclosure', 'encoding', 'mapping'] as $key) {
+            if (!array_key_exists($key, $pending)) {
                 return null;
             }
         }
+        if (!is_string($pending['token']) || !is_string($pending['path']) || !is_string($pending['filename'])
+            || !is_string($pending['delimiter']) || !is_string($pending['enclosure']) || !is_string($pending['encoding'])
+            || !is_array($pending['mapping'])) {
+            return null;
+        }
+
+        $mapping = [];
+        foreach ($pending['mapping'] as $field => $header) {
+            if (is_string($field) && is_string($header)) {
+                $mapping[$field] = $header;
+            }
+        }
+
+        $profileId = $pending['profile_id'] ?? null;
 
         return [
             'token' => $pending['token'],
             'path' => $pending['path'],
             'filename' => $pending['filename'],
             'delimiter' => $pending['delimiter'],
+            'enclosure' => $pending['enclosure'],
             'encoding' => $pending['encoding'],
+            'mapping' => $mapping,
             'full_import' => ($pending['full_import'] ?? false) === true,
+            'profile_id' => is_int($profileId) ? $profileId : null,
         ];
     }
 
@@ -251,6 +352,18 @@ final class StudentImportController
         }
 
         return $value;
+    }
+
+    private function positiveIntOrNull(string $value): ?int
+    {
+        if ($value === '') {
+            return null;
+        }
+        if (!ctype_digit($value) || (int) $value < 1) {
+            throw new RuntimeException('Ungültiges Importprofil.');
+        }
+
+        return (int) $value;
     }
 
     /** @return array{total:int,active:int,inactive:int} */
