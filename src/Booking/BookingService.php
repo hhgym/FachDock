@@ -74,6 +74,8 @@ final class BookingService
      *     student_id: int,
      *     school_year_id: int,
      *     locker_id: int,
+     *     projected_grade: int,
+     *     rule_snapshot: string,
      *     starts_on: string,
      *     ends_on: string
      * }
@@ -81,7 +83,8 @@ final class BookingService
     private function loadConvertibleReservation(int $reservationId): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT lr.id, lr.student_id, lr.school_year_id, lr.locker_id, sy.starts_on, sy.ends_on '
+            'SELECT lr.id, lr.student_id, lr.school_year_id, lr.locker_id, lr.projected_grade, '
+            . 'lr.rule_snapshot, sy.starts_on, sy.ends_on '
             . 'FROM locker_reservations lr '
             . 'INNER JOIN reservation_slots rs ON rs.reservation_id = lr.id '
             . 'INNER JOIN school_years sy ON sy.id = lr.school_year_id '
@@ -102,6 +105,8 @@ final class BookingService
             'student_id' => (int) $row['student_id'],
             'school_year_id' => (int) $row['school_year_id'],
             'locker_id' => (int) $row['locker_id'],
+            'projected_grade' => (int) $row['projected_grade'],
+            'rule_snapshot' => (string) $row['rule_snapshot'],
             'starts_on' => (string) $row['starts_on'],
             'ends_on' => (string) $row['ends_on'],
         ];
@@ -208,7 +213,7 @@ final class BookingService
     }
 
     /**
-     * @param array{student_id: int, school_year_id: int, locker_id: int, starts_on: string, ends_on: string, id: int} $reservation
+     * @param array{student_id: int, school_year_id: int, locker_id: int, projected_grade: int, rule_snapshot: string, starts_on: string, ends_on: string, id: int} $reservation
      * @param array{first_name: string, last_name: string, class_name: string, grade: int} $student
      * @throws JsonException
      */
@@ -228,7 +233,7 @@ final class BookingService
             'student_id' => $reservation['student_id'],
             'school_year_id' => $reservation['school_year_id'],
             'status' => $data->status->value,
-            'projected_grade' => $data->projectedGrade,
+            'projected_grade' => $reservation['projected_grade'],
             'valid_from' => $reservation['starts_on'],
             'valid_until' => $reservation['ends_on'],
             'initiated_by_type' => trim($data->initiatedByType),
@@ -239,7 +244,7 @@ final class BookingService
             'fee_exemption_type' => $this->nullable($data->feeExemptionType),
             'previous_booking_id' => $data->previousBookingId,
             'student_snapshot' => json_encode($student, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
-            'rule_snapshot' => json_encode($data->ruleSnapshot, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+            'rule_snapshot' => $reservation['rule_snapshot'],
         ]);
 
         $id = (int) $this->pdo->lastInsertId();
@@ -277,7 +282,7 @@ final class BookingService
     }
 
     /**
-     * @param array{school_year_id: int, locker_id: int, student_id: int, starts_on: string, ends_on: string, id: int} $reservation
+     * @param array{school_year_id: int, locker_id: int, student_id: int, projected_grade: int, rule_snapshot: string, starts_on: string, ends_on: string, id: int} $reservation
      * @param array{short_name: string, locker_position: int, corpus_position: int, group_code: string, cabinet_group_id: int, area_code: string, area_name: string, floor_code: string, floor_name: string, building_code: string, building_name: string} $locker
      * @throws JsonException
      */
