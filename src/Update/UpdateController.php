@@ -105,6 +105,7 @@ final class UpdateController
     private function page(?UpdateInfo $latest, array $errors, mixed $updated, int $status = 200): Response
     {
         return Response::html($this->views->render('update.php', [
+            'staff' => $this->sessions->current(),
             'currentVersion' => $this->currentVersion,
             'latest' => $latest,
             'updateAvailable' => $latest !== null && $latest->isNewerThan($this->currentVersion),

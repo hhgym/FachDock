@@ -29,6 +29,11 @@ return [
         'payment_grace_minutes' => 30,
         'but_rejection_payment_days' => 14,
     ],
+    'stripe' => [
+        'mode' => 'test',
+        'currency' => 'EUR',
+        'checkout_minutes' => 30,
+    ],
     'mail' => [
         'worker_batch_size' => 50,
         'max_per_hour' => 50,

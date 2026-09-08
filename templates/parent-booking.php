@@ -130,7 +130,7 @@ $money = static fn (int $cents): string => number_format($cents / 100, 2, ',', '
         <?php if ($active !== null && !$paymentRunning): ?>
             <section class="card stack">
                 <h2>Buchung abschließen</h2>
-                <p>Mit dem nächsten Schritt wird aus der Reservierung eine verbindliche Buchung. Die Online-Zahlung per Stripe wird separat ergänzt.</p>
+                <p>Wählen Sie zwischen einer BuT-Gebührenbefreiung und der Online-Zahlung. Bei einer Online-Zahlung werden Sie zu Stripe Checkout weitergeleitet.</p>
                 <div class="entity-list">
                     <div class="entity-row stack">
                         <strong>BuT-Gebührenbefreiung</strong>
@@ -143,7 +143,12 @@ $money = static fn (int $cents): string => number_format($cents / 100, 2, ',', '
                     </div>
                     <div class="entity-row stack">
                         <strong>Online bezahlen</strong>
-                        <p class="form-hint">Der Stripe-Zahlungsweg wird im nächsten Buchungsbaustein aktiviert.</p>
+                        <p class="form-hint">Der fällige Betrag wird anhand des Schuljahres und des Buchungszeitpunkts berechnet. Die verbindliche Buchung entsteht nach bestätigtem Zahlungseingang.</p>
+                        <form method="post" action="/parent/payment/start">
+                            <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+                            <input type="hidden" name="reservation_id" value="<?= (int) $active['reservation_id'] ?>">
+                            <button class="button" type="submit">Mit Stripe bezahlen</button>
+                        </form>
                     </div>
                 </div>
             </section>
