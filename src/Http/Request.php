@@ -19,6 +19,7 @@ final class Request
         private readonly array $post = [],
         private readonly array $server = [],
         private readonly array $files = [],
+        private readonly string $rawBody = '',
     ) {
     }
 
@@ -26,6 +27,7 @@ final class Request
     {
         $uri = (string) ($_SERVER['REQUEST_URI'] ?? '/');
         $path = parse_url($uri, PHP_URL_PATH);
+        $rawBody = file_get_contents('php://input');
 
         return new self(
             strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')),
@@ -34,6 +36,7 @@ final class Request
             $_POST,
             $_SERVER,
             $_FILES,
+            is_string($rawBody) ? $rawBody : '',
         );
     }
 
@@ -87,6 +90,23 @@ final class Request
             (int) $size,
             (int) $error,
         );
+    }
+
+    public function rawBody(): string
+    {
+        return $this->rawBody;
+    }
+
+    public function header(string $name): string
+    {
+        $normalized = strtoupper(str_replace('-', '_', trim($name)));
+        $serverKey = match ($normalized) {
+            'CONTENT_TYPE', 'CONTENT_LENGTH' => $normalized,
+            default => 'HTTP_' . $normalized,
+        };
+        $value = $this->server[$serverKey] ?? '';
+
+        return is_scalar($value) ? trim((string) $value) : '';
     }
 
     public function clientIp(): string
