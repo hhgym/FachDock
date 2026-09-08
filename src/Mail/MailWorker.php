@@ -74,7 +74,7 @@ final class MailWorker
         $this->pdo->beginTransaction();
         try {
             $statement = $this->pdo->query(
-                "SELECT id, recipient_email, recipient_name, subject, html_body, text_body, "
+                'SELECT id, recipient_email, recipient_name, subject, html_body, text_body, '
                 . '(not_after IS NOT NULL AND not_after <= CURRENT_TIMESTAMP) AS expired '
                 . "FROM mail_queue WHERE status = 'waiting' AND available_at <= CURRENT_TIMESTAMP "
                 . 'ORDER BY priority ASC, id ASC LIMIT 1 FOR UPDATE SKIP LOCKED'
