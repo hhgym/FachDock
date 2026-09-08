@@ -6,28 +6,35 @@ FachDock ist eine webbasierte Verwaltungs- und Buchungslösung für schulische S
 
 ## Projektstatus
 
-FachDock befindet sich in der frühen Entwicklung.
+Aktuelle Version: **0.1.0**
 
-Aktueller Entwicklungsstand: **0.1.0-dev**
+> FachDock befindet sich noch vor Version 1.0.0. Version 0.1.0 ist ein früher, installierbarer Teststand für die technische Basis, den Web-Installer, die lokale Administration, die Standort-/Schließfachstruktur und die Update-Routine. Sie ist noch nicht für den produktiven Schulbetrieb vorgesehen.
+
+## Bereits enthalten
+
+- Web-Installer mit migrationsbasierter Datenbankeinrichtung
+- lokale Anmeldung für Administratoren und Schließfachverwalter
+- serverseitig widerrufbare Sitzungen und Passwortänderung
+- Gebäude, Etagen und Bereiche
+- Korpustypen und barrierearme Fachpositionen
+- Schrankgruppen mit gemischten Korpustypen
+- automatische Fachbezeichnungen wie `A-07-2` und `1OG-78-A-07-2`
+- erste Verwaltungsoberfläche für die physische Schließfachstruktur
+- stabiler GitHub-Updatekanal mit SHA-256-Prüfung und Datenbankmigrationen
 
 ## Geplante Kernfunktionen
 
-- mehrgebäudefähige Standortverwaltung
 - interaktive Lagepläne je Etage
-- Schrankgruppen, Korpusse und automatisch erzeugte Schließfächer
+- Schülerimport und dauerhafte Zugangscodes
 - regelbasierte Schließfachvorschläge und konkrete Fachauswahl
 - Elternportal mit E-Mail-Magic-Link
-- Schülerzugang über IServ/OIDC
-- CSV-Schülerimport mit Importprofilen und Vorschau
+- Schüler- und Lehrkräftezugang über IServ/OIDC
 - Buchung, Verlängerung und Fachwechsel
-- Stripe-Zahlungen und vorbereitete automatische Verlängerung
-- BuT-Befreiungsworkflow
+- Stripe-Zahlungen und BuT-Befreiungsworkflow
 - Defektmeldungen und Notöffnungen
 - E-Mail-Queue, Web-Push und Systemjobs
 - PDF-/CSV-Exporte und Dokumentenarchiv
-- Audit-Log, Aufbewahrungs- und Anonymisierungsregeln
-- Web-Installer und migrationsbasierte Updates
-- Updateprüfung über GitHub Releases
+- Audit-, Aufbewahrungs- und Anonymisierungsfunktionen
 
 ## Technische Basis
 
@@ -49,11 +56,11 @@ FachDock verwendet Git Flow:
 - `release/*` – Release-Stabilisierung
 - `hotfix/*` – dringende Korrekturen veröffentlichter Versionen
 
-Produktive Versionen werden als GitHub Releases mit Tags wie `v1.0.0` veröffentlicht.
+Stabile Versionen werden als GitHub Releases mit Tags wie `v0.1.0` und später `v1.0.0` veröffentlicht. FachDock berücksichtigt beim integrierten Update ausschließlich stabile Releases.
 
 ## Installation
 
-Die Erstinstallation erfolgt über einen Web-Installer. Eine Installationsanleitung folgt mit der ersten lauffähigen Version.
+Die Erstinstallation erfolgt über den Web-Installer. Siehe `docs/INSTALLATION.md`.
 
 ## Sicherheit
 
@@ -61,4 +68,4 @@ Geheime Konfigurationswerte wie Stripe-, SMTP- oder OIDC-Secrets werden nicht in
 
 ## Lizenz
 
-FachDock wird unter der **GNU Affero General Public License v3.0 (AGPL-3.0)** veröffentlicht.
+FachDock wird unter der **GNU Affero General Public License v3.0 (AGPL-3.0-only)** veröffentlicht.

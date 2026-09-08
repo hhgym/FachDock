@@ -1,0 +1,16 @@
+/vendor/
+/config/app.local.php
+/config/secrets.local.php
+/storage/*
+!/storage/.gitkeep
+/.idea/
+/.vscode/
+*.log
+.DS_Store
+Thumbs.db
+.env
+.env.*
+!.env.example
+/phpunit.xml
+/.phpunit.cache/
+/.php-cs-fixer.cache

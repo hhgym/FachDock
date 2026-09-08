@@ -1,0 +1,51 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use FachDock\Config\Config;
+use FachDock\Database\ConnectionFactory;
+use FachDock\Installation\InstallationState;
+use FachDock\Migration\MigrationRunner;
+
+$root = dirname(__DIR__);
+$autoload = $root . '/vendor/autoload.php';
+
+if (!is_file($autoload)) {
+    fwrite(STDERR, "Composer dependencies are missing.\n");
+    exit(1);
+}
+
+require $autoload;
+
+$command = $argv[1] ?? 'help';
+
+if ($command === 'help' || $command === '--help' || $command === '-h') {
+    echo "FachDock CLI\n\n";
+    echo "Commands:\n";
+    echo "  migrate   Run all pending database migrations\n";
+    exit(0);
+}
+
+if ($command !== 'migrate') {
+    fwrite(STDERR, "Unknown command: {$command}\n");
+    exit(2);
+}
+
+if (!(new InstallationState($root))->isInstalled()) {
+    fwrite(STDERR, "FachDock is not installed yet. Use the web installer first.\n");
+    exit(3);
+}
+
+try {
+    $config = Config::load($root);
+    $pdo = ConnectionFactory::fromConfig($config);
+    $count = (new MigrationRunner($pdo, $root . '/migrations'))->migrate();
+    echo $count === 1
+        ? "1 migration applied.\n"
+        : sprintf("%d migrations applied.\n", $count);
+    exit(0);
+} catch (Throwable $exception) {
+    fwrite(STDERR, "Migration failed: " . $exception->getMessage() . "\n");
+    exit(1);
+}
