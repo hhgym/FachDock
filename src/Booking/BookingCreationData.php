@@ -8,10 +8,8 @@ use DomainException;
 
 final readonly class BookingCreationData
 {
-    /** @param array<string, mixed> $ruleSnapshot */
     public function __construct(
         public BookingStatus $status,
-        public int $projectedGrade,
         public string $initiatedByType,
         public ?int $initiatedById = null,
         public ?int $annualFeeCents = null,
@@ -19,14 +17,10 @@ final readonly class BookingCreationData
         public ?int $prorationMonths = null,
         public ?string $feeExemptionType = null,
         public ?int $previousBookingId = null,
-        public array $ruleSnapshot = [],
         public string $assignmentReason = 'initial_booking',
     ) {
         if (!in_array($status, [BookingStatus::Active, BookingStatus::ExemptionReview], true)) {
             throw new DomainException('Dieser Buchungsstatus kann nicht aus einer Reservierung erzeugt werden.');
-        }
-        if ($projectedGrade < 5 || $projectedGrade > 12) {
-            throw new DomainException('Die prognostizierte Klassenstufe muss zwischen 5 und 12 liegen.');
         }
         if (trim($initiatedByType) === '') {
             throw new DomainException('Der Auslöser der Buchung muss angegeben werden.');
