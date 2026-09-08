@@ -381,7 +381,7 @@ final class StripePaymentService
     {
         try {
             $statement = $this->pdo->prepare(
-                "INSERT INTO stripe_webhook_events (stripe_event_id, event_type, status, received_at) "
+                'INSERT INTO stripe_webhook_events (stripe_event_id, event_type, status, received_at) '
                 . "VALUES (:event_id, :event_type, 'processing', CURRENT_TIMESTAMP)"
             );
             $statement->execute([
