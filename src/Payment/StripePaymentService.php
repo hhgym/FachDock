@@ -35,7 +35,7 @@ final class StripePaymentService
     public function start(AuthenticatedParent $parent, int $reservationId): PaymentStartResult
     {
         $context = $this->reservationForParent($parent, $reservationId);
-        $quote = $this->feeQuote($context['annual_fee_cents'], $context['starts_on'], $context['current_date']);
+        $quote = $this->feeQuote($context['annual_fee_cents'], $context['starts_on'], $context['booking_date']);
 
         if ($quote['charged_cents'] === 0) {
             $bookingId = $this->bookings->convertReservation(
@@ -679,7 +679,7 @@ final class StripePaymentService
      *     school_year_id: int,
      *     annual_fee_cents: int,
      *     starts_on: string,
-     *     current_date: string,
+     *     booking_date: string,
      *     school_year_label: string,
      *     locker_short_name: string,
      *     stripe_customer_id: string|null
@@ -693,7 +693,7 @@ final class StripePaymentService
 
         $statement = $this->pdo->prepare(
             'SELECT lr.student_id, lr.school_year_id, sy.annual_fee_cents, sy.starts_on, '
-            . 'CURRENT_DATE AS current_date, sy.label AS school_year_label, l.short_name AS locker_short_name, '
+            . 'CURRENT_DATE AS booking_date, sy.label AS school_year_label, l.short_name AS locker_short_name, '
             . 'pc.stripe_customer_id '
             . 'FROM locker_reservations lr '
             . 'INNER JOIN reservation_slots rs ON rs.reservation_id = lr.id '
@@ -719,7 +719,7 @@ final class StripePaymentService
             'school_year_id' => (int) $row['school_year_id'],
             'annual_fee_cents' => (int) $row['annual_fee_cents'],
             'starts_on' => (string) $row['starts_on'],
-            'current_date' => (string) $row['current_date'],
+            'booking_date' => (string) $row['booking_date'],
             'school_year_label' => (string) $row['school_year_label'],
             'locker_short_name' => (string) $row['locker_short_name'],
             'stripe_customer_id' => $row['stripe_customer_id'] !== null
