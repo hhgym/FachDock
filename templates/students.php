@@ -8,7 +8,8 @@ use FachDock\Student\StudentImportPreview;
 /** @var AuthenticatedStaff $staff */
 /** @var string $csrfToken */
 /** @var StudentImportPreview|null $preview */
-/** @var array{token:string,path:string,filename:string,delimiter:string,encoding:string,full_import:bool}|null $pending */
+/** @var array{token:string,path:string,filename:string,delimiter:string,enclosure:string,encoding:string,mapping:array<string,string>,full_import:bool,profile_id:?int}|null $pending */
+/** @var list<array{id:int,name:string,delimiter:string,enclosure:string,encoding:string,mapping:array<string,string>}> $profiles */
 /** @var list<string> $errors */
 /** @var bool $success */
 /** @var array{total:int,active:int,inactive:int} $stats */
@@ -54,19 +55,66 @@ $labels = [
     </section>
 
     <section class="card stack">
+        <h2>Importprofile</h2>
+        <?php if ($profiles === []): ?>
+            <p class="form-hint">Noch kein Profil vorhanden. Ohne Profil versucht FachDock übliche Spaltennamen automatisch zu erkennen.</p>
+        <?php else: ?>
+            <p class="form-hint">Vorhanden: <?php foreach ($profiles as $profile): ?><strong><?= $e($profile['name']) ?></strong> (<?= $e($profile['delimiter'] === "\t" ? 'Tab' : $profile['delimiter']) ?>, <?= $e($profile['encoding']) ?>) · <?php endforeach; ?></p>
+        <?php endif; ?>
+
+        <details>
+            <summary>Neues Importprofil anlegen</summary>
+            <form method="post" action="/admin/students/import/profiles" class="grid" style="margin-top:1rem">
+                <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+                <label>Profilname<input name="profile_name" required maxlength="255" placeholder="Untis Schülerexport"></label>
+                <label>Trennzeichen
+                    <select name="profile_delimiter">
+                        <option value=";">Semikolon ;</option>
+                        <option value=",">Komma ,</option>
+                        <option value="&#9;">Tabulator</option>
+                    </select>
+                </label>
+                <label>Zeichenkodierung
+                    <select name="profile_encoding">
+                        <option value="UTF-8">UTF-8</option>
+                        <option value="WINDOWS-1252">Windows-1252</option>
+                        <option value="ISO-8859-1">ISO-8859-1</option>
+                    </select>
+                </label>
+                <label>Spalte Matrikelnummer<input name="header_matrikelnummer" required placeholder="Matrikelnummer"></label>
+                <label>Spalte Vorname<input name="header_first_name" required placeholder="Vorname"></label>
+                <label>Spalte Nachname<input name="header_last_name" required placeholder="Nachname"></label>
+                <label>Spalte Klasse<input name="header_class_name" required placeholder="Klasse"></label>
+                <label>Spalte Aktiv<input name="header_active" required placeholder="Aktiv"></label>
+                <label>Spalte Stufe optional<input name="header_grade" placeholder="Stufe"></label>
+                <label>Spalte E-Mail optional<input name="header_email" placeholder="Email"></label>
+                <button class="button" type="submit">Importprofil speichern</button>
+            </form>
+        </details>
+    </section>
+
+    <section class="card stack">
         <h2>CSV-Datei auswählen</h2>
-        <p class="form-hint">Pflichtspalten: Matrikelnummer, Vorname, Nachname, Klasse, Aktiv. Optional: Stufe und E-Mail. Die Stufe wird sonst aus der Klassenbezeichnung abgeleitet.</p>
+        <p class="form-hint">Pflichtdaten: Matrikelnummer, Vorname, Nachname, Klasse, Aktiv. Optional: Stufe und E-Mail. Die Stufe wird sonst aus der Klassenbezeichnung abgeleitet.</p>
         <form method="post" action="/admin/students/import/preview" enctype="multipart/form-data" class="grid">
             <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
             <label class="wide">CSV-Datei<input type="file" name="csv_file" accept=".csv,text/csv" required></label>
-            <label>Trennzeichen
+            <label>Importprofil
+                <select name="profile_id">
+                    <option value="">Automatische Spaltenerkennung</option>
+                    <?php foreach ($profiles as $profile): ?>
+                        <option value="<?= $profile['id'] ?>"><?= $e($profile['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label>Trennzeichen ohne Profil
                 <select name="delimiter">
                     <option value=";">Semikolon ;</option>
                     <option value=",">Komma ,</option>
                     <option value="&#9;">Tabulator</option>
                 </select>
             </label>
-            <label>Zeichenkodierung
+            <label>Zeichenkodierung ohne Profil
                 <select name="encoding">
                     <option value="UTF-8">UTF-8</option>
                     <option value="WINDOWS-1252">Windows-1252</option>
@@ -82,7 +130,7 @@ $labels = [
         <?php $counts = $preview->counts(); ?>
         <section class="card stack">
             <h2>Importvorschau</h2>
-            <p><strong><?= $e($pending['filename']) ?></strong><?php if ($pending['full_import']): ?> · vollständiger Import<?php else: ?> · Teilimport<?php endif; ?></p>
+            <p><strong><?= $e($pending['filename']) ?></strong><?php if ($pending['profile_id'] !== null): ?> · Profil-ID <?= $pending['profile_id'] ?><?php endif; ?><?php if ($pending['full_import']): ?> · vollständiger Import<?php else: ?> · Teilimport<?php endif; ?></p>
             <p>
                 Neu: <?= $counts['new'] ?? 0 ?> · Geändert: <?= $counts['changed'] ?? 0 ?> · Reaktiviert: <?= $counts['reactivated'] ?? 0 ?> · Unverändert: <?= $counts['unchanged'] ?? 0 ?> · Ungültig: <?= $counts['invalid'] ?? 0 ?>
             </p>
