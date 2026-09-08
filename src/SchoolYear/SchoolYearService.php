@@ -290,15 +290,7 @@ final class SchoolYearService
             return null;
         }
 
-        try {
-            return $this->create($startYear);
-        } catch (DomainException $exception) {
-            $lookup->execute(['starts_on' => $period->startsOn->format('Y-m-d')]);
-            if ($lookup->fetchColumn() !== false) {
-                return null;
-            }
-            throw $exception;
-        }
+        return $this->create($startYear);
     }
 
     /**
