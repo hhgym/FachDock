@@ -29,14 +29,17 @@ final class NavigationRendererTest extends TestCase
         $html = $renderer->inject(self::CONTENT, [
             'staff' => $staff,
             'csrfToken' => 'csrf-admin',
-        ], '/admin/parents');
+        ], '/admin/config/stripe');
 
         self::assertStringContainsString('FachDock', $html);
         self::assertStringContainsString('Personen', $html);
         self::assertStringContainsString('Konfiguration', $html);
         self::assertStringContainsString('System', $html);
         self::assertStringContainsString('href="/admin/system/update"', $html);
-        self::assertStringContainsString('href="/admin/parents" aria-current="page"', $html);
+        self::assertStringContainsString('Stripe &amp; Zahlung', $html);
+        self::assertStringContainsString('href="/admin/config/stripe" aria-current="page"', $html);
+        self::assertStringContainsString('mobile-menu-icon', $html);
+        self::assertStringContainsString('mobile-nav-section-active" open', $html);
         self::assertStringContainsString('name="_csrf" value="csrf-admin"', $html);
         self::assertStringNotContainsString('legacy navigation', $html);
     }
@@ -62,6 +65,7 @@ final class NavigationRendererTest extends TestCase
         self::assertStringContainsString('href="/admin/but"', $html);
         self::assertStringNotContainsString('href="/admin/students"', $html);
         self::assertStringNotContainsString('href="/admin/recommendations"', $html);
+        self::assertStringNotContainsString('href="/admin/config/stripe"', $html);
         self::assertStringNotContainsString('href="/admin/system/update"', $html);
     }
 
@@ -85,6 +89,7 @@ final class NavigationRendererTest extends TestCase
         self::assertStringContainsString('href="/parent"', $html);
         self::assertStringContainsString('href="/parent/booking" aria-current="page"', $html);
         self::assertStringContainsString('action="/parent/logout"', $html);
+        self::assertStringContainsString('mobile-menu-icon', $html);
         self::assertStringContainsString('Erika Muster', $html);
     }
 
