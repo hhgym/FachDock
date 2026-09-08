@@ -40,6 +40,11 @@ use FachDock\Mail\MailTemplateRenderer;
 use FachDock\Mail\MailTemplateService;
 use FachDock\Parent\ParentContactAdminController;
 use FachDock\Parent\ParentContactService;
+use FachDock\Parent\ParentMagicLinkService;
+use FachDock\Parent\ParentPortalAccessService;
+use FachDock\Parent\ParentPortalController;
+use FachDock\Parent\ParentSessionService;
+use FachDock\Parent\ParentVerificationAdminController;
 use FachDock\SchoolYear\SchoolYearAdminController;
 use FachDock\SchoolYear\SchoolYearService;
 use FachDock\Security\Csrf;
@@ -172,6 +177,36 @@ final class Application
             $views,
             $csrf,
             $smtpConfigured,
+        ))->register($router);
+
+        $parentMagicLinkMinutes = $this->configInt('auth.parent_magic_link_minutes', 15);
+        $parentMagicLinks = new ParentMagicLinkService($pdo, $parentMagicLinkMinutes);
+        $parentPortalAccess = new ParentPortalAccessService(
+            $pdo,
+            $parentMagicLinks,
+            $mailQueue,
+            (string) $this->config->get('app.base_url', ''),
+            (string) $this->config->get('app.school_name', ''),
+            $parentMagicLinkMinutes,
+        );
+        $parentSessions = new ParentSessionService(
+            $pdo,
+            $this->configInt('auth.parent_session_lifetime_minutes', 1440),
+        );
+        (new ParentPortalController(
+            $parentPortalAccess,
+            $parentMagicLinks,
+            $parentSessions,
+            $views,
+            $csrf,
+            $this->logger,
+        ))->register($router);
+        (new ParentVerificationAdminController(
+            $parentPortalAccess,
+            $sessions,
+            $audit,
+            $this->logger,
+            $csrf,
         ))->register($router);
 
         (new SchoolYearAdminController(
@@ -447,7 +482,7 @@ final class Application
         array $errors = [],
         int $status = 200,
     ): Response {
-        return Response::html($this->viewsOrGiven($views)->render('sessions.php', [
+        return Response::html($views->render('sessions.php', [
             'staff' => $staff,
             'sessions' => $sessions->activeSessionsForUser($staff->id),
             'csrfToken' => $csrf->token(),
@@ -501,11 +536,6 @@ final class Application
         $value = $this->config->get($key, $default);
 
         return is_numeric($value) ? max(1, (int) $value) : $default;
-    }
-
-    private function viewsOrGiven(ViewRenderer $views): ViewRenderer
-    {
-        return $views;
     }
 
     private function errorResponse(Throwable $exception): Response
