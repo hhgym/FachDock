@@ -142,8 +142,8 @@ final class MailTemplateService
         $allowedMap = array_fill_keys($allowed, true);
         foreach ([$subject, $html, $text] as $template) {
             preg_match_all('/\{\{([a-z0-9_]+)\}\}/i', $template, $matches);
-            foreach ($matches[1] ?? [] as $placeholder) {
-                if (!is_string($placeholder) || !isset($allowedMap[$placeholder])) {
+            foreach ($matches[1] as $placeholder) {
+                if (!isset($allowedMap[$placeholder])) {
                     throw new DomainException('Das Template verwendet einen nicht erlaubten Platzhalter.');
                 }
             }
