@@ -6,6 +6,7 @@ namespace FachDock\Location;
 
 use DomainException;
 use PDO;
+use RuntimeException;
 
 final class LocationCatalogService
 {
@@ -130,9 +131,12 @@ final class LocationCatalogService
     /** @return list<array<string, mixed>> */
     private function rows(string $sql): array
     {
-        $rows = $this->pdo->query($sql)->fetchAll();
+        $statement = $this->pdo->query($sql);
+        if ($statement === false) {
+            throw new RuntimeException('Standortdaten konnten nicht gelesen werden.');
+        }
 
-        return array_values($rows);
+        return array_values($statement->fetchAll());
     }
 
     private function assertText(string $value, string $label): void
