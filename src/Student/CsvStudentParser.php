@@ -60,7 +60,11 @@ final class CsvStudentParser
         }
     }
 
-    /** @param list<string> $header @param array<string, string> $mapping @return array<string, int> */
+    /**
+     * @param list<string> $header
+     * @param array<string, string> $mapping
+     * @return array<string, int>
+     */
     private function resolveColumns(array $header, array $mapping): array
     {
         $normalized = [];
@@ -183,7 +187,10 @@ final class CsvStudentParser
         };
     }
 
-    /** @param list<string> $values @param array<string, int> $columns */
+    /**
+     * @param list<string> $values
+     * @param array<string, int> $columns
+     */
     private function value(array $values, array $columns, string $field): string
     {
         if (!isset($columns[$field])) {
@@ -220,6 +227,11 @@ final class CsvStudentParser
             return preg_replace('/^\xEF\xBB\xBF/', '', $value) ?? $value;
         }
 
-        return mb_convert_encoding($value, 'UTF-8', $encoding);
+        $converted = mb_convert_encoding($value, 'UTF-8', $encoding);
+        if ($converted === false) {
+            throw new RuntimeException('Die CSV-Zeichenkodierung konnte nicht konvertiert werden.');
+        }
+
+        return $converted;
     }
 }
