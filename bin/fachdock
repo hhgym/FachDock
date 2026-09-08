@@ -6,6 +6,11 @@ declare(strict_types=1);
 use FachDock\Config\Config;
 use FachDock\Database\ConnectionFactory;
 use FachDock\Installation\InstallationState;
+use FachDock\Mail\MailQueueService;
+use FachDock\Mail\MailRetrySchedule;
+use FachDock\Mail\MailTemplateRenderer;
+use FachDock\Mail\MailWorker;
+use FachDock\Mail\PhpMailerSmtpSender;
 use FachDock\Migration\MigrationRunner;
 
 $root = dirname(__DIR__);
@@ -23,11 +28,12 @@ $command = $argv[1] ?? 'help';
 if ($command === 'help' || $command === '--help' || $command === '-h') {
     echo "FachDock CLI\n\n";
     echo "Commands:\n";
-    echo "  migrate   Run all pending database migrations\n";
+    echo "  migrate     Run all pending database migrations\n";
+    echo "  mail:work   Process one batch of queued emails\n";
     exit(0);
 }
 
-if ($command !== 'migrate') {
+if (!in_array($command, ['migrate', 'mail:work'], true)) {
     fwrite(STDERR, "Unknown command: {$command}\n");
     exit(2);
 }
@@ -40,12 +46,62 @@ if (!(new InstallationState($root))->isInstalled()) {
 try {
     $config = Config::load($root);
     $pdo = ConnectionFactory::fromConfig($config);
-    $count = (new MigrationRunner($pdo, $root . '/migrations'))->migrate();
-    echo $count === 1
-        ? "1 migration applied.\n"
-        : sprintf("%d migrations applied.\n", $count);
+
+    if ($command === 'migrate') {
+        $count = (new MigrationRunner($pdo, $root . '/migrations'))->migrate();
+        echo $count === 1
+            ? "1 migration applied.\n"
+            : sprintf("%d migrations applied.\n", $count);
+        exit(0);
+    }
+
+    $intConfig = static function (Config $config, string $key, int $default): int {
+        $value = $config->get($key, $default);
+
+        return is_numeric($value) ? max(1, (int) $value) : $default;
+    };
+    $retryValues = $config->get('mail.retry_minutes', [15, 60, 360]);
+    $retryMinutes = [];
+    if (is_array($retryValues)) {
+        foreach ($retryValues as $value) {
+            if (is_numeric($value)) {
+                $retryMinutes[] = (int) $value;
+            }
+        }
+    }
+    if ($retryMinutes === []) {
+        $retryMinutes = [15, 60, 360];
+    }
+
+    $sender = new PhpMailerSmtpSender(
+        (string) $config->get('smtp.host', ''),
+        $intConfig($config, 'smtp.port', 587),
+        (string) $config->get('smtp.username', ''),
+        (string) $config->get('smtp.password', ''),
+        (string) $config->get('smtp.encryption', 'tls'),
+        (string) $config->get('smtp.from_email', ''),
+        (string) $config->get('smtp.from_name', 'FachDock'),
+    );
+    $queue = new MailQueueService($pdo, new MailTemplateRenderer());
+    $worker = new MailWorker(
+        $pdo,
+        $sender,
+        $queue,
+        new MailRetrySchedule($retryMinutes),
+        $intConfig($config, 'mail.max_per_hour', 50),
+        $intConfig($config, 'mail.processing_timeout_minutes', 15),
+    );
+    $result = $worker->run($intConfig($config, 'mail.worker_batch_size', 50));
+    printf(
+        "Mail worker: %d processed, %d sent, %d deferred, %d failed, %d expired.\n",
+        $result['processed'],
+        $result['sent'],
+        $result['deferred'],
+        $result['failed'],
+        $result['expired'],
+    );
     exit(0);
 } catch (Throwable $exception) {
-    fwrite(STDERR, "Migration failed: " . $exception->getMessage() . "\n");
+    fwrite(STDERR, ucfirst($command) . ' failed: ' . $exception->getMessage() . "\n");
     exit(1);
 }
