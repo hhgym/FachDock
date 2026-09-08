@@ -20,15 +20,20 @@ final class StudentImportService
     /**
      * @param list<array{line:int, matrikelnummer:string, first_name:string, last_name:string, class_name:string, grade:int, email:?string, active:bool, category:string, messages:list<string>}> $rows
      */
-    public function preview(array $rows): StudentImportPreview
+    public function preview(array $rows, bool $fullImport = false): StudentImportPreview
     {
         $lookup = $this->pdo->prepare(
             'SELECT id, first_name, last_name, class_name, grade, email, active '
             . 'FROM students WHERE matrikelnummer = :matrikelnummer LIMIT 1'
         );
         $previewRows = [];
+        $presentMatrikelnummern = [];
 
         foreach ($rows as $row) {
+            if ($row['matrikelnummer'] !== '') {
+                $presentMatrikelnummern[] = $row['matrikelnummer'];
+            }
+
             if ($row['category'] === 'invalid') {
                 $previewRows[] = $row;
                 continue;
@@ -52,7 +57,11 @@ final class StudentImportService
             $previewRows[] = $row;
         }
 
-        return new StudentImportPreview($previewRows, []);
+        return new StudentImportPreview(
+            $previewRows,
+            [],
+            $fullImport ? $this->potentialDeactivations($presentMatrikelnummern) : [],
+        );
     }
 
     /**
@@ -175,6 +184,46 @@ final class StudentImportService
             }
             throw $exception;
         }
+    }
+
+    /**
+     * @param list<string> $presentMatrikelnummern
+     * @return list<array{matrikelnummer:string, first_name:string, last_name:string, class_name:string, grade:int}>
+     */
+    private function potentialDeactivations(array $presentMatrikelnummern): array
+    {
+        $params = [];
+        $sql = 'SELECT matrikelnummer, first_name, last_name, class_name, grade FROM students WHERE active = 1';
+
+        $unique = array_values(array_unique($presentMatrikelnummern));
+        if ($unique !== []) {
+            $placeholders = [];
+            foreach ($unique as $index => $matrikelnummer) {
+                $key = 'present_' . $index;
+                $placeholders[] = ':' . $key;
+                $params[$key] = $matrikelnummer;
+            }
+            $sql .= ' AND matrikelnummer NOT IN (' . implode(', ', $placeholders) . ')';
+        }
+        $sql .= ' ORDER BY class_name, last_name, first_name, matrikelnummer';
+
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute($params);
+        $deactivations = [];
+        foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $deactivations[] = [
+                'matrikelnummer' => (string) $row['matrikelnummer'],
+                'first_name' => (string) $row['first_name'],
+                'last_name' => (string) $row['last_name'],
+                'class_name' => (string) $row['class_name'],
+                'grade' => (int) $row['grade'],
+            ];
+        }
+
+        return $deactivations;
     }
 
     /**
