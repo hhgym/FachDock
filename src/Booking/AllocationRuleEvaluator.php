@@ -105,8 +105,8 @@ final class AllocationRuleEvaluator
     private function applicableRules(int $schoolYearId, int $projectedGrade): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT ar.id, ar.name, ar.rule_kind, ar.min_grade, ar.max_grade, ar.building_id, ar.floor_id, '
-            . 'ar.area_id, ar.cabinet_group_id, ar.weight, ar.priority, ar.updated_at '
+            'SELECT ar.id, ar.name, ar.version, ar.rule_kind, ar.min_grade, ar.max_grade, ar.building_id, '
+            . 'ar.floor_id, ar.area_id, ar.cabinet_group_id, ar.weight, ar.priority, ar.updated_at '
             . 'FROM allocation_rules ar '
             . 'INNER JOIN school_years target_year ON target_year.id = :school_year_id '
             . 'LEFT JOIN school_years valid_from ON valid_from.id = ar.valid_from_school_year_id '
@@ -142,13 +142,15 @@ final class AllocationRuleEvaluator
         return true;
     }
 
-    /** @param array<string, mixed> $rule
-     *  @return array<string, mixed>
+    /**
+     * @param array<string, mixed> $rule
+     * @return array<string, mixed>
      */
     private function snapshotRule(array $rule, bool $matches): array
     {
         return [
             'id' => (int) $rule['id'],
+            'version' => (int) $rule['version'],
             'name' => (string) $rule['name'],
             'kind' => (string) $rule['rule_kind'],
             'priority' => (int) $rule['priority'],
