@@ -132,7 +132,7 @@ $labels = [
             <h2>Importvorschau</h2>
             <p><strong><?= $e($pending['filename']) ?></strong><?php if ($pending['profile_id'] !== null): ?> · Profil-ID <?= $pending['profile_id'] ?><?php endif; ?><?php if ($pending['full_import']): ?> · vollständiger Import<?php else: ?> · Teilimport<?php endif; ?></p>
             <p>
-                Neu: <?= $counts['new'] ?? 0 ?> · Geändert: <?= $counts['changed'] ?? 0 ?> · Reaktiviert: <?= $counts['reactivated'] ?? 0 ?> · Unverändert: <?= $counts['unchanged'] ?? 0 ?> · Ungültig: <?= $counts['invalid'] ?? 0 ?>
+                Neu: <?= $counts['new'] ?? 0 ?> · Geändert: <?= $counts['changed'] ?? 0 ?> · Reaktiviert: <?= $counts['reactivated'] ?? 0 ?> · Deaktiviert: <?= $counts['deactivated'] ?? 0 ?> · Unverändert: <?= $counts['unchanged'] ?? 0 ?> · Ungültig: <?= $counts['invalid'] ?? 0 ?>
             </p>
 
             <div style="overflow-x:auto">
@@ -155,6 +155,27 @@ $labels = [
                 </table>
             </div>
 
+            <?php if ($pending['full_import'] && $preview->deactivations !== []): ?>
+                <div class="alert alert-error">
+                    <strong>Diese bisher aktiven Schüler fehlen in der Datei und würden deaktiviert:</strong>
+                </div>
+                <div style="overflow-x:auto">
+                    <table>
+                        <thead><tr><th>Matrikelnummer</th><th>Name</th><th>Klasse</th><th>Stufe</th></tr></thead>
+                        <tbody>
+                        <?php foreach ($preview->deactivations as $student): ?>
+                            <tr>
+                                <td><code><?= $e($student['matrikelnummer']) ?></code></td>
+                                <td><?= $e($student['first_name'] . ' ' . $student['last_name']) ?></td>
+                                <td><?= $e($student['class_name']) ?></td>
+                                <td><?= $student['grade'] ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+
             <form method="post" action="/admin/students/import/commit" class="stack">
                 <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
                 <input type="hidden" name="token" value="<?= $e($pending['token']) ?>">
@@ -162,7 +183,7 @@ $labels = [
                     <label><input type="checkbox" name="skip_invalid" value="1"> Ungültige Zeilen überspringen und nur gültige Zeilen importieren.</label>
                 <?php endif; ?>
                 <?php if ($pending['full_import']): ?>
-                    <div class="alert alert-error">Beim vollständigen Import können fehlende bisher aktive Schüler deaktiviert werden. Dies ist nur möglich, wenn die Vorschau keine ungültigen Zeilen enthält.</div>
+                    <div class="alert alert-error">Beim vollständigen Import werden die oben aufgeführten fehlenden aktiven Schüler deaktiviert. Der Import ist nur möglich, wenn die Vorschau keine ungültigen Zeilen enthält.</div>
                 <?php endif; ?>
                 <button class="button" type="submit"<?= $pending['full_import'] && $preview->hasInvalidRows() ? ' disabled' : '' ?>>Import verbindlich durchführen</button>
             </form>
