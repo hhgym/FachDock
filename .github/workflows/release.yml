@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate stable SemVer tag
+        shell: bash
+        run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Only stable SemVer tags such as v1.2.3 are supported."
+            exit 1
+          fi
+
+      - name: Ensure tagged commit belongs to main
+        shell: bash
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "Release tags must point to commits contained in main."
+            exit 1
+          }
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - name: Install production dependencies
+        run: composer install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
+
+      - name: Build release package
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          PACKAGE="FachDock-${VERSION}"
+          mkdir -p "dist/${PACKAGE}"
+          rsync -a ./ "dist/${PACKAGE}/" \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='dist/' \
+            --exclude='tests/' \
+            --exclude='storage/*' \
+            --exclude='config/app.local.php' \
+            --exclude='config/secrets.local.php' \
+            --exclude='.php-cs-fixer.dist.php' \
+            --exclude='phpstan.neon.dist' \
+            --exclude='phpunit.xml.dist'
+          mkdir -p "dist/${PACKAGE}/storage"
+          touch "dist/${PACKAGE}/storage/.gitkeep"
+          cd dist
+          zip -qr "${PACKAGE}.zip" "${PACKAGE}"
+          sha256sum "${PACKAGE}.zip" > "${PACKAGE}.zip.sha256"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          PACKAGE="FachDock-${VERSION}"
+          gh release create "$GITHUB_REF_NAME" \
+            "dist/${PACKAGE}.zip" \
+            "dist/${PACKAGE}.zip.sha256" \
+            --title "FachDock ${VERSION}" \
+            --generate-notes
