@@ -336,7 +336,8 @@ final class StudentImportController
     private function delimiter(string $value): string
     {
         return match ($value) {
-            ';', ',', "\t" => $value,
+            ';', ',' => $value,
+            'tab' => "\t",
             default => throw new RuntimeException('Ungültiges CSV-Trennzeichen.'),
         };
     }
