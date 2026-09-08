@@ -107,6 +107,16 @@ final class NavigationRenderer
             [
                 'label' => 'Buchungen',
                 'items' => [
+                    [
+                        'label' => 'Buchungen',
+                        'href' => '/admin/bookings',
+                        'matches' => ['/admin/bookings'],
+                    ],
+                    [
+                        'label' => 'Zahlungen',
+                        'href' => '/admin/payments',
+                        'matches' => ['/admin/payments'],
+                    ],
                     ['label' => 'BuT-Prüfung', 'href' => '/admin/but'],
                 ],
             ],
