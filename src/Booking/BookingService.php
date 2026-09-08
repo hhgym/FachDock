@@ -81,31 +81,20 @@ final class BookingService
     private function loadConvertibleReservation(int $reservationId): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT lr.id, lr.student_id, lr.school_year_id, lr.locker_id, lr.status, lr.expires_at, '
-            . 'lr.payment_grace_expires_at, sy.starts_on, sy.ends_on '
+            'SELECT lr.id, lr.student_id, lr.school_year_id, lr.locker_id, sy.starts_on, sy.ends_on '
             . 'FROM locker_reservations lr '
             . 'INNER JOIN reservation_slots rs ON rs.reservation_id = lr.id '
             . 'INNER JOIN school_years sy ON sy.id = lr.school_year_id '
-            . 'WHERE lr.id = :id FOR UPDATE'
+            . 'WHERE lr.id = :id AND ('
+            . "(lr.status = 'active' AND lr.expires_at > CURRENT_TIMESTAMP) OR "
+            . "(lr.status = 'payment_running' AND lr.payment_grace_expires_at IS NOT NULL "
+            . 'AND lr.payment_grace_expires_at > CURRENT_TIMESTAMP)'
+            . ') FOR UPDATE'
         );
         $statement->execute(['id' => $reservationId]);
         $row = $statement->fetch();
         if (!is_array($row)) {
-            throw new DomainException('Die Reservierung ist nicht mehr aktiv.');
-        }
-
-        $status = (string) $row['status'];
-        if ($status === ReservationStatus::Active->value) {
-            if ((string) $row['expires_at'] <= date('Y-m-d H:i:s')) {
-                throw new DomainException('Die Reservierung ist abgelaufen.');
-            }
-        } elseif ($status === ReservationStatus::PaymentRunning->value) {
-            $grace = $row['payment_grace_expires_at'];
-            if ($grace === null || (string) $grace <= date('Y-m-d H:i:s')) {
-                throw new DomainException('Die Zahlungsfrist der Reservierung ist abgelaufen.');
-            }
-        } else {
-            throw new DomainException('Die Reservierung kann nicht mehr in eine Buchung umgewandelt werden.');
+            throw new DomainException('Die Reservierung ist nicht mehr aktiv oder ihre Frist ist abgelaufen.');
         }
 
         return [
