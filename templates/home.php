@@ -24,7 +24,10 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
     <div><strong><?= $e($appName) ?></strong><?php if ($schoolName !== ''): ?> · <?= $e($schoolName) ?><?php endif; ?></div>
     <div class="topbar-actions">
         <a href="/admin/locations">Standorte</a>
-        <?php if ($staff->isAdministrator()): ?><a href="/admin/system/update">Updates</a><?php endif; ?>
+        <?php if ($staff->isAdministrator()): ?>
+            <a href="/admin/students">Schüler</a>
+            <a href="/admin/system/update">Updates</a>
+        <?php endif; ?>
         <a href="/account/password">Passwort</a>
         <a href="/account/sessions">Sitzungen</a>
         <form method="post" action="/logout">
@@ -41,7 +44,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
     </header>
     <section class="card">
         <h2>FachDock-Grundsystem</h2>
-        <p>Lokale Anmeldung, serverseitig widerrufbare Sitzungen, Standortverwaltung und der stabile GitHub-Updatekanal sind aktiv.</p>
+        <p>Lokale Anmeldung, serverseitig widerrufbare Sitzungen, Standortverwaltung, Schülerimport und der stabile GitHub-Updatekanal sind aktiv.</p>
     </section>
 </main>
 </body>

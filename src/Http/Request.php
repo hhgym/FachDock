@@ -10,6 +10,7 @@ final class Request
      * @param array<string, mixed> $query
      * @param array<string, mixed> $post
      * @param array<string, mixed> $server
+     * @param array<string, mixed> $files
      */
     public function __construct(
         private readonly string $method,
@@ -17,6 +18,7 @@ final class Request
         private readonly array $query = [],
         private readonly array $post = [],
         private readonly array $server = [],
+        private readonly array $files = [],
     ) {
     }
 
@@ -31,6 +33,7 @@ final class Request
             $_GET,
             $_POST,
             $_SERVER,
+            $_FILES,
         );
     }
 
@@ -61,6 +64,29 @@ final class Request
         $value = $this->post[$key] ?? $default;
 
         return is_scalar($value) ? trim((string) $value) : $default;
+    }
+
+    public function uploadedFile(string $key): ?UploadedFile
+    {
+        $file = $this->files[$key] ?? null;
+        if (!is_array($file)) {
+            return null;
+        }
+
+        $name = $file['name'] ?? null;
+        $temporaryPath = $file['tmp_name'] ?? null;
+        $size = $file['size'] ?? null;
+        $error = $file['error'] ?? null;
+        if (!is_scalar($name) || !is_scalar($temporaryPath) || !is_numeric($size) || !is_numeric($error)) {
+            return null;
+        }
+
+        return new UploadedFile(
+            (string) $name,
+            (string) $temporaryPath,
+            (int) $size,
+            (int) $error,
+        );
     }
 
     public function clientIp(): string
