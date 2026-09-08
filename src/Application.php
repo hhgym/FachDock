@@ -24,6 +24,10 @@ use FachDock\Location\LocationAdminController;
 use FachDock\Location\LocationCatalogService;
 use FachDock\Logging\LoggerFactory;
 use FachDock\Security\Csrf;
+use FachDock\Student\CsvStudentParser;
+use FachDock\Student\StudentImportController;
+use FachDock\Student\StudentImportProfileService;
+use FachDock\Student\StudentImportService;
 use FachDock\Update\GitHubReleaseClient;
 use FachDock\Update\SelfUpdateService;
 use FachDock\Update\UpdateController;
@@ -106,6 +110,17 @@ final class Application
             new LocationCatalogService($pdo),
             new CorpusTypeService($pdo),
             new CabinetGroupService($pdo),
+            $sessions,
+            $views,
+            $csrf,
+        ))->register($router);
+
+        (new StudentImportController(
+            $this->root,
+            $pdo,
+            new CsvStudentParser(),
+            new StudentImportService($pdo),
+            new StudentImportProfileService($pdo),
             $sessions,
             $views,
             $csrf,
