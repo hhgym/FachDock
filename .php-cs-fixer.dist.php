@@ -7,7 +7,7 @@ $finder = PhpCsFixer\Finder::create()
     ->append([__FILE__, __DIR__ . '/public/index.php']);
 
 return (new PhpCsFixer\Config())
-    ->setRiskyAllowed(false)
+    ->setRiskyAllowed(true)
     ->setRules([
         '@PSR12' => true,
         'declare_strict_types' => true,
