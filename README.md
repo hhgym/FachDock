@@ -6,9 +6,9 @@ FachDock ist eine webbasierte Verwaltungs- und Buchungslösung für schulische S
 
 ## Projektstatus
 
-Aktuelle Version: **0.1.1**
+Aktuelle Version: **0.2.0**
 
-> FachDock befindet sich noch vor Version 1.0.0. Version 0.1.1 ist ein früher, installierbarer Teststand für die technische Basis, den Web-Installer, die lokale Administration, die Standort-/Schließfachstruktur und die Update-Routine. Sie ist noch nicht für den produktiven Schulbetrieb vorgesehen.
+> FachDock befindet sich noch vor Version 1.0.0. Version 0.2.0 ist ein installierbarer Teststand für Web-Installer, Update-Routine, lokale Administration, Standort-/Schließfachstruktur, Schülerimport sowie die technische Buchungs- und Reservierungsgrundlage. Sie ist noch nicht für den produktiven Schulbetrieb vorgesehen.
 
 ## Bereits enthalten
 
@@ -19,17 +19,21 @@ Aktuelle Version: **0.1.1**
 - Korpustypen und barrierearme Fachpositionen
 - Schrankgruppen mit gemischten Korpustypen
 - automatische Fachbezeichnungen wie `A-07-2` und `1OG-78-A-07-2`
-- erste Verwaltungsoberfläche für die physische Schließfachstruktur
+- erweiterte Verwaltungsoberfläche für die physische Schließfachstruktur
+- CSV-Schülerimport mit Vorschau, Validierung und Importprofilen
+- permanente, nur gehasht gespeicherte Schüler-Zugangscodes mit einmaligem Export neu erzeugter Codes
+- Schuljahres-, Zuteilungsregel-, Buchungs- und Reservierungsdatenmodell
+- transaktionale, konkurrenzsichere Reservierungen und Buchungsumwandlung
 - stabiler GitHub-Updatekanal mit SHA-256-Prüfung und Datenbankmigrationen
 
 ## Geplante Kernfunktionen
 
+- Administrationsoberfläche für Schuljahre und Zuteilungsregeln
 - interaktive Lagepläne je Etage
-- Schülerimport und dauerhafte Zugangscodes
 - regelbasierte Schließfachvorschläge und konkrete Fachauswahl
 - Elternportal mit E-Mail-Magic-Link
 - Schüler- und Lehrkräftezugang über IServ/OIDC
-- Buchung, Verlängerung und Fachwechsel
+- Verlängerung und Fachwechsel
 - Stripe-Zahlungen und BuT-Befreiungsworkflow
 - Defektmeldungen und Notöffnungen
 - E-Mail-Queue, Web-Push und Systemjobs
@@ -56,7 +60,7 @@ FachDock verwendet Git Flow:
 - `release/*` – Release-Stabilisierung
 - `hotfix/*` – dringende Korrekturen veröffentlichter Versionen
 
-Stabile Versionen werden als GitHub Releases mit Tags wie `v0.1.1` und später `v1.0.0` veröffentlicht. FachDock berücksichtigt beim integrierten Update ausschließlich stabile Releases.
+Stabile Versionen werden als GitHub Releases mit Tags wie `v0.2.0` und später `v1.0.0` veröffentlicht. FachDock berücksichtigt beim integrierten Update ausschließlich stabile Releases.
 
 ## Installation
 
