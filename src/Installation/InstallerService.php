@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FachDock\Installation;
 
+use FachDock\Auth\PasswordHasher;
 use FachDock\Database\ConnectionFactory;
 use FachDock\Migration\MigrationRunner;
 use JsonException;
@@ -42,7 +43,7 @@ final class InstallerService
         $pdo = ConnectionFactory::connect($database);
         (new MigrationRunner($pdo, $this->root . '/migrations'))->migrate();
 
-        $hash = password_hash($adminPassword, PASSWORD_DEFAULT);
+        $hash = (new PasswordHasher())->hash($adminPassword);
 
         $pdo->beginTransaction();
         try {

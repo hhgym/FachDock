@@ -23,6 +23,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
 <header class="topbar">
     <div><strong><?= $e($appName) ?></strong><?php if ($schoolName !== ''): ?> · <?= $e($schoolName) ?><?php endif; ?></div>
     <div class="topbar-actions">
+        <a href="/account/password">Passwort</a>
         <a href="/account/sessions">Sitzungen</a>
         <form method="post" action="/logout">
             <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">

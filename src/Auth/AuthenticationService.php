@@ -17,6 +17,7 @@ final class AuthenticationService
         private readonly StaffSessionService $sessions,
         private readonly int $maxFailedAttempts = 5,
         private readonly int $lockoutMinutes = 15,
+        private readonly int $minimumPasswordLength = 12,
     ) {
         $this->users = new StaffUserRepository($pdo);
         $this->hasher = new PasswordHasher();
@@ -74,6 +75,35 @@ final class AuthenticationService
         if ($staff !== null) {
             $this->audit('auth.logout', $staff->id, $ipAddress);
         }
+    }
+
+    public function changePassword(
+        AuthenticatedStaff $staff,
+        string $currentPassword,
+        string $newPassword,
+        string $confirmation,
+        string $ipAddress,
+    ): void {
+        if (mb_strlen($newPassword) < max(1, $this->minimumPasswordLength)) {
+            throw new AuthenticationException(
+                'Das neue Passwort muss mindestens ' . max(1, $this->minimumPasswordLength) . ' Zeichen lang sein.'
+            );
+        }
+        if ($newPassword !== $confirmation) {
+            throw new AuthenticationException('Die beiden neuen Passwörter stimmen nicht überein.');
+        }
+
+        $user = $this->users->findById($staff->id);
+        if ($user === null || (int) $user['active'] !== 1) {
+            throw new AuthenticationException('Das Konto ist nicht mehr aktiv.');
+        }
+        if (!$this->hasher->verify($currentPassword, (string) $user['password_hash'])) {
+            throw new AuthenticationException('Das aktuelle Passwort ist nicht korrekt.');
+        }
+
+        $this->users->replacePasswordHash($staff->id, $this->hasher->hash($newPassword));
+        $this->sessions->revokeAllForUser($staff->id, $staff->sessionId);
+        $this->audit('auth.password.changed', $staff->id, $ipAddress);
     }
 
     private function audit(string $action, int $staffUserId, string $ipAddress): void

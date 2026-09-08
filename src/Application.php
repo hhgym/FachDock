@@ -19,7 +19,6 @@ use FachDock\Installation\SystemRequirements;
 use FachDock\Logging\LoggerFactory;
 use FachDock\Security\Csrf;
 use FachDock\View\ViewRenderer;
-use PDO;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -82,6 +81,7 @@ final class Application
             $sessions,
             $this->configInt('auth.max_failed_attempts', 5),
             $this->configInt('auth.lockout_minutes', 15),
+            $this->configInt('auth.password_min_length', 12),
         );
 
         $router->get('/login', function (Request $request) use ($views, $csrf, $sessions): Response {
@@ -182,6 +182,41 @@ final class Application
             return Response::redirect('/account/sessions');
         });
 
+        $router->get('/account/password', function (Request $request) use ($views, $csrf, $sessions): Response {
+            unset($request);
+            $staff = $sessions->current();
+            if ($staff === null) {
+                return Response::redirect('/login');
+            }
+
+            return $this->passwordPage($views, $csrf, $staff, [], false);
+        });
+
+        $router->post('/account/password', function (Request $request) use ($views, $csrf, $sessions, $auth): Response {
+            $staff = $sessions->current();
+            if ($staff === null) {
+                return Response::redirect('/login');
+            }
+            if (!$csrf->verify($request->postString('_csrf'))) {
+                return Response::html('<h1>Ungültige Sitzung</h1>', 419);
+            }
+
+            try {
+                $auth->changePassword(
+                    $staff,
+                    $request->postString('current_password'),
+                    $request->postString('new_password'),
+                    $request->postString('new_password_confirmation'),
+                    $request->clientIp(),
+                );
+                $csrf->rotate();
+
+                return $this->passwordPage($views, $csrf, $staff, [], true);
+            } catch (AuthenticationException $exception) {
+                return $this->passwordPage($views, $csrf, $staff, [$exception->getMessage()], false, 422);
+            }
+        });
+
         return $router;
     }
 
@@ -256,6 +291,24 @@ final class Application
             'sessions' => $sessions->activeSessionsForUser($staff->id),
             'csrfToken' => $csrf->token(),
             'errors' => $errors,
+        ]), $status);
+    }
+
+    /** @param list<string> $errors */
+    private function passwordPage(
+        ViewRenderer $views,
+        Csrf $csrf,
+        AuthenticatedStaff $staff,
+        array $errors,
+        bool $success,
+        int $status = 200,
+    ): Response {
+        return Response::html($views->render('password.php', [
+            'staff' => $staff,
+            'csrfToken' => $csrf->token(),
+            'minimumLength' => $this->configInt('auth.password_min_length', 12),
+            'errors' => $errors,
+            'success' => $success,
         ]), $status);
     }
 

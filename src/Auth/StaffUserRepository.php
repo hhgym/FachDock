@@ -23,9 +23,21 @@ final class StaffUserRepository
             . 'LIMIT 1'
         );
         $statement->execute(['identifier' => $identifier]);
-        $row = $statement->fetch();
 
-        return is_array($row) ? $row : null;
+        return $this->fetchRow($statement);
+    }
+
+    /** @return array<string, mixed>|null */
+    public function findById(int $userId): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, username, display_name, email, password_hash, role, active, '
+            . 'failed_login_attempts, locked_until '
+            . 'FROM staff_users WHERE id = :id LIMIT 1'
+        );
+        $statement->execute(['id' => $userId]);
+
+        return $this->fetchRow($statement);
     }
 
     public function recordSuccessfulLogin(int $userId): void
@@ -74,5 +86,13 @@ final class StaffUserRepository
             . 'updated_at = CURRENT_TIMESTAMP WHERE id = :id'
         );
         $statement->execute(['id' => $userId, 'hash' => $hash]);
+    }
+
+    /** @return array<string, mixed>|null */
+    private function fetchRow(\PDOStatement $statement): ?array
+    {
+        $row = $statement->fetch();
+
+        return is_array($row) ? $row : null;
     }
 }
