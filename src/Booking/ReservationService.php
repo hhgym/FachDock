@@ -225,7 +225,8 @@ final class ReservationService
     private function assertBookableSchoolYear(int $schoolYearId, bool $allowBeforeOpening): void
     {
         $statement = $this->pdo->prepare(
-            'SELECT status, (new_booking_opens_on <= CURRENT_DATE) AS booking_open '
+            'SELECT status, (new_booking_opens_on <= CURRENT_DATE) AS booking_open, '
+            . '(ends_on >= CURRENT_DATE) AS year_not_ended '
             . 'FROM school_years WHERE id = :id FOR UPDATE'
         );
         $statement->execute(['id' => $schoolYearId]);
@@ -233,7 +234,7 @@ final class ReservationService
         if (!is_array($row)) {
             throw new DomainException('Das Schuljahr existiert nicht.');
         }
-        if ((string) $row['status'] === 'closed') {
+        if ((string) $row['status'] === 'closed' || (int) $row['year_not_ended'] !== 1) {
             throw new DomainException('Das Schuljahr ist bereits geschlossen.');
         }
         if (!$allowBeforeOpening && (int) $row['booking_open'] !== 1) {
