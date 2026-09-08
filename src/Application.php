@@ -34,6 +34,10 @@ use FachDock\Location\CorpusTypeService;
 use FachDock\Location\LocationAdminController;
 use FachDock\Location\LocationCatalogService;
 use FachDock\Logging\LoggerFactory;
+use FachDock\Mail\MailAdminController;
+use FachDock\Mail\MailQueueService;
+use FachDock\Mail\MailTemplateRenderer;
+use FachDock\Mail\MailTemplateService;
 use FachDock\Parent\ParentContactAdminController;
 use FachDock\Parent\ParentContactService;
 use FachDock\SchoolYear\SchoolYearAdminController;
@@ -153,6 +157,21 @@ final class Application
             $this->logger,
             $views,
             $csrf,
+        ))->register($router);
+
+        $mailQueue = new MailQueueService($pdo, new MailTemplateRenderer());
+        $smtpHost = trim((string) $this->config->get('smtp.host', ''));
+        $smtpFrom = trim((string) $this->config->get('smtp.from_email', ''));
+        $smtpConfigured = $smtpHost !== '' && filter_var($smtpFrom, FILTER_VALIDATE_EMAIL) !== false;
+        (new MailAdminController(
+            new MailTemplateService($pdo),
+            $mailQueue,
+            $sessions,
+            $audit,
+            $this->logger,
+            $views,
+            $csrf,
+            $smtpConfigured,
         ))->register($router);
 
         (new SchoolYearAdminController(
@@ -428,7 +447,7 @@ final class Application
         array $errors = [],
         int $status = 200,
     ): Response {
-        return Response::html($views->render('sessions.php', [
+        return Response::html($this->viewsOrGiven($views)->render('sessions.php', [
             'staff' => $staff,
             'sessions' => $sessions->activeSessionsForUser($staff->id),
             'csrfToken' => $csrf->token(),
@@ -482,6 +501,11 @@ final class Application
         $value = $this->config->get($key, $default);
 
         return is_numeric($value) ? max(1, (int) $value) : $default;
+    }
+
+    private function viewsOrGiven(ViewRenderer $views): ViewRenderer
+    {
+        return $views;
     }
 
     private function errorResponse(Throwable $exception): Response

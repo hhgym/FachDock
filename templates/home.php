@@ -31,6 +31,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
             <a href="/admin/allocation-rules">Zuteilungsregeln</a>
             <a href="/admin/recommendations">Empfehlungen</a>
             <a href="/admin/booking-selection">Buchungsauswahl</a>
+            <a href="/admin/mail">E-Mail</a>
             <a href="/admin/system/update">Updates</a>
         <?php endif; ?>
         <a href="/account/password">Passwort</a>
@@ -49,7 +50,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
     </header>
     <section class="card">
         <h2>FachDock-Grundsystem</h2>
-        <p>Lokale Anmeldung, Standort- und Schülerverwaltung, Eltern-Kind-Verknüpfungen, Schuljahreskonfiguration, Zuteilungsregeln, Verfügbarkeitsprüfung, zeitlich begrenzte Schließfachreservierungen und der stabile GitHub-Updatekanal sind aktiv.</p>
+        <p>Lokale Anmeldung, Standort- und Schülerverwaltung, Eltern-Kind-Verknüpfungen, Schuljahreskonfiguration, Zuteilungsregeln, Verfügbarkeitsprüfung, zeitlich begrenzte Schließfachreservierungen, versionierte E-Mail-Vorlagen und der stabile GitHub-Updatekanal sind aktiv.</p>
     </section>
 </main>
 </body>
