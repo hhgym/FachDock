@@ -7,7 +7,6 @@ namespace FachDock\Tests\Payment;
 use FachDock\Payment\StripePhpGateway;
 use PHPUnit\Framework\TestCase;
 use Stripe\Exception\SignatureVerificationException;
-use Stripe\Webhook;
 
 final class StripeWebhookVerificationTest extends TestCase
 {
@@ -15,11 +14,12 @@ final class StripeWebhookVerificationTest extends TestCase
     {
         $secret = 'whsec_fachdock_test';
         $payload = $this->checkoutEventPayload();
-        $signature = Webhook::generateTestHeaderString([
-            'payload' => $payload,
-            'secret' => $secret,
-            'timestamp' => time(),
-        ]);
+        $timestamp = time();
+        $signature = sprintf(
+            't=%d,v1=%s',
+            $timestamp,
+            hash_hmac('sha256', $timestamp . '.' . $payload, $secret),
+        );
         $gateway = new StripePhpGateway('sk_test_example', $secret, 'test');
 
         $event = $gateway->verifyWebhook($payload, $signature);
