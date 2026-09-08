@@ -6,6 +6,27 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-08
+
+### Added
+- Verbindlicher BuT-Buchungsweg: Eine aktive Reservierung kann als Buchung mit zunächst zu prüfender Gebührenbefreiung übernommen werden.
+- Administrationsqueue für BuT-Prüfungen mit Freigabe, Ablehnung, Prüfvermerk und konfigurierbarer Zahlungsfrist nach Ablehnung.
+- Stripe Checkout für reguläre Elternbuchungen mit Customer-Zuordnung, anteiliger Gebührenberechnung und serverseitigem Zahlungsstatus.
+- Signierte und idempotente Stripe-Webhooks für erfolgreiche, asynchron erfolgreiche, fehlgeschlagene und abgelaufene Zahlungen.
+- Zahlungsstatusseite im Elternportal sowie persistierte Zahlungsversuche und Stripe-Webhook-Ereignisse.
+- Zentrales responsives FachDock-Menü für Verwaltung und Elternportal mit gruppierter Navigation, aktivem Menüpunkt und Konto-Menü.
+- Rollenabhängige Menüs für Administratoren und Schließfachverwaltung.
+- MySQL-8.4-Integrationstests für den Stripe-Checkout- und Webhook-Workflow einschließlich der einmaligen Reservierung-zu-Buchung-Konvertierung.
+- Reale Stripe-Signaturprüfung in den automatisierten Tests.
+
+### Changed
+- Stripe kann explizit im Test- oder Live-Modus betrieben werden; Test- und Live-Schlüssel werden gegeneinander validiert, um versehentliche Live-Zahlungen in Testinstallationen zu verhindern.
+- Die bestehenden Einzel-Header authentifizierter Seiten werden zentral durch die gemeinsame Navigation ersetzt.
+- Der CI-Lauf verwendet für datenbankabhängige Zahlungstests MySQL 8.4.
+
+### Fixed
+- Die Stripe-Zahlungsabfrage verwendet keinen mit MySQL 8.4 kollidierenden Alias für `CURRENT_DATE` mehr.
+
 ## [0.3.0] - 2026-09-08
 
 ### Added

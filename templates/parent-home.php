@@ -21,6 +21,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
 <header class="topbar">
     <div><strong>FachDock</strong> · Elternportal</div>
     <div class="topbar-actions">
+        <a href="/parent/booking">Schließfach buchen</a>
         <span><?= $e($parent->displayName()) ?></span>
         <form method="post" action="/parent/logout">
             <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
@@ -32,7 +33,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
     <header class="hero">
         <span class="eyebrow">Elternportal</span>
         <h1>Ihre Kinder</h1>
-        <p>Der Elternzugang ist aktiv. Buchungen und Zahlungen werden in den nächsten Ausbaustufen hier ergänzt.</p>
+        <p>Für verknüpfte Kinder können Sie bereits regelkonforme freie Schließfächer auswählen und für 15 Minuten reservieren.</p>
     </header>
 
     <section class="card stack">
@@ -44,6 +45,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
                     <div class="entity-row compact-form">
                         <strong><?= $e((string) $child['first_name'] . ' ' . (string) $child['last_name']) ?></strong>
                         <div class="muted">Klasse <?= $e((string) $child['class_name']) ?> · Klassenstufe <?= (int) $child['grade'] ?></div>
+                        <div><a class="button button-secondary" href="/parent/booking?student_id=<?= (int) $child['id'] ?>">Schließfach auswählen</a></div>
                     </div>
                 <?php endforeach; ?>
             </div>

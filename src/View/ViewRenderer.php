@@ -29,6 +29,11 @@ final class ViewRenderer
             throw new RuntimeException('Unable to render template: ' . $template);
         }
 
-        return $content;
+        $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
+        if (!is_string($currentPath) || $currentPath === '') {
+            $currentPath = '/';
+        }
+
+        return (new NavigationRenderer())->inject($content, $data, $currentPath);
     }
 }

@@ -19,6 +19,25 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    env:
+      TEST_DB_HOST: 127.0.0.1
+      TEST_DB_PORT: 33060
+      TEST_DB_USERNAME: root
+      TEST_DB_PASSWORD: root
+      TEST_DB_NAME_PREFIX: fachdock_test
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 33060:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
     steps:
       - name: Checkout

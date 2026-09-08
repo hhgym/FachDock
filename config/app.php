@@ -7,7 +7,7 @@ $root = dirname(__DIR__);
 return [
     'app' => [
         'name' => 'FachDock',
-        'version' => '0.3.0',
+        'version' => '0.4.0',
         'environment' => 'production',
         'debug' => false,
         'installed' => false,
@@ -27,6 +27,12 @@ return [
         'recommendation_count' => 3,
         'reservation_minutes' => 15,
         'payment_grace_minutes' => 30,
+        'but_rejection_payment_days' => 14,
+    ],
+    'stripe' => [
+        'mode' => 'test',
+        'currency' => 'EUR',
+        'checkout_minutes' => 30,
     ],
     'mail' => [
         'worker_batch_size' => 50,
