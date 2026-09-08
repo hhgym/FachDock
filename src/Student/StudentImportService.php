@@ -65,6 +65,7 @@ final class StudentImportService
         string $sourceFilename,
         bool $fullImport,
         bool $skipInvalidRows,
+        ?int $profileId = null,
     ): array {
         if ($preview->hasInvalidRows() && !$skipInvalidRows) {
             throw new RuntimeException('Der Import enthält ungültige Zeilen und wurde nicht durchgeführt.');
@@ -78,7 +79,12 @@ final class StudentImportService
 
         $this->pdo->beginTransaction();
         try {
-            $runId = $this->createRun($staffUserId, $sourceFilename, $fullImport ? 'full' : 'partial');
+            $runId = $this->createRun(
+                $staffUserId,
+                $sourceFilename,
+                $fullImport ? 'full' : 'partial',
+                $profileId,
+            );
             $upsert = $this->pdo->prepare(
                 'INSERT INTO students '
                 . '(matrikelnummer, first_name, last_name, class_name, grade, email, active, access_code_hash, '
@@ -87,8 +93,10 @@ final class StudentImportService
                 . ':access_code_hash, :access_code_generated_at, :run_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) '
                 . 'ON DUPLICATE KEY UPDATE first_name = VALUES(first_name), last_name = VALUES(last_name), '
                 . 'class_name = VALUES(class_name), grade = VALUES(grade), email = VALUES(email), '
-                . 'active = VALUES(active), last_import_run_id = VALUES(last_import_run_id), '
-                . 'updated_at = CURRENT_TIMESTAMP'
+                . 'active = VALUES(active), '
+                . 'access_code_hash = COALESCE(access_code_hash, VALUES(access_code_hash)), '
+                . 'access_code_generated_at = COALESCE(access_code_generated_at, VALUES(access_code_generated_at)), '
+                . 'last_import_run_id = VALUES(last_import_run_id), updated_at = CURRENT_TIMESTAMP'
             );
             $lookupCode = $this->pdo->prepare(
                 'SELECT access_code_hash FROM students WHERE matrikelnummer = :matrikelnummer LIMIT 1'
@@ -146,6 +154,7 @@ final class StudentImportService
                 'deactivated' => $deactivated,
                 'generated_access_codes' => count($generatedCodes),
                 'preview_counts' => $preview->counts(),
+                'profile_id' => $profileId,
             ];
             $this->completeRun($runId, $summary);
             $this->audit($staffUserId, $runId, $summary);
@@ -193,15 +202,16 @@ final class StudentImportService
         throw new RuntimeException('Es konnte kein eindeutiger Schüler-Zugangscode erzeugt werden.');
     }
 
-    private function createRun(int $staffUserId, string $filename, string $mode): int
+    private function createRun(int $staffUserId, string $filename, string $mode, ?int $profileId): int
     {
         $statement = $this->pdo->prepare(
             'INSERT INTO student_import_runs '
             . '(staff_user_id, profile_id, source_filename, mode, status, summary, created_at) '
-            . 'VALUES (:staff_user_id, NULL, :filename, :mode, :status, :summary, CURRENT_TIMESTAMP)'
+            . 'VALUES (:staff_user_id, :profile_id, :filename, :mode, :status, :summary, CURRENT_TIMESTAMP)'
         );
         $statement->execute([
             'staff_user_id' => $staffUserId,
+            'profile_id' => $profileId,
             'filename' => mb_substr(basename($filename), 0, 255),
             'mode' => $mode,
             'status' => 'processing',
