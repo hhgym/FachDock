@@ -70,7 +70,7 @@ final class ViewRenderer
         }
 
         $hash = hash_file('sha256', $file);
-        if (!is_string($hash) || $hash === '') {
+        if (!is_string($hash)) {
             return null;
         }
 
