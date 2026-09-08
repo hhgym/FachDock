@@ -12,7 +12,7 @@ return new class () implements Migration {
 
     public function description(): string
     {
-        return 'Add versioned mail templates and persistent delivery queue';
+        return 'Add versioned mail templates, persistent queue and delivery history';
     }
 
     public function up(PDO $pdo): void
@@ -66,6 +66,28 @@ return new class () implements Migration {
             . 'INDEX idx_mail_queue_sent (sent_at),'
             . 'INDEX idx_mail_queue_relation (relation_type, relation_id),'
             . 'CONSTRAINT fk_mail_queue_template FOREIGN KEY (mail_template_id) REFERENCES mail_templates(id)'
+            . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+        );
+
+        $pdo->exec(
+            'CREATE TABLE mail_delivery_history ('
+            . 'id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,'
+            . 'mail_queue_id BIGINT UNSIGNED NOT NULL,'
+            . 'template_key VARCHAR(64) NOT NULL,'
+            . 'template_version INT UNSIGNED NOT NULL,'
+            . 'recipient_email VARCHAR(255) NOT NULL,'
+            . 'subject VARCHAR(500) NOT NULL,'
+            . 'placeholder_snapshot LONGTEXT NOT NULL,'
+            . 'relation_type VARCHAR(64) NULL,'
+            . 'relation_id BIGINT UNSIGNED NULL,'
+            . 'business_reference VARCHAR(191) NULL,'
+            . 'status VARCHAR(32) NOT NULL,'
+            . 'attempt_no SMALLINT UNSIGNED NOT NULL,'
+            . 'error_message VARCHAR(1000) NULL,'
+            . 'recorded_at DATETIME NOT NULL,'
+            . 'INDEX idx_mail_history_queue (mail_queue_id, recorded_at),'
+            . 'INDEX idx_mail_history_status (status, recorded_at),'
+            . 'INDEX idx_mail_history_relation (relation_type, relation_id)'
             . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
         );
 
