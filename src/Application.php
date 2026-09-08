@@ -34,6 +34,8 @@ use FachDock\Location\CorpusTypeService;
 use FachDock\Location\LocationAdminController;
 use FachDock\Location\LocationCatalogService;
 use FachDock\Logging\LoggerFactory;
+use FachDock\Parent\ParentContactAdminController;
+use FachDock\Parent\ParentContactService;
 use FachDock\SchoolYear\SchoolYearAdminController;
 use FachDock\SchoolYear\SchoolYearService;
 use FachDock\Security\Csrf;
@@ -140,6 +142,15 @@ final class Application
             new StudentImportService($pdo),
             new StudentImportProfileService($pdo),
             $sessions,
+            $views,
+            $csrf,
+        ))->register($router);
+
+        (new ParentContactAdminController(
+            new ParentContactService($pdo),
+            $sessions,
+            $audit,
+            $this->logger,
             $views,
             $csrf,
         ))->register($router);
