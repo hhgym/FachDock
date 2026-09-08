@@ -5,7 +5,7 @@ declare(strict_types=1);
 use FachDock\Migration\Migration;
 use PDO;
 
-return new class implements Migration {
+return new class () implements Migration {
     public function version(): string
     {
         return '202609080001';
