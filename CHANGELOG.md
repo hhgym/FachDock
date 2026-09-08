@@ -6,6 +6,28 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-08
+
+### Added
+- Administrationsoberfläche für Zuteilungsregeln mit Gültigkeitszeiträumen, Klassenstufen, harten Erlaubnis-/Ausschlussregeln und gewichteten Empfehlungen.
+- Testfunktion für Zuteilungsregeln und regelkonforme Schließfachempfehlungen mit konfigurierbarer Anzahl von Vorschlägen.
+- Administrativer Buchungsauswahl-Workflow mit echter transaktionaler Reservierung und Austausch einer noch nicht bezahlten Reservierung.
+- Vollständige Schuljahresverwaltung inklusive automatischer Anlage von aktuellem und folgendem Schuljahr, Statuspflege, Öffnungsdatum für Neubuchungen und zeitweiser Korrekturöffnung geschlossener Jahre.
+- Elternkontakte mit historisierten n:m-Verknüpfungen zu Schülerinnen und Schülern.
+- Einmalige, gehashte Magic Links zur E-Mail-Verifikation und passwortlosen Elternanmeldung.
+- Öffentliches Elternportal mit widerrufbaren 24-Stunden-Sitzungen und ausschließlich den aktiv verknüpften eigenen Kindern.
+- Persistente E-Mail-Queue mit SMTP-Versand über PHPMailer, Prioritäten, Ablaufzeit, Deduplizierung, Retry-Schedule und stündlichem Versandlimit.
+- Versionierte E-Mail-Templates mit getrennten HTML-/Textfassungen und streng validierten Platzhaltern.
+- Administrationsoberfläche für E-Mail-Templates und Versandqueue mit manuellem Retry und Abbruch.
+- CLI-Befehl `bin/fachdock mail:work` für den regelmäßigen Versand per Cronjob.
+- Versandhistorie ohne dauerhafte Speicherung von Mail-Body oder geheimen Magic-Link-Platzhaltern.
+
+### Changed
+- Magic-Link-URLs werden ausschließlich aus der konfigurierten kanonischen HTTPS-Basis-URL erzeugt und nicht aus dem eingehenden Host-Header abgeleitet.
+- Öffentliche Eltern-Login-Anfragen liefern unabhängig von Existenz, Verifikationsstatus oder Rate-Limit eines Kontakts dieselbe Antwort und verhindern damit Account Enumeration.
+- Reservierungen berücksichtigen die prognostizierte Klassenstufe des Zielschuljahres und die dafür gültigen Zuteilungsregeln.
+- Der Anwendungs-Bootstrap bindet Schuljahres-, Eltern-, Mail-, Regel-, Empfehlungs- und Buchungsauswahlmodule zentral ein.
+
 ## [0.2.0] - 2026-09-08
 
 ### Added
