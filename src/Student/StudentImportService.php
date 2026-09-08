@@ -157,6 +157,9 @@ final class StudentImportService
                 'profile_id' => $profileId,
             ];
             $this->completeRun($runId, $summary);
+            if ($profileId !== null) {
+                $this->markProfileUsed($profileId);
+            }
             $this->audit($staffUserId, $runId, $summary);
             $this->pdo->commit();
 
@@ -261,6 +264,22 @@ final class StudentImportService
             'status' => 'completed',
             'summary' => json_encode($summary, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
         ]);
+    }
+
+    private function markProfileUsed(int $profileId): void
+    {
+        $statement = $this->pdo->prepare(
+            'UPDATE student_import_profiles SET last_used_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP '
+            . 'WHERE id = :id AND active = 1'
+        );
+        $statement->execute(['id' => $profileId]);
+        if ($statement->rowCount() === 0) {
+            $check = $this->pdo->prepare('SELECT id FROM student_import_profiles WHERE id = :id AND active = 1');
+            $check->execute(['id' => $profileId]);
+            if ($check->fetchColumn() === false) {
+                throw new RuntimeException('Das verwendete Importprofil ist nicht mehr verfügbar.');
+            }
+        }
     }
 
     /** @param array<string, mixed> $summary @throws JsonException */
