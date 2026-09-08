@@ -71,7 +71,7 @@ $labels = [
                     <select name="profile_delimiter">
                         <option value=";">Semikolon ;</option>
                         <option value=",">Komma ,</option>
-                        <option value="&#9;">Tabulator</option>
+                        <option value="tab">Tabulator</option>
                     </select>
                 </label>
                 <label>Zeichenkodierung
@@ -111,7 +111,7 @@ $labels = [
                 <select name="delimiter">
                     <option value=";">Semikolon ;</option>
                     <option value=",">Komma ,</option>
-                    <option value="&#9;">Tabulator</option>
+                    <option value="tab">Tabulator</option>
                 </select>
             </label>
             <label>Zeichenkodierung ohne Profil
