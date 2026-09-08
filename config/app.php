@@ -30,6 +30,7 @@ return [
         'but_rejection_payment_days' => 14,
     ],
     'stripe' => [
+        'mode' => 'test',
         'currency' => 'EUR',
         'checkout_minutes' => 30,
     ],
