@@ -19,7 +19,7 @@ final readonly class MailRetrySchedule
                 throw new DomainException('Eine E-Mail-Wiederholungsfrist ist ungültig.');
             }
         }
-        $this->minutes = array_values($minutes);
+        $this->minutes = $minutes;
     }
 
     public function delayAfterFailure(int $attempts): ?int
