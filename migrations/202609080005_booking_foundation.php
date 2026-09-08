@@ -95,11 +95,24 @@ return new class () implements Migration {
             . 'created_at DATETIME NOT NULL,'
             . 'updated_at DATETIME NOT NULL,'
             . 'ended_at DATETIME NULL,'
-            . 'UNIQUE KEY uq_booking_student_year (student_id, school_year_id),'
+            . 'INDEX idx_bookings_student_year (student_id, school_year_id, created_at),'
             . 'INDEX idx_bookings_year_status (school_year_id, status),'
             . 'CONSTRAINT fk_booking_student FOREIGN KEY (student_id) REFERENCES students(id),'
             . 'CONSTRAINT fk_booking_year FOREIGN KEY (school_year_id) REFERENCES school_years(id),'
             . 'CONSTRAINT fk_booking_previous FOREIGN KEY (previous_booking_id) REFERENCES bookings(id)'
+            . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+        );
+
+        $pdo->exec(
+            'CREATE TABLE booking_slots ('
+            . 'booking_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,'
+            . 'school_year_id BIGINT UNSIGNED NOT NULL,'
+            . 'student_id BIGINT UNSIGNED NOT NULL,'
+            . 'created_at DATETIME NOT NULL,'
+            . 'UNIQUE KEY uq_booking_slot_student_year (school_year_id, student_id),'
+            . 'CONSTRAINT fk_booking_slot_booking FOREIGN KEY (booking_id) REFERENCES bookings(id),'
+            . 'CONSTRAINT fk_booking_slot_year FOREIGN KEY (school_year_id) REFERENCES school_years(id),'
+            . 'CONSTRAINT fk_booking_slot_student FOREIGN KEY (student_id) REFERENCES students(id)'
             . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
         );
 
