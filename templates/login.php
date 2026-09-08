@@ -17,7 +17,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
     <link rel="stylesheet" href="/assets/app.css">
 </head>
 <body>
-<main class="shell shell-narrow">
+<main class="shell shell-narrow stack">
     <header class="hero">
         <span class="eyebrow"><?= $e($appName) ?></span>
         <h1>Anmeldung</h1>
@@ -43,6 +43,12 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
         <button class="button" type="submit">Anmelden</button>
         <p class="form-hint">Lokale Anmeldung für Administration und Schließfachverwaltung.</p>
     </form>
+
+    <section class="card">
+        <strong>Elternzugang</strong>
+        <p>Eltern melden sich ohne Passwort über einen einmaligen Link per E-Mail an.</p>
+        <a href="/parent/login">Zum Elternportal</a>
+    </section>
 </main>
 </body>
 </html>

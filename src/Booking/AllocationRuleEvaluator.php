@@ -15,13 +15,54 @@ final class AllocationRuleEvaluator
 
     public function evaluate(int $schoolYearId, int $projectedGrade, int $lockerId): AllocationDecision
     {
-        if ($projectedGrade < 5 || $projectedGrade > 12) {
-            throw new DomainException('Die prognostizierte Klassenstufe muss zwischen 5 und 12 liegen.');
+        $this->assertGrade($projectedGrade);
+
+        return $this->decision(
+            $projectedGrade,
+            $lockerId,
+            $this->lockerLocation($lockerId),
+            $this->applicableRules($schoolYearId, $projectedGrade),
+        );
+    }
+
+    /**
+     * @param list<array{locker_id: int, building_id: int, floor_id: int, area_id: int, cabinet_group_id: int}> $locations
+     * @return array<int, AllocationDecision>
+     */
+    public function evaluateLocations(int $schoolYearId, int $projectedGrade, array $locations): array
+    {
+        $this->assertGrade($projectedGrade);
+        $rules = $this->applicableRules($schoolYearId, $projectedGrade);
+        $decisions = [];
+
+        foreach ($locations as $location) {
+            $lockerId = $location['locker_id'];
+            $decisions[$lockerId] = $this->decision(
+                $projectedGrade,
+                $lockerId,
+                [
+                    'building_id' => $location['building_id'],
+                    'floor_id' => $location['floor_id'],
+                    'area_id' => $location['area_id'],
+                    'cabinet_group_id' => $location['cabinet_group_id'],
+                ],
+                $rules,
+            );
         }
 
-        $location = $this->lockerLocation($lockerId);
-        $rules = $this->applicableRules($schoolYearId, $projectedGrade);
+        return $decisions;
+    }
 
+    /**
+     * @param array{building_id: int, floor_id: int, area_id: int, cabinet_group_id: int} $location
+     * @param list<array<string, mixed>> $rules
+     */
+    private function decision(
+        int $projectedGrade,
+        int $lockerId,
+        array $location,
+        array $rules,
+    ): AllocationDecision {
         $allowRules = [];
         $matchedAllows = [];
         $matchedDenies = [];
@@ -158,5 +199,12 @@ final class AllocationRuleEvaluator
             'updated_at' => (string) $rule['updated_at'],
             'matches' => $matches,
         ];
+    }
+
+    private function assertGrade(int $projectedGrade): void
+    {
+        if ($projectedGrade < 5 || $projectedGrade > 12) {
+            throw new DomainException('Die prognostizierte Klassenstufe muss zwischen 5 und 12 liegen.');
+        }
     }
 }

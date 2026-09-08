@@ -22,8 +22,9 @@ a { color: #263f8f; }
 label { display: grid; gap: 6px; font-weight: 650; }
 label small, .muted, .form-hint { color: #667085; font-weight: 400; }
 .form-hint { margin: 0; font-size: .92rem; }
-input, select { width: 100%; padding: 11px 12px; border: 1px solid #cfd5df; border-radius: 9px; font: inherit; background: #fff; color: inherit; }
-input:focus, select:focus { outline: 3px solid rgba(56, 84, 165, .15); border-color: #3854a5; }
+input, select, textarea { width: 100%; padding: 11px 12px; border: 1px solid #cfd5df; border-radius: 9px; font: inherit; background: #fff; color: inherit; }
+textarea { resize: vertical; }
+input:focus, select:focus, textarea:focus { outline: 3px solid rgba(56, 84, 165, .15); border-color: #3854a5; }
 input[type="checkbox"] { width: auto; padding: 0; }
 .check-label { display: flex; align-items: center; gap: 9px; align-self: end; min-height: 44px; }
 .button { justify-self: start; border: 0; border-radius: 10px; padding: 12px 18px; background: #263f8f; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
@@ -60,12 +61,28 @@ code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .sequence-list { margin: 0; padding-left: 26px; display: grid; gap: 6px; }
 .sequence-list li { padding-left: 3px; }
 .mini-button { margin-left: 8px; border: 0; background: transparent; color: #9f2f29; cursor: pointer; text-decoration: underline; font: inherit; font-size: .86rem; }
+.school-year-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.school-year-heading h2 { margin: 3px 0 4px; font-size: 1.5rem; }
+.school-year-actions { padding-top: 16px; border-top: 1px solid #edf0f4; }
+.badge { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 999px; background: #eef1f7; color: #44506a; font-size: .82rem; font-weight: 750; white-space: nowrap; }
+.rule-test-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.rule-override { padding-top: 16px; border-top: 1px solid #edf0f4; }
+.table-scroll { overflow-x: auto; border: 1px solid #e5e8ee; border-radius: 12px; }
+.data-table { width: 100%; border-collapse: collapse; background: #fff; font-size: .92rem; }
+.data-table th, .data-table td { padding: 10px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid #edf0f4; white-space: nowrap; }
+.data-table th { background: #f7f8fa; font-size: .78rem; letter-spacing: .04em; text-transform: uppercase; color: #5d6678; }
+.data-table td:last-child { white-space: normal; min-width: 220px; }
+.data-table tbody tr:last-child td { border-bottom: 0; }
+.recommendation-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.recommendation-card { border: 1px solid #dfe4ec; border-radius: 14px; padding: 18px; background: #fbfcff; }
+.recommendation-card h3 { margin: 6px 0 8px; font-size: 1.35rem; }
+.recommendation-card p { margin: 4px 0; }
 
 @media (max-width: 680px) {
     .shell { margin: 28px auto; }
-    .grid { grid-template-columns: 1fr; }
+    .grid, .recommendation-grid { grid-template-columns: 1fr; }
     .wide { grid-column: auto; }
     .card { padding: 18px; }
     .topbar { align-items: flex-start; }
-    .topbar-actions, .session-row { align-items: flex-start; flex-direction: column; }
+    .topbar-actions, .session-row, .school-year-heading { align-items: flex-start; flex-direction: column; }
 }

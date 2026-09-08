@@ -11,6 +11,16 @@ use FachDock\Auth\AuthenticationService;
 use FachDock\Auth\PasswordHasher;
 use FachDock\Auth\StaffSessionService;
 use FachDock\Auth\StaffUserRepository;
+use FachDock\Booking\AllocationRuleAdminController;
+use FachDock\Booking\AllocationRuleEvaluator;
+use FachDock\Booking\AllocationRuleService;
+use FachDock\Booking\AllocationRuleTestService;
+use FachDock\Booking\BookingSelectionAdminController;
+use FachDock\Booking\LockerRecommendationAdminController;
+use FachDock\Booking\LockerRecommendationRanker;
+use FachDock\Booking\LockerRecommendationService;
+use FachDock\Booking\ProjectedGradeResolver;
+use FachDock\Booking\ReservationService;
 use FachDock\Config\Config;
 use FachDock\Database\ConnectionFactory;
 use FachDock\Http\Request;
@@ -24,6 +34,19 @@ use FachDock\Location\CorpusTypeService;
 use FachDock\Location\LocationAdminController;
 use FachDock\Location\LocationCatalogService;
 use FachDock\Logging\LoggerFactory;
+use FachDock\Mail\MailAdminController;
+use FachDock\Mail\MailQueueService;
+use FachDock\Mail\MailTemplateRenderer;
+use FachDock\Mail\MailTemplateService;
+use FachDock\Parent\ParentContactAdminController;
+use FachDock\Parent\ParentContactService;
+use FachDock\Parent\ParentMagicLinkService;
+use FachDock\Parent\ParentPortalAccessService;
+use FachDock\Parent\ParentPortalController;
+use FachDock\Parent\ParentSessionService;
+use FachDock\Parent\ParentVerificationAdminController;
+use FachDock\SchoolYear\SchoolYearAdminController;
+use FachDock\SchoolYear\SchoolYearService;
 use FachDock\Security\Csrf;
 use FachDock\Student\CsvStudentParser;
 use FachDock\Student\StudentImportController;
@@ -106,13 +129,16 @@ final class Application
             $this->configInt('auth.lockout_minutes', 15),
             $this->configInt('auth.password_min_length', 12),
         );
+        $audit = new AuditLogger($pdo);
+        $locations = new LocationCatalogService($pdo);
+        $schoolYears = new SchoolYearService($pdo);
 
         (new LocationAdminController(
-            new LocationCatalogService($pdo),
+            $locations,
             new CorpusTypeService($pdo),
             new CabinetGroupService($pdo),
             $sessions,
-            new AuditLogger($pdo),
+            $audit,
             $this->logger,
             $views,
             $csrf,
@@ -127,6 +153,119 @@ final class Application
             $sessions,
             $views,
             $csrf,
+        ))->register($router);
+
+        (new ParentContactAdminController(
+            new ParentContactService($pdo),
+            $sessions,
+            $audit,
+            $this->logger,
+            $views,
+            $csrf,
+        ))->register($router);
+
+        $mailQueue = new MailQueueService($pdo, new MailTemplateRenderer());
+        $smtpHost = trim((string) $this->config->get('smtp.host', ''));
+        $smtpFrom = trim((string) $this->config->get('smtp.from_email', ''));
+        $smtpConfigured = $smtpHost !== '' && filter_var($smtpFrom, FILTER_VALIDATE_EMAIL) !== false;
+        (new MailAdminController(
+            new MailTemplateService($pdo),
+            $mailQueue,
+            $sessions,
+            $audit,
+            $this->logger,
+            $views,
+            $csrf,
+            $smtpConfigured,
+        ))->register($router);
+
+        $parentMagicLinkMinutes = $this->configInt('auth.parent_magic_link_minutes', 15);
+        $parentMagicLinks = new ParentMagicLinkService($pdo, $parentMagicLinkMinutes);
+        $parentPortalAccess = new ParentPortalAccessService(
+            $pdo,
+            $parentMagicLinks,
+            $mailQueue,
+            (string) $this->config->get('app.base_url', ''),
+            (string) $this->config->get('app.school_name', ''),
+            $parentMagicLinkMinutes,
+        );
+        $parentSessions = new ParentSessionService(
+            $pdo,
+            $this->configInt('auth.parent_session_lifetime_minutes', 1440),
+        );
+        (new ParentPortalController(
+            $parentPortalAccess,
+            $parentMagicLinks,
+            $parentSessions,
+            $views,
+            $csrf,
+            $this->logger,
+        ))->register($router);
+        (new ParentVerificationAdminController(
+            $parentPortalAccess,
+            $sessions,
+            $audit,
+            $this->logger,
+            $csrf,
+        ))->register($router);
+
+        (new SchoolYearAdminController(
+            $schoolYears,
+            $sessions,
+            $audit,
+            $this->logger,
+            $views,
+            $csrf,
+        ))->register($router);
+
+        $allocationEvaluator = new AllocationRuleEvaluator($pdo);
+        (new AllocationRuleAdminController(
+            new AllocationRuleService($pdo),
+            new AllocationRuleTestService($pdo, $allocationEvaluator),
+            $locations,
+            $schoolYears,
+            $sessions,
+            $audit,
+            $this->logger,
+            $views,
+            $csrf,
+        ))->register($router);
+
+        $gradeResolver = new ProjectedGradeResolver();
+        $recommendationRanker = new LockerRecommendationRanker();
+        $recommendations = new LockerRecommendationService(
+            $pdo,
+            $allocationEvaluator,
+            $recommendationRanker,
+            $gradeResolver,
+        );
+        $recommendationCount = $this->configInt('booking.recommendation_count', 3);
+
+        (new LockerRecommendationAdminController(
+            $recommendations,
+            $schoolYears,
+            $sessions,
+            $views,
+            $recommendationCount,
+        ))->register($router);
+
+        $reservations = new ReservationService(
+            $pdo,
+            $this->configInt('booking.reservation_minutes', 15),
+            $this->configInt('booking.payment_grace_minutes', 30),
+            $allocationEvaluator,
+            $gradeResolver,
+        );
+        (new BookingSelectionAdminController(
+            $recommendations,
+            $reservations,
+            $schoolYears,
+            $sessions,
+            $audit,
+            $this->logger,
+            $views,
+            $csrf,
+            $recommendationCount,
         ))->register($router);
 
         $releaseClient = new GitHubReleaseClient();
