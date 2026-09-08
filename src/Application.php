@@ -16,6 +16,10 @@ use FachDock\Booking\AllocationRuleEvaluator;
 use FachDock\Booking\AllocationRuleService;
 use FachDock\Booking\AllocationRuleTestService;
 use FachDock\Booking\BookingSelectionAdminController;
+use FachDock\Booking\BookingService;
+use FachDock\Booking\ButBookingController;
+use FachDock\Booking\ButBookingService;
+use FachDock\Booking\FeeCalculator;
 use FachDock\Booking\LockerRecommendationAdminController;
 use FachDock\Booking\LockerRecommendationRanker;
 use FachDock\Booking\LockerRecommendationService;
@@ -278,6 +282,22 @@ final class Application
             $views,
             $csrf,
             $recommendationCount,
+        ))->register($router);
+
+        $butBookings = new ButBookingService(
+            $pdo,
+            new BookingService($pdo),
+            new FeeCalculator(),
+            $this->configInt('booking.but_rejection_payment_days', 14),
+        );
+        (new ButBookingController(
+            $butBookings,
+            $parentSessions,
+            $sessions,
+            $audit,
+            $this->logger,
+            $views,
+            $csrf,
         ))->register($router);
 
         $releaseClient = new GitHubReleaseClient();
