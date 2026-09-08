@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace FachDock\Payment;
 
 use FachDock\Audit\AuditLogger;
+use FachDock\Auth\StaffSessionService;
 use FachDock\Booking\AllocationRuleEvaluator;
 use FachDock\Booking\BookingService;
 use FachDock\Booking\FeeCalculator;
 use FachDock\Booking\ProjectedGradeResolver;
 use FachDock\Booking\ReservationService;
 use FachDock\Config\Config;
+use FachDock\Config\LocalConfigWriter;
 use FachDock\Database\ConnectionFactory;
 use FachDock\Http\Request;
 use FachDock\Http\Router;
@@ -25,6 +27,8 @@ final class StripePaymentEntryPoint
         'POST /parent/payment/start',
         'GET /parent/payment/return',
         'POST /webhooks/stripe',
+        'GET /admin/config/stripe',
+        'POST /admin/config/stripe',
     ];
 
     public static function handles(Request $request): bool
@@ -39,6 +43,30 @@ final class StripePaymentEntryPoint
         $logger = LoggerFactory::create($root);
         $views = new ViewRenderer((string) $config->get('paths.templates'));
         $csrf = new Csrf();
+        $router = new Router();
+        $audit = new AuditLogger($pdo);
+
+        if ($request->path() === '/admin/config/stripe') {
+            $staffSessions = new StaffSessionService(
+                $pdo,
+                self::configInt($config, 'auth.session_max_lifetime_minutes', 480),
+                self::configInt($config, 'auth.session_idle_timeout_minutes', 60),
+            );
+            (new StripeSettingsController(
+                $config,
+                new LocalConfigWriter($root),
+                $staffSessions,
+                $audit,
+                $logger,
+                $views,
+                $csrf,
+            ))->register($router);
+
+            $router->dispatch($request)->send();
+
+            return;
+        }
+
         $allocationEvaluator = new AllocationRuleEvaluator($pdo);
         $reservations = new ReservationService(
             $pdo,
@@ -65,11 +93,10 @@ final class StripePaymentEntryPoint
             $pdo,
             self::configInt($config, 'auth.parent_session_lifetime_minutes', 1440),
         );
-        $router = new Router();
         (new StripePaymentController(
             $payments,
             $sessions,
-            new AuditLogger($pdo),
+            $audit,
             $logger,
             $views,
             $csrf,

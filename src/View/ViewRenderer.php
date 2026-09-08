@@ -29,11 +29,51 @@ final class ViewRenderer
             throw new RuntimeException('Unable to render template: ' . $template);
         }
 
+        $content = $this->versionStylesheets($content);
         $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
         if (!is_string($currentPath) || $currentPath === '') {
             $currentPath = '/';
         }
 
         return (new NavigationRenderer())->inject($content, $data, $currentPath);
+    }
+
+    private function versionStylesheets(string $content): string
+    {
+        $root = dirname($this->templateDirectory);
+        $appVersion = $this->assetVersion($root . '/public/assets/app.css');
+        if ($appVersion !== null) {
+            $updated = preg_replace(
+                '~href="/assets/app\.css(?:\?[^\"]*)?"~',
+                'href="/assets/app.css?v=' . $appVersion . '"',
+                $content,
+                1,
+            );
+            if (is_string($updated)) {
+                $content = $updated;
+            }
+        }
+
+        $navigationVersion = $this->assetVersion($root . '/public/assets/navigation.css');
+        if ($navigationVersion !== null && !str_contains($content, '/assets/navigation.css')) {
+            $stylesheet = '    <link rel="stylesheet" href="/assets/navigation.css?v=' . $navigationVersion . '">' . "\n";
+            $content = str_replace('</head>', $stylesheet . '</head>', $content);
+        }
+
+        return $content;
+    }
+
+    private function assetVersion(string $file): ?string
+    {
+        if (!is_file($file)) {
+            return null;
+        }
+
+        $hash = hash_file('sha256', $file);
+        if (!is_string($hash)) {
+            return null;
+        }
+
+        return substr($hash, 0, 12);
     }
 }
