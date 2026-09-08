@@ -20,6 +20,11 @@ return [
         'session_max_lifetime_minutes' => 480,
         'session_idle_timeout_minutes' => 60,
     ],
+    'booking' => [
+        'recommendation_count' => 3,
+        'reservation_minutes' => 15,
+        'payment_grace_minutes' => 30,
+    ],
     'database' => [
         'driver' => 'mysql',
         'host' => '127.0.0.1',

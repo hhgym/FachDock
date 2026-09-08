@@ -15,6 +15,9 @@ use FachDock\Booking\AllocationRuleAdminController;
 use FachDock\Booking\AllocationRuleEvaluator;
 use FachDock\Booking\AllocationRuleService;
 use FachDock\Booking\AllocationRuleTestService;
+use FachDock\Booking\LockerRecommendationAdminController;
+use FachDock\Booking\LockerRecommendationRanker;
+use FachDock\Booking\LockerRecommendationService;
 use FachDock\Config\Config;
 use FachDock\Database\ConnectionFactory;
 use FachDock\Http\Request;
@@ -158,6 +161,18 @@ final class Application
             $this->logger,
             $views,
             $csrf,
+        ))->register($router);
+
+        (new LockerRecommendationAdminController(
+            new LockerRecommendationService(
+                $pdo,
+                $allocationEvaluator,
+                new LockerRecommendationRanker(),
+            ),
+            $schoolYears,
+            $sessions,
+            $views,
+            $this->configInt('booking.recommendation_count', 3),
         ))->register($router);
 
         $releaseClient = new GitHubReleaseClient();

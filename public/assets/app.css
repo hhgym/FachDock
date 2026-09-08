@@ -73,10 +73,14 @@ code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .data-table th { background: #f7f8fa; font-size: .78rem; letter-spacing: .04em; text-transform: uppercase; color: #5d6678; }
 .data-table td:last-child { white-space: normal; min-width: 220px; }
 .data-table tbody tr:last-child td { border-bottom: 0; }
+.recommendation-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.recommendation-card { border: 1px solid #dfe4ec; border-radius: 14px; padding: 18px; background: #fbfcff; }
+.recommendation-card h3 { margin: 6px 0 8px; font-size: 1.35rem; }
+.recommendation-card p { margin: 4px 0; }
 
 @media (max-width: 680px) {
     .shell { margin: 28px auto; }
-    .grid { grid-template-columns: 1fr; }
+    .grid, .recommendation-grid { grid-template-columns: 1fr; }
     .wide { grid-column: auto; }
     .card { padding: 18px; }
     .topbar { align-items: flex-start; }
