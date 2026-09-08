@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FachDock\Installation;
 
 use FachDock\Auth\PasswordHasher;
+use FachDock\Config\Config;
 use FachDock\Database\ConnectionFactory;
 use FachDock\Migration\MigrationRunner;
 use JsonException;
@@ -180,6 +181,7 @@ final class InstallerService
     /** @throws JsonException */
     private function writeAuditEntry(PDO $pdo, int $adminId): void
     {
+        $version = (string) Config::load($this->root)->get('app.version', 'unknown');
         $statement = $pdo->prepare(
             'INSERT INTO audit_log (actor_type, staff_user_id, action, entity_type, entity_id, metadata, created_at) '
             . 'VALUES (:actor_type, :staff_user_id, :action, :entity_type, :entity_id, :metadata, CURRENT_TIMESTAMP)'
@@ -190,7 +192,7 @@ final class InstallerService
             'action' => 'system.installation.completed',
             'entity_type' => 'system',
             'entity_id' => 'fachdock',
-            'metadata' => json_encode(['version' => '0.1.0-dev'], JSON_THROW_ON_ERROR),
+            'metadata' => json_encode(['version' => $version], JSON_THROW_ON_ERROR),
         ]);
     }
 
