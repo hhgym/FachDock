@@ -2,11 +2,10 @@
 
 declare(strict_types=1);
 
-/**
- * Copy this file to config/secrets.local.php and fill in local secrets.
- * Never commit secrets.local.php.
- */
 return [
+    'database' => [
+        'password' => '',
+    ],
     'stripe' => [
         'secret_key' => '',
         'webhook_secret' => '',
