@@ -15,6 +15,7 @@ final class LockerRecommendationService
         private readonly PDO $pdo,
         private readonly AllocationRuleEvaluator $evaluator,
         private readonly LockerRecommendationRanker $ranker = new LockerRecommendationRanker(),
+        private readonly ProjectedGradeResolver $gradeResolver = new ProjectedGradeResolver(),
     ) {
     }
 
@@ -44,12 +45,15 @@ final class LockerRecommendationService
         bool $allowBeforeOpening = false,
     ): array {
         $student = $this->student($studentId);
-        $grade = $projectedGrade ?? (int) $student['grade'];
+        $schoolYear = $this->schoolYearAvailability($schoolYearId, $allowBeforeOpening);
+        $grade = $projectedGrade ?? $this->gradeResolver->resolve(
+            (int) $student['grade'],
+            $schoolYear['starts_on'],
+        );
         if ($grade < 5 || $grade > 12) {
             throw new DomainException('Die prognostizierte Klassenstufe muss zwischen 5 und 12 liegen.');
         }
 
-        $this->assertSchoolYearAvailable($schoolYearId, $allowBeforeOpening);
         $this->assertStudentHasNoBooking($studentId, $schoolYearId);
 
         $statement = $this->pdo->prepare(
@@ -131,6 +135,7 @@ final class LockerRecommendationService
                 'area_name' => (string) $row['area_name'],
                 'group_code' => (string) $row['group_code'],
                 'matched_soft_rule_ids' => $decision->snapshot['matched_soft_rule_ids'] ?? [],
+                'projected_grade' => $grade,
             ];
         }
 
@@ -144,6 +149,14 @@ final class LockerRecommendationService
         });
 
         return $result;
+    }
+
+    public function projectedGradeForStudent(int $studentId, int $schoolYearId): int
+    {
+        $student = $this->student($studentId);
+        $schoolYear = $this->schoolYearAvailability($schoolYearId, true);
+
+        return $this->gradeResolver->resolve((int) $student['grade'], $schoolYear['starts_on']);
     }
 
     /** @return list<array{id: int, matrikelnummer: string, first_name: string, last_name: string, class_name: string, grade: int}> */
@@ -201,13 +214,14 @@ final class LockerRecommendationService
         ];
     }
 
-    private function assertSchoolYearAvailable(int $schoolYearId, bool $allowBeforeOpening): void
+    /** @return array{starts_on: string} */
+    private function schoolYearAvailability(int $schoolYearId, bool $allowBeforeOpening): array
     {
         if ($schoolYearId < 1) {
             throw new DomainException('Das Schuljahr ist ungültig.');
         }
         $statement = $this->pdo->prepare(
-            'SELECT status, ends_on, new_booking_opens_on FROM school_years WHERE id = :id'
+            'SELECT status, starts_on, ends_on, new_booking_opens_on FROM school_years WHERE id = :id'
         );
         $statement->execute(['id' => $schoolYearId]);
         $row = $statement->fetch();
@@ -220,6 +234,8 @@ final class LockerRecommendationService
         if (!$allowBeforeOpening && (string) $row['new_booking_opens_on'] > date('Y-m-d')) {
             throw new DomainException('Reguläre Neubuchungen für dieses Schuljahr sind noch nicht geöffnet.');
         }
+
+        return ['starts_on' => (string) $row['starts_on']];
     }
 
     private function assertStudentHasNoBooking(int $studentId, int $schoolYearId): void

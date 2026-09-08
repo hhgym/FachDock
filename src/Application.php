@@ -15,9 +15,12 @@ use FachDock\Booking\AllocationRuleAdminController;
 use FachDock\Booking\AllocationRuleEvaluator;
 use FachDock\Booking\AllocationRuleService;
 use FachDock\Booking\AllocationRuleTestService;
+use FachDock\Booking\BookingSelectionAdminController;
 use FachDock\Booking\LockerRecommendationAdminController;
 use FachDock\Booking\LockerRecommendationRanker;
 use FachDock\Booking\LockerRecommendationService;
+use FachDock\Booking\ProjectedGradeResolver;
+use FachDock\Booking\ReservationService;
 use FachDock\Config\Config;
 use FachDock\Database\ConnectionFactory;
 use FachDock\Http\Request;
@@ -163,16 +166,41 @@ final class Application
             $csrf,
         ))->register($router);
 
+        $gradeResolver = new ProjectedGradeResolver();
+        $recommendationRanker = new LockerRecommendationRanker();
+        $recommendations = new LockerRecommendationService(
+            $pdo,
+            $allocationEvaluator,
+            $recommendationRanker,
+            $gradeResolver,
+        );
+        $recommendationCount = $this->configInt('booking.recommendation_count', 3);
+
         (new LockerRecommendationAdminController(
-            new LockerRecommendationService(
-                $pdo,
-                $allocationEvaluator,
-                new LockerRecommendationRanker(),
-            ),
+            $recommendations,
             $schoolYears,
             $sessions,
             $views,
-            $this->configInt('booking.recommendation_count', 3),
+            $recommendationCount,
+        ))->register($router);
+
+        $reservations = new ReservationService(
+            $pdo,
+            $this->configInt('booking.reservation_minutes', 15),
+            $this->configInt('booking.payment_grace_minutes', 30),
+            $allocationEvaluator,
+            $gradeResolver,
+        );
+        (new BookingSelectionAdminController(
+            $recommendations,
+            $reservations,
+            $schoolYears,
+            $sessions,
+            $audit,
+            $this->logger,
+            $views,
+            $csrf,
+            $recommendationCount,
         ))->register($router);
 
         $releaseClient = new GitHubReleaseClient();

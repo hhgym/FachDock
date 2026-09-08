@@ -13,11 +13,18 @@ use Throwable;
 
 final class ReservationService
 {
+    private readonly AllocationRuleEvaluator $evaluator;
+    private readonly ProjectedGradeResolver $gradeResolver;
+
     public function __construct(
         private readonly PDO $pdo,
         private readonly int $reservationMinutes = 15,
         private readonly int $paymentGraceMinutes = 30,
+        ?AllocationRuleEvaluator $evaluator = null,
+        ?ProjectedGradeResolver $gradeResolver = null,
     ) {
+        $this->evaluator = $evaluator ?? new AllocationRuleEvaluator($pdo);
+        $this->gradeResolver = $gradeResolver ?? new ProjectedGradeResolver();
     }
 
     /** @throws JsonException */
@@ -36,11 +43,14 @@ final class ReservationService
         try {
             $this->expireStaleWithinTransaction();
             $currentGrade = $this->activeStudentGrade($studentId);
-            $targetGrade = $projectedGrade ?? $currentGrade;
-            $this->assertBookableSchoolYear($schoolYearId, $allowBeforeOpening);
+            $schoolYearStartsOn = $this->assertBookableSchoolYear($schoolYearId, $allowBeforeOpening);
+            $targetGrade = $projectedGrade ?? $this->gradeResolver->resolve($currentGrade, $schoolYearStartsOn);
+            if ($targetGrade < 5 || $targetGrade > 12) {
+                throw new DomainException('Die prognostizierte Klassenstufe muss zwischen 5 und 12 liegen.');
+            }
             $this->assertBookableLocker($schoolYearId, $lockerId);
 
-            $decision = (new AllocationRuleEvaluator($this->pdo))->evaluate($schoolYearId, $targetGrade, $lockerId);
+            $decision = $this->evaluator->evaluate($schoolYearId, $targetGrade, $lockerId);
             if (!$decision->allowed) {
                 throw new DomainException($decision->reason ?? 'Das Schließfach entspricht nicht den Zuteilungsregeln.');
             }
@@ -192,6 +202,67 @@ final class ReservationService
         }
     }
 
+    /**
+     * @return array{
+     *     reservation_id: int,
+     *     locker_id: int,
+     *     short_name: string,
+     *     projected_grade: int,
+     *     status: string,
+     *     expires_at: string,
+     *     payment_grace_expires_at: string|null,
+     *     long_name: string
+     * }|null
+     */
+    public function activeForStudent(int $studentId, int $schoolYearId): ?array
+    {
+        if ($studentId < 1 || $schoolYearId < 1) {
+            throw new DomainException('Schüler und Schuljahr müssen gültig sein.');
+        }
+        $this->expireStale();
+
+        $statement = $this->pdo->prepare(
+            'SELECT lr.id AS reservation_id, lr.locker_id, lr.projected_grade, lr.status, lr.expires_at, '
+            . 'lr.payment_grace_expires_at, l.short_name, l.position_no AS locker_position, '
+            . 'c.position_no AS corpus_position, cg.code AS group_code, a.code AS area_code, f.code AS floor_code '
+            . 'FROM reservation_slots rs '
+            . 'INNER JOIN locker_reservations lr ON lr.id = rs.reservation_id '
+            . 'INNER JOIN lockers l ON l.id = lr.locker_id '
+            . 'INNER JOIN corpuses c ON c.id = l.corpus_id '
+            . 'INNER JOIN cabinet_groups cg ON cg.id = c.cabinet_group_id '
+            . 'INNER JOIN areas a ON a.id = cg.area_id '
+            . 'INNER JOIN floors f ON f.id = a.floor_id '
+            . 'WHERE rs.student_id = :student_id AND rs.school_year_id = :school_year_id'
+        );
+        $statement->execute([
+            'student_id' => $studentId,
+            'school_year_id' => $schoolYearId,
+        ]);
+        $row = $statement->fetch();
+        if (!is_array($row)) {
+            return null;
+        }
+
+        return [
+            'reservation_id' => (int) $row['reservation_id'],
+            'locker_id' => (int) $row['locker_id'],
+            'short_name' => (string) $row['short_name'],
+            'projected_grade' => (int) $row['projected_grade'],
+            'status' => (string) $row['status'],
+            'expires_at' => (string) $row['expires_at'],
+            'payment_grace_expires_at' => $row['payment_grace_expires_at'] !== null
+                ? (string) $row['payment_grace_expires_at']
+                : null,
+            'long_name' => \FachDock\Location\LockerNaming::longName(
+                (string) $row['floor_code'],
+                (string) $row['area_code'],
+                (string) $row['group_code'],
+                (int) $row['corpus_position'],
+                (int) $row['locker_position'],
+            ),
+        ];
+    }
+
     private function expireStaleWithinTransaction(): int
     {
         $condition = "(lr.status = 'active' AND lr.expires_at <= CURRENT_TIMESTAMP) "
@@ -222,10 +293,10 @@ final class ReservationService
         return (int) $grade;
     }
 
-    private function assertBookableSchoolYear(int $schoolYearId, bool $allowBeforeOpening): void
+    private function assertBookableSchoolYear(int $schoolYearId, bool $allowBeforeOpening): string
     {
         $statement = $this->pdo->prepare(
-            'SELECT status, (new_booking_opens_on <= CURRENT_DATE) AS booking_open, '
+            'SELECT status, starts_on, (new_booking_opens_on <= CURRENT_DATE) AS booking_open, '
             . '(ends_on >= CURRENT_DATE) AS year_not_ended '
             . 'FROM school_years WHERE id = :id FOR UPDATE'
         );
@@ -240,6 +311,8 @@ final class ReservationService
         if (!$allowBeforeOpening && (int) $row['booking_open'] !== 1) {
             throw new DomainException('Reguläre Neubuchungen für dieses Schuljahr sind noch nicht geöffnet.');
         }
+
+        return (string) $row['starts_on'];
     }
 
     private function assertBookableLocker(int $schoolYearId, int $lockerId): void
