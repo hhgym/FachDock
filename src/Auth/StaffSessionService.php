@@ -122,16 +122,22 @@ final class StaffSessionService
     /** @return list<array<string, mixed>> */
     public function activeSessionsForUser(int $staffUserId): array
     {
+        $idle = max(1, $this->idleTimeoutMinutes);
         $statement = $this->pdo->prepare(
             'SELECT id, ip_address, user_agent, created_at, last_seen_at, expires_at '
             . 'FROM staff_sessions '
-            . 'WHERE staff_user_id = :user_id AND revoked_at IS NULL AND expires_at > CURRENT_TIMESTAMP '
+            . 'WHERE staff_user_id = :user_id '
+            . 'AND revoked_at IS NULL '
+            . 'AND expires_at > CURRENT_TIMESTAMP '
+            . 'AND last_seen_at >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL ' . $idle . ' MINUTE) '
             . 'ORDER BY last_seen_at DESC'
         );
         $statement->execute(['user_id' => $staffUserId]);
-        $rows = $statement->fetchAll();
 
-        return is_array($rows) ? $rows : [];
+        /** @var list<array<string, mixed>> $rows */
+        $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        return $rows;
     }
 
     public function revokeSession(int $staffUserId, int $sessionId): void
