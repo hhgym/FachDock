@@ -63,6 +63,20 @@ final class Request
         return is_scalar($value) ? trim((string) $value) : $default;
     }
 
+    public function clientIp(): string
+    {
+        $value = $this->server['REMOTE_ADDR'] ?? '';
+
+        return is_scalar($value) ? mb_substr((string) $value, 0, 45) : '';
+    }
+
+    public function userAgent(): string
+    {
+        $value = $this->server['HTTP_USER_AGENT'] ?? '';
+
+        return is_scalar($value) ? mb_substr((string) $value, 0, 500) : '';
+    }
+
     public function isSecure(): bool
     {
         return ($this->server['HTTPS'] ?? '') === 'on'

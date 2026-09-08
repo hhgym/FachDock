@@ -13,6 +13,13 @@ return [
         'installed' => false,
         'school_name' => '',
     ],
+    'auth' => [
+        'password_min_length' => 12,
+        'max_failed_attempts' => 5,
+        'lockout_minutes' => 15,
+        'session_max_lifetime_minutes' => 480,
+        'session_idle_timeout_minutes' => 60,
+    ],
     'database' => [
         'driver' => 'mysql',
         'host' => '127.0.0.1',
