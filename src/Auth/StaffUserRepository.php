@@ -8,6 +8,12 @@ use PDO;
 
 final class StaffUserRepository
 {
+    private const FIND_BY_IDENTIFIER_SQL = 'SELECT id, username, display_name, email, password_hash, role, active, '
+        . 'failed_login_attempts, locked_until '
+        . 'FROM staff_users '
+        . 'WHERE username = :username_identifier OR email = :email_identifier '
+        . 'LIMIT 1';
+
     public function __construct(private readonly PDO $pdo)
     {
     }
@@ -15,14 +21,11 @@ final class StaffUserRepository
     /** @return array<string, mixed>|null */
     public function findByIdentifier(string $identifier): ?array
     {
-        $statement = $this->pdo->prepare(
-            'SELECT id, username, display_name, email, password_hash, role, active, '
-            . 'failed_login_attempts, locked_until '
-            . 'FROM staff_users '
-            . 'WHERE username = :identifier OR email = :identifier '
-            . 'LIMIT 1'
-        );
-        $statement->execute(['identifier' => $identifier]);
+        $statement = $this->pdo->prepare(self::FIND_BY_IDENTIFIER_SQL);
+        $statement->execute([
+            'username_identifier' => $identifier,
+            'email_identifier' => $identifier,
+        ]);
 
         return $this->fetchRow($statement);
     }
