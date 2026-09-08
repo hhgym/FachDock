@@ -21,6 +21,7 @@ return [
         'session_max_lifetime_minutes' => 480,
         'session_idle_timeout_minutes' => 60,
         'parent_magic_link_minutes' => 15,
+        'parent_session_lifetime_minutes' => 1440,
     ],
     'booking' => [
         'recommendation_count' => 3,

@@ -29,7 +29,7 @@ $formValue = static function (array $form, string $key): string {
 <body>
 <header class="topbar">
     <div><strong>FachDock</strong> · Elternkontakte</div>
-    <div class="topbar-actions"><a href="/admin/students">Schüler</a><a href="/">Dashboard</a></div>
+    <div class="topbar-actions"><a href="/admin/mail">E-Mail</a><a href="/admin/students">Schüler</a><a href="/">Dashboard</a></div>
 </header>
 <main class="shell stack">
     <header class="hero">
@@ -44,7 +44,7 @@ $formValue = static function (array $form, string $key): string {
 
     <section class="card stack">
         <h2>Elternkontakt mit Schüler verknüpfen</h2>
-        <p class="form-hint">Die Verknüpfung durch die Administration bestätigt nicht die Inhaberschaft der E-Mail-Adresse. Neue Kontakte bleiben bis zur späteren E-Mail-Verifikation im Status „ausstehend“.</p>
+        <p class="form-hint">Die Verknüpfung durch die Administration bestätigt nicht die Inhaberschaft der E-Mail-Adresse. Neue Kontakte bleiben bis zur Bestätigung über einen Magic Link im Status „ausstehend“.</p>
         <form method="post" action="/admin/parents/link" class="grid">
             <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
             <label>E-Mail-Adresse
@@ -101,7 +101,7 @@ $formValue = static function (array $form, string $key): string {
 
     <section class="card stack">
         <div class="school-year-heading">
-            <div><h2>Elternkontakte</h2><p class="form-hint">Verifikation erfolgt später ausschließlich über einen einmaligen Magic Link an die gespeicherte E-Mail-Adresse.</p></div>
+            <div><h2>Elternkontakte</h2><p class="form-hint">Die Verifikation erfolgt ausschließlich über einen einmaligen Link an die gespeicherte E-Mail-Adresse.</p></div>
             <span class="badge"><?= count($contacts) ?> Kontakte</span>
         </div>
         <?php if ($contacts === []): ?>
@@ -109,7 +109,7 @@ $formValue = static function (array $form, string $key): string {
         <?php else: ?>
             <div class="table-scroll">
                 <table class="data-table">
-                    <thead><tr><th>E-Mail</th><th>Name</th><th>Status</th><th>Verifiziert</th><th>Aktive Kinder</th></tr></thead>
+                    <thead><tr><th>E-Mail</th><th>Name</th><th>Status</th><th>Verifiziert</th><th>Aktive Kinder</th><th>Aktion</th></tr></thead>
                     <tbody>
                     <?php foreach ($contacts as $contact): ?>
                         <tr>
@@ -118,6 +118,15 @@ $formValue = static function (array $form, string $key): string {
                             <td><?= !$contact['active'] ? 'deaktiviert' : ((string) $contact['status'] === 'verified' ? 'verifiziert' : 'ausstehend') ?></td>
                             <td><?= $contact['verified_at'] !== null ? $e((string) $contact['verified_at']) : '–' ?></td>
                             <td><?= (int) $contact['active_link_count'] ?></td>
+                            <td>
+                                <?php if ($contact['active'] && $contact['verified_at'] === null): ?>
+                                    <form method="post" action="/admin/parents/send-verification">
+                                        <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+                                        <input type="hidden" name="parent_contact_id" value="<?= (int) $contact['id'] ?>">
+                                        <button class="button button-secondary" type="submit">Bestätigungslink senden</button>
+                                    </form>
+                                <?php else: ?>–<?php endif; ?>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody>
@@ -128,7 +137,7 @@ $formValue = static function (array $form, string $key): string {
 
     <section class="card">
         <h2>Magic Links</h2>
-        <p>Die Token-Infrastruktur ist vorbereitet: Tokens sind zufällig, 15 Minuten gültig, nur einmal verwendbar und werden ausschließlich gehasht gespeichert. Ein Versand-Button wird erst ergänzt, wenn die E-Mail-Queue und SMTP-Auslieferung implementiert sind.</p>
+        <p>Magic Links sind zufällig, standardmäßig 15 Minuten gültig, nur einmal verwendbar und werden ausschließlich gehasht gespeichert. Der Klartext-Link wird nur für den Versand in der E-Mail-Queue benötigt und nach erfolgreichem Versand aus dem Queue-Eintrag entfernt.</p>
     </section>
 </main>
 </body>

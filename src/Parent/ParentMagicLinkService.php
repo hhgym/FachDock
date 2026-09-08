@@ -23,7 +23,7 @@ final class ParentMagicLinkService
         ParentMagicLinkPurpose $purpose,
         ?string $requestedIp = null,
         ?string $userAgent = null,
-    ): string {
+    ): IssuedParentMagicLink {
         if ($parentContactId < 1) {
             throw new DomainException('Der Elternkontakt ist ungültig.');
         }
@@ -63,9 +63,21 @@ final class ParentMagicLinkService
                 'requested_ip' => $this->nullableLimited($requestedIp, 45),
                 'user_agent' => $this->nullableLimited($userAgent, 500),
             ]);
+            $linkId = (int) $this->pdo->lastInsertId();
+            if ($linkId < 1) {
+                throw new RuntimeException('Der Magic Link konnte nicht angelegt werden.');
+            }
+
+            $expiry = $this->pdo->prepare('SELECT expires_at FROM parent_magic_links WHERE id = :id');
+            $expiry->execute(['id' => $linkId]);
+            $expiresAt = $expiry->fetchColumn();
+            if (!is_string($expiresAt) || $expiresAt === '') {
+                throw new RuntimeException('Die Gültigkeit des Magic Links konnte nicht bestimmt werden.');
+            }
+
             $this->pdo->commit();
 
-            return $rawToken;
+            return new IssuedParentMagicLink($rawToken, $expiresAt);
         } catch (Throwable $exception) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
