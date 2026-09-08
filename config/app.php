@@ -27,6 +27,7 @@ return [
         'recommendation_count' => 3,
         'reservation_minutes' => 15,
         'payment_grace_minutes' => 30,
+        'but_rejection_payment_days' => 14,
     ],
     'mail' => [
         'worker_batch_size' => 50,
