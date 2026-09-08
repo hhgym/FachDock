@@ -6,9 +6,9 @@ FachDock ist eine webbasierte Verwaltungs- und Buchungslösung für schulische S
 
 ## Projektstatus
 
-Aktuelle Version: **0.1.0**
+Aktuelle Version: **0.1.1**
 
-> FachDock befindet sich noch vor Version 1.0.0. Version 0.1.0 ist ein früher, installierbarer Teststand für die technische Basis, den Web-Installer, die lokale Administration, die Standort-/Schließfachstruktur und die Update-Routine. Sie ist noch nicht für den produktiven Schulbetrieb vorgesehen.
+> FachDock befindet sich noch vor Version 1.0.0. Version 0.1.1 ist ein früher, installierbarer Teststand für die technische Basis, den Web-Installer, die lokale Administration, die Standort-/Schließfachstruktur und die Update-Routine. Sie ist noch nicht für den produktiven Schulbetrieb vorgesehen.
 
 ## Bereits enthalten
 
@@ -56,7 +56,7 @@ FachDock verwendet Git Flow:
 - `release/*` – Release-Stabilisierung
 - `hotfix/*` – dringende Korrekturen veröffentlichter Versionen
 
-Stabile Versionen werden als GitHub Releases mit Tags wie `v0.1.0` und später `v1.0.0` veröffentlicht. FachDock berücksichtigt beim integrierten Update ausschließlich stabile Releases.
+Stabile Versionen werden als GitHub Releases mit Tags wie `v0.1.1` und später `v1.0.0` veröffentlicht. FachDock berücksichtigt beim integrierten Update ausschließlich stabile Releases.
 
 ## Installation
 
