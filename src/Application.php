@@ -7,7 +7,9 @@ namespace FachDock;
 use FachDock\Auth\AuthenticatedStaff;
 use FachDock\Auth\AuthenticationException;
 use FachDock\Auth\AuthenticationService;
+use FachDock\Auth\PasswordHasher;
 use FachDock\Auth\StaffSessionService;
+use FachDock\Auth\StaffUserRepository;
 use FachDock\Config\Config;
 use FachDock\Database\ConnectionFactory;
 use FachDock\Http\Request;
@@ -22,6 +24,9 @@ use FachDock\Location\LocationAdminController;
 use FachDock\Location\LocationCatalogService;
 use FachDock\Logging\LoggerFactory;
 use FachDock\Security\Csrf;
+use FachDock\Update\GitHubReleaseClient;
+use FachDock\Update\SelfUpdateService;
+use FachDock\Update\UpdateController;
 use FachDock\View\ViewRenderer;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -49,6 +54,15 @@ final class Application
     public function run(): void
     {
         $request = Request::fromGlobals();
+
+        if (is_file($this->root . '/storage/maintenance.flag')) {
+            Response::html(
+                '<h1>FachDock wird aktualisiert.</h1><p>Bitte laden Sie die Seite in Kürze erneut.</p>',
+                503,
+            )->send();
+
+            return;
+        }
 
         try {
             $response = $this->router()->dispatch($request);
@@ -92,6 +106,18 @@ final class Application
             new LocationCatalogService($pdo),
             new CorpusTypeService($pdo),
             new CabinetGroupService($pdo),
+            $sessions,
+            $views,
+            $csrf,
+        ))->register($router);
+
+        $releaseClient = new GitHubReleaseClient();
+        (new UpdateController(
+            (string) $this->config->get('app.version', '0.1.0-dev'),
+            $releaseClient,
+            new SelfUpdateService($this->root, $pdo, $releaseClient),
+            new StaffUserRepository($pdo),
+            new PasswordHasher(),
             $sessions,
             $views,
             $csrf,
