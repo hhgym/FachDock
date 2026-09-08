@@ -139,7 +139,7 @@ final class StudentImportController
                 $pending['encoding'],
                 $pending['mapping'],
             );
-            $preview = $this->imports->preview($rows);
+            $preview = $this->imports->preview($rows, $pending['full_import']);
 
             return $this->page($staff, $preview, [], false);
         } catch (Throwable $exception) {
@@ -172,7 +172,7 @@ final class StudentImportController
                 $pending['encoding'],
                 $pending['mapping'],
             );
-            $preview = $this->imports->preview($rows);
+            $preview = $this->imports->preview($rows, $pending['full_import']);
             $result = $this->imports->commit(
                 $preview,
                 $staff->id,
@@ -181,9 +181,6 @@ final class StudentImportController
                 $request->postString('skip_invalid') === '1',
                 $pending['profile_id'],
             );
-            if ($pending['profile_id'] !== null) {
-                $this->profiles->markUsed($pending['profile_id']);
-            }
 
             $this->clearPending();
             $this->csrf->rotate();
