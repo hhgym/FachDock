@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FachDock;
 
+use FachDock\Audit\AuditLogger;
 use FachDock\Auth\AuthenticatedStaff;
 use FachDock\Auth\AuthenticationException;
 use FachDock\Auth\AuthenticationService;
@@ -111,6 +112,8 @@ final class Application
             new CorpusTypeService($pdo),
             new CabinetGroupService($pdo),
             $sessions,
+            new AuditLogger($pdo),
+            $this->logger,
             $views,
             $csrf,
         ))->register($router);

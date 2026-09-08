@@ -77,6 +77,7 @@ final class CorpusTypeService
         int $compartmentCount,
         array $barrierFriendlyPositions = [],
         array $dimensions = [],
+        bool $active = true,
     ): void {
         $this->assertTypeInput($code, $name, $compartmentCount, $barrierFriendlyPositions);
 
@@ -102,7 +103,8 @@ final class CorpusTypeService
                 'UPDATE corpus_types SET code = :code, name = :name, compartment_count = :count, '
                 . 'width_mm = :width, height_mm = :height, depth_mm = :depth, '
                 . 'compartment_width_mm = :compartment_width, compartment_height_mm = :compartment_height, '
-                . 'compartment_depth_mm = :compartment_depth, updated_at = CURRENT_TIMESTAMP WHERE id = :id'
+                . 'compartment_depth_mm = :compartment_depth, active = :active, '
+                . 'updated_at = CURRENT_TIMESTAMP WHERE id = :id'
             );
             $statement->execute([
                 'id' => $id,
@@ -115,6 +117,7 @@ final class CorpusTypeService
                 'compartment_width' => $this->dimension($dimensions, 'compartment_width_mm'),
                 'compartment_height' => $this->dimension($dimensions, 'compartment_height_mm'),
                 'compartment_depth' => $this->dimension($dimensions, 'compartment_depth_mm'),
+                'active' => $active ? 1 : 0,
             ]);
 
             $this->replacePositions($id, $compartmentCount, $barrierFriendlyPositions);
@@ -177,9 +180,7 @@ final class CorpusTypeService
         }
     }
 
-    /**
-     * @param array<string, int|null> $dimensions
-     */
+    /** @param array<string, int|null> $dimensions */
     private function dimension(array $dimensions, string $key): ?int
     {
         $value = $dimensions[$key] ?? null;

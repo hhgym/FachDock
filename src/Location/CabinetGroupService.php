@@ -25,11 +25,7 @@ final class CabinetGroupService
 
         $this->pdo->beginTransaction();
         try {
-            $area = $this->pdo->prepare('SELECT id FROM areas WHERE id = :id AND active = 1 FOR UPDATE');
-            $area->execute(['id' => $areaId]);
-            if ($area->fetchColumn() === false) {
-                throw new DomainException('Der ausgewählte Bereich ist nicht verfügbar.');
-            }
+            $this->assertActiveArea($areaId, true);
 
             $pendingCode = 'PENDING-' . bin2hex(random_bytes(4));
             $insert = $this->pdo->prepare(
@@ -79,11 +75,7 @@ final class CabinetGroupService
         $this->pdo->beginTransaction();
         try {
             $group = $this->loadGroupForUpdate($groupId);
-            if ($group['structure_locked_at'] !== null) {
-                throw new DomainException(
-                    'Die Korpusreihenfolge ist gesperrt, weil die Schrankgruppe bereits historisch verwendet wurde.'
-                );
-            }
+            $this->assertStructureUnlocked($group['structure_locked_at']);
 
             $deleteLockers = $this->pdo->prepare(
                 'DELETE l FROM lockers l INNER JOIN corpuses c ON c.id = l.corpus_id '
@@ -128,22 +120,51 @@ final class CabinetGroupService
 
     public function updateMetadata(int $groupId, int $areaId, ?string $name, bool $active): void
     {
-        $statement = $this->pdo->prepare(
-            'UPDATE cabinet_groups SET area_id = :area_id, name = :name, active = :active, '
-            . 'updated_at = CURRENT_TIMESTAMP WHERE id = :id'
-        );
-        $statement->execute([
-            'id' => $groupId,
-            'area_id' => $areaId,
-            'name' => $this->nullableName($name),
-            'active' => $active ? 1 : 0,
-        ]);
-        if ($statement->rowCount() === 0) {
-            $exists = $this->pdo->prepare('SELECT id FROM cabinet_groups WHERE id = :id');
-            $exists->execute(['id' => $groupId]);
-            if ($exists->fetchColumn() === false) {
-                throw new DomainException('Die Schrankgruppe existiert nicht.');
+        $this->pdo->beginTransaction();
+        try {
+            $this->loadGroupForUpdate($groupId);
+            $this->assertActiveArea($areaId, true);
+
+            $statement = $this->pdo->prepare(
+                'UPDATE cabinet_groups SET area_id = :area_id, name = :name, active = :active, '
+                . 'updated_at = CURRENT_TIMESTAMP WHERE id = :id'
+            );
+            $statement->execute([
+                'id' => $groupId,
+                'area_id' => $areaId,
+                'name' => $this->nullableName($name),
+                'active' => $active ? 1 : 0,
+            ]);
+            $this->pdo->commit();
+        } catch (Throwable $exception) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
             }
+            throw $exception;
+        }
+    }
+
+    public function deleteUnused(int $groupId): void
+    {
+        $this->pdo->beginTransaction();
+        try {
+            $group = $this->loadGroupForUpdate($groupId);
+            $this->assertStructureUnlocked($group['structure_locked_at']);
+
+            $deleteLockers = $this->pdo->prepare(
+                'DELETE l FROM lockers l INNER JOIN corpuses c ON c.id = l.corpus_id '
+                . 'WHERE c.cabinet_group_id = :group_id'
+            );
+            $deleteLockers->execute(['group_id' => $groupId]);
+            $this->pdo->prepare('DELETE FROM corpuses WHERE cabinet_group_id = :group_id')
+                ->execute(['group_id' => $groupId]);
+            $this->pdo->prepare('DELETE FROM cabinet_groups WHERE id = :id')->execute(['id' => $groupId]);
+            $this->pdo->commit();
+        } catch (Throwable $exception) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $exception;
         }
     }
 
@@ -236,6 +257,31 @@ final class CabinetGroupService
             'code' => (string) $row['code'],
             'structure_locked_at' => $row['structure_locked_at'] !== null ? (string) $row['structure_locked_at'] : null,
         ];
+    }
+
+    private function assertActiveArea(int $areaId, bool $lock): void
+    {
+        $sql = 'SELECT a.id FROM areas a '
+            . 'INNER JOIN floors f ON f.id = a.floor_id '
+            . 'INNER JOIN buildings b ON b.id = f.building_id '
+            . 'WHERE a.id = :id AND a.active = 1 AND f.active = 1 AND b.active = 1';
+        if ($lock) {
+            $sql .= ' FOR UPDATE';
+        }
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute(['id' => $areaId]);
+        if ($statement->fetchColumn() === false) {
+            throw new DomainException('Der ausgewählte Bereich ist nicht verfügbar oder übergeordnet deaktiviert.');
+        }
+    }
+
+    private function assertStructureUnlocked(?string $lockedAt): void
+    {
+        if ($lockedAt !== null) {
+            throw new DomainException(
+                'Die Struktur ist dauerhaft gesperrt, weil die Schrankgruppe bereits historisch verwendet wurde.'
+            );
+        }
     }
 
     /** @param list<int> $typeIds */
