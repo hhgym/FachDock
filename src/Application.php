@@ -19,6 +19,8 @@ use FachDock\Booking\BookingSelectionAdminController;
 use FachDock\Booking\LockerRecommendationAdminController;
 use FachDock\Booking\LockerRecommendationRanker;
 use FachDock\Booking\LockerRecommendationService;
+use FachDock\Booking\ParentBookingController;
+use FachDock\Booking\ParentBookingService;
 use FachDock\Booking\ProjectedGradeResolver;
 use FachDock\Booking\ReservationService;
 use FachDock\Config\Config;
@@ -261,6 +263,16 @@ final class Application
             $reservations,
             $schoolYears,
             $sessions,
+            $audit,
+            $this->logger,
+            $views,
+            $csrf,
+            $recommendationCount,
+        ))->register($router);
+        (new ParentBookingController(
+            new ParentBookingService($pdo, $recommendations, $reservations, $recommendationRanker),
+            $parentPortalAccess,
+            $parentSessions,
             $audit,
             $this->logger,
             $views,
