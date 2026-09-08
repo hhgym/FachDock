@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace FachDock\Booking;
 
-use DateTimeImmutable;
 use DomainException;
+use JsonException;
 use PDO;
 use PDOException;
 use RuntimeException;
@@ -20,10 +20,12 @@ final class ReservationService
     ) {
     }
 
+    /** @throws JsonException */
     public function reserve(
         int $studentId,
         int $schoolYearId,
         int $lockerId,
+        ?int $projectedGrade = null,
         bool $allowBeforeOpening = false,
     ): int {
         if ($studentId < 1 || $schoolYearId < 1 || $lockerId < 1) {
@@ -33,23 +35,37 @@ final class ReservationService
         $this->pdo->beginTransaction();
         try {
             $this->expireStaleWithinTransaction();
-            $this->assertActiveStudent($studentId);
+            $currentGrade = $this->activeStudentGrade($studentId);
+            $targetGrade = $projectedGrade ?? $currentGrade;
             $this->assertBookableSchoolYear($schoolYearId, $allowBeforeOpening);
             $this->assertBookableLocker($schoolYearId, $lockerId);
+
+            $decision = (new AllocationRuleEvaluator($this->pdo))->evaluate($schoolYearId, $targetGrade, $lockerId);
+            if (!$decision->allowed) {
+                throw new DomainException($decision->reason ?? 'Das Schließfach entspricht nicht den Zuteilungsregeln.');
+            }
+
             $this->replaceStudentReservationIfAllowed($studentId, $schoolYearId);
             $this->assertLockerHasNoReservation($lockerId, $schoolYearId);
 
             $duration = max(1, $this->reservationMinutes);
             $statement = $this->pdo->prepare(
                 'INSERT INTO locker_reservations '
-                . '(student_id, school_year_id, locker_id, status, expires_at, created_at, updated_at) '
-                . "VALUES (:student_id, :school_year_id, :locker_id, 'active', "
-                . 'DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ' . $duration . ' MINUTE), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+                . '(student_id, school_year_id, locker_id, projected_grade, status, expires_at, rule_snapshot, '
+                . 'created_at, updated_at) '
+                . "VALUES (:student_id, :school_year_id, :locker_id, :projected_grade, 'active', "
+                . 'DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ' . $duration . ' MINUTE), :rule_snapshot, '
+                . 'CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
             );
             $statement->execute([
                 'student_id' => $studentId,
                 'school_year_id' => $schoolYearId,
                 'locker_id' => $lockerId,
+                'projected_grade' => $targetGrade,
+                'rule_snapshot' => json_encode(
+                    $decision->snapshot,
+                    JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE,
+                ),
             ]);
 
             $reservationId = (int) $this->pdo->lastInsertId();
@@ -194,19 +210,23 @@ final class ReservationService
         return $updated === false ? 0 : $updated;
     }
 
-    private function assertActiveStudent(int $studentId): void
+    private function activeStudentGrade(int $studentId): int
     {
-        $statement = $this->pdo->prepare('SELECT id FROM students WHERE id = :id AND active = 1 FOR UPDATE');
+        $statement = $this->pdo->prepare('SELECT grade FROM students WHERE id = :id AND active = 1 FOR UPDATE');
         $statement->execute(['id' => $studentId]);
-        if ($statement->fetchColumn() === false) {
+        $grade = $statement->fetchColumn();
+        if ($grade === false) {
             throw new DomainException('Der Schüler ist nicht für eine Buchung verfügbar.');
         }
+
+        return (int) $grade;
     }
 
     private function assertBookableSchoolYear(int $schoolYearId, bool $allowBeforeOpening): void
     {
         $statement = $this->pdo->prepare(
-            'SELECT status, new_booking_opens_on FROM school_years WHERE id = :id FOR UPDATE'
+            'SELECT status, (new_booking_opens_on <= CURRENT_DATE) AS booking_open '
+            . 'FROM school_years WHERE id = :id FOR UPDATE'
         );
         $statement->execute(['id' => $schoolYearId]);
         $row = $statement->fetch();
@@ -216,11 +236,8 @@ final class ReservationService
         if ((string) $row['status'] === 'closed') {
             throw new DomainException('Das Schuljahr ist bereits geschlossen.');
         }
-        if (!$allowBeforeOpening) {
-            $opensOn = new DateTimeImmutable((string) $row['new_booking_opens_on']);
-            if (new DateTimeImmutable('today') < $opensOn) {
-                throw new DomainException('Reguläre Neubuchungen für dieses Schuljahr sind noch nicht geöffnet.');
-            }
+        if (!$allowBeforeOpening && (int) $row['booking_open'] !== 1) {
+            throw new DomainException('Reguläre Neubuchungen für dieses Schuljahr sind noch nicht geöffnet.');
         }
     }
 
