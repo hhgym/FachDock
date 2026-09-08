@@ -60,6 +60,10 @@ code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .sequence-list { margin: 0; padding-left: 26px; display: grid; gap: 6px; }
 .sequence-list li { padding-left: 3px; }
 .mini-button { margin-left: 8px; border: 0; background: transparent; color: #9f2f29; cursor: pointer; text-decoration: underline; font: inherit; font-size: .86rem; }
+.school-year-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.school-year-heading h2 { margin: 3px 0 4px; font-size: 1.5rem; }
+.school-year-actions { padding-top: 16px; border-top: 1px solid #edf0f4; }
+.badge { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 999px; background: #eef1f7; color: #44506a; font-size: .82rem; font-weight: 750; white-space: nowrap; }
 
 @media (max-width: 680px) {
     .shell { margin: 28px auto; }
@@ -67,5 +71,5 @@ code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
     .wide { grid-column: auto; }
     .card { padding: 18px; }
     .topbar { align-items: flex-start; }
-    .topbar-actions, .session-row { align-items: flex-start; flex-direction: column; }
+    .topbar-actions, .session-row, .school-year-heading { align-items: flex-start; flex-direction: column; }
 }
