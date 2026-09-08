@@ -5,6 +5,9 @@ on:
     branches:
       - develop
       - main
+      - 'feature/**'
+      - 'release/**'
+      - 'hotfix/**'
   pull_request:
     branches:
       - develop
@@ -14,7 +17,7 @@ permissions:
   contents: read
 
 jobs:
-  validate:
+  quality:
     runs-on: ubuntu-latest
 
     steps:
@@ -35,5 +38,13 @@ jobs:
         run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: PHP syntax check
-        run: |
-          find src config public migrations tests -type f -name '*.php' -print0 2>/dev/null | xargs -0 -r -n1 php -l
+        run: find src config public migrations tests -type f -name '*.php' -print0 | xargs -0 -r -n1 php -l
+
+      - name: PHPUnit
+        run: composer test
+
+      - name: PHPStan
+        run: composer analyse
+
+      - name: Code style
+        run: composer cs-check
