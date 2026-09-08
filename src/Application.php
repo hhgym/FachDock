@@ -16,6 +16,10 @@ use FachDock\Http\Router;
 use FachDock\Installation\InstallationState;
 use FachDock\Installation\InstallerService;
 use FachDock\Installation\SystemRequirements;
+use FachDock\Location\CabinetGroupService;
+use FachDock\Location\CorpusTypeService;
+use FachDock\Location\LocationAdminController;
+use FachDock\Location\LocationCatalogService;
 use FachDock\Logging\LoggerFactory;
 use FachDock\Security\Csrf;
 use FachDock\View\ViewRenderer;
@@ -83,6 +87,15 @@ final class Application
             $this->configInt('auth.lockout_minutes', 15),
             $this->configInt('auth.password_min_length', 12),
         );
+
+        (new LocationAdminController(
+            new LocationCatalogService($pdo),
+            new CorpusTypeService($pdo),
+            new CabinetGroupService($pdo),
+            $sessions,
+            $views,
+            $csrf,
+        ))->register($router);
 
         $router->get('/login', function (Request $request) use ($views, $csrf, $sessions): Response {
             unset($request);
