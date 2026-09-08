@@ -24,6 +24,9 @@ use FachDock\Location\LocationAdminController;
 use FachDock\Location\LocationCatalogService;
 use FachDock\Logging\LoggerFactory;
 use FachDock\Security\Csrf;
+use FachDock\Student\CsvStudentParser;
+use FachDock\Student\StudentImportController;
+use FachDock\Student\StudentImportService;
 use FachDock\Update\GitHubReleaseClient;
 use FachDock\Update\SelfUpdateService;
 use FachDock\Update\UpdateController;
@@ -106,6 +109,16 @@ final class Application
             new LocationCatalogService($pdo),
             new CorpusTypeService($pdo),
             new CabinetGroupService($pdo),
+            $sessions,
+            $views,
+            $csrf,
+        ))->register($router);
+
+        (new StudentImportController(
+            $this->root,
+            $pdo,
+            new CsvStudentParser(),
+            new StudentImportService($pdo),
             $sessions,
             $views,
             $csrf,
@@ -342,13 +355,18 @@ final class Application
         bool $success,
         int $status = 200,
     ): Response {
-        return Response::html($views->render('password.php', [
+        return Response::html($this->viewsOr($views)->render('password.php', [
             'staff' => $staff,
             'csrfToken' => $csrf->token(),
             'minimumLength' => $this->configInt('auth.password_min_length', 12),
             'errors' => $errors,
             'success' => $success,
         ]), $status);
+    }
+
+    private function viewsOr(ViewRenderer $views): ViewRenderer
+    {
+        return $views;
     }
 
     /**
