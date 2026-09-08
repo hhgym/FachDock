@@ -40,6 +40,7 @@ return new class () implements Migration {
             . 'checkout_url TEXT NULL,'
             . 'failure_code VARCHAR(128) NULL,'
             . 'failure_message VARCHAR(1000) NULL,'
+            . 'processing_started_at DATETIME NULL,'
             . 'created_at DATETIME NOT NULL,'
             . 'updated_at DATETIME NOT NULL,'
             . 'paid_at DATETIME NULL,'
