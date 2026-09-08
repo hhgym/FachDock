@@ -24,6 +24,8 @@ use FachDock\Location\CorpusTypeService;
 use FachDock\Location\LocationAdminController;
 use FachDock\Location\LocationCatalogService;
 use FachDock\Logging\LoggerFactory;
+use FachDock\SchoolYear\SchoolYearAdminController;
+use FachDock\SchoolYear\SchoolYearService;
 use FachDock\Security\Csrf;
 use FachDock\Student\CsvStudentParser;
 use FachDock\Student\StudentImportController;
@@ -106,13 +108,14 @@ final class Application
             $this->configInt('auth.lockout_minutes', 15),
             $this->configInt('auth.password_min_length', 12),
         );
+        $audit = new AuditLogger($pdo);
 
         (new LocationAdminController(
             new LocationCatalogService($pdo),
             new CorpusTypeService($pdo),
             new CabinetGroupService($pdo),
             $sessions,
-            new AuditLogger($pdo),
+            $audit,
             $this->logger,
             $views,
             $csrf,
@@ -125,6 +128,15 @@ final class Application
             new StudentImportService($pdo),
             new StudentImportProfileService($pdo),
             $sessions,
+            $views,
+            $csrf,
+        ))->register($router);
+
+        (new SchoolYearAdminController(
+            new SchoolYearService($pdo),
+            $sessions,
+            $audit,
+            $this->logger,
             $views,
             $csrf,
         ))->register($router);
