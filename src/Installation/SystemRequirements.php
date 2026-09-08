@@ -17,7 +17,7 @@ final class SystemRequirements
             $this->item('php', 'PHP 8.3 oder neuer', version_compare(PHP_VERSION, '8.3.0', '>='), PHP_VERSION),
         ];
 
-        foreach (['pdo', 'pdo_mysql', 'json', 'mbstring', 'openssl'] as $extension) {
+        foreach (['pdo', 'pdo_mysql', 'json', 'mbstring', 'openssl', 'curl', 'zip'] as $extension) {
             $requirements[] = $this->item(
                 'ext_' . $extension,
                 'PHP-Erweiterung ' . $extension,
