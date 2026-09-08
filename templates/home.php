@@ -24,6 +24,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
     <div><strong><?= $e($appName) ?></strong><?php if ($schoolName !== ''): ?> · <?= $e($schoolName) ?><?php endif; ?></div>
     <div class="topbar-actions">
         <a href="/admin/locations">Standorte</a>
+        <a href="/admin/but">BuT-Prüfung</a>
         <?php if ($staff->isAdministrator()): ?>
             <a href="/admin/students">Schüler</a>
             <a href="/admin/parents">Eltern</a>
@@ -50,7 +51,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
     </header>
     <section class="card">
         <h2>FachDock-Grundsystem</h2>
-        <p>Lokale Anmeldung, Standort- und Schülerverwaltung, Eltern-Kind-Verknüpfungen, Schuljahreskonfiguration, Zuteilungsregeln, Verfügbarkeitsprüfung, zeitlich begrenzte Schließfachreservierungen, versionierte E-Mail-Vorlagen und der stabile GitHub-Updatekanal sind aktiv.</p>
+        <p>Lokale Anmeldung, Standort- und Schülerverwaltung, Eltern-Kind-Verknüpfungen, Schuljahreskonfiguration, Zuteilungsregeln, Verfügbarkeitsprüfung, zeitlich begrenzte Schließfachreservierungen, BuT-Prüfungen, versionierte E-Mail-Vorlagen und der stabile GitHub-Updatekanal sind aktiv.</p>
     </section>
 </main>
 </body>

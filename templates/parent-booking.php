@@ -106,9 +106,11 @@ $money = static fn (int $cents): string => number_format($cents / 100, 2, ',', '
             </div>
 
             <?php if ($active !== null): ?>
-                <div class="alert">
-                    <strong>Reserviert: <?= $e((string) $active['short_name']) ?></strong>
-                    <div><?= $e((string) $active['long_name']) ?></div>
+                <div class="alert stack">
+                    <div>
+                        <strong>Reserviert: <?= $e((string) $active['short_name']) ?></strong>
+                        <div><?= $e((string) $active['long_name']) ?></div>
+                    </div>
                     <?php if ($paymentRunning): ?>
                         <p>Für diese Reservierung wurde bereits ein Zahlungsvorgang gestartet. Die Auswahl kann deshalb nicht mehr gewechselt oder freigegeben werden.</p>
                     <?php else: ?>
@@ -124,6 +126,28 @@ $money = static fn (int $cents): string => number_format($cents / 100, 2, ',', '
                 </div>
             <?php endif; ?>
         </section>
+
+        <?php if ($active !== null && !$paymentRunning): ?>
+            <section class="card stack">
+                <h2>Buchung abschließen</h2>
+                <p>Mit dem nächsten Schritt wird aus der Reservierung eine verbindliche Buchung. Die Online-Zahlung per Stripe wird separat ergänzt.</p>
+                <div class="entity-list">
+                    <div class="entity-row stack">
+                        <strong>BuT-Gebührenbefreiung</strong>
+                        <p class="form-hint">Wenn für Ihr Kind eine Gebührenbefreiung nach Bildung und Teilhabe geltend gemacht wird, wird das Schließfach sofort verbindlich gebucht und anschließend durch die Schließfachverwaltung geprüft.</p>
+                        <form method="post" action="/parent/booking/but">
+                            <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+                            <input type="hidden" name="reservation_id" value="<?= (int) $active['reservation_id'] ?>">
+                            <button class="button" type="submit">BuT-Befreiung beantragen und verbindlich buchen</button>
+                        </form>
+                    </div>
+                    <div class="entity-row stack">
+                        <strong>Online bezahlen</strong>
+                        <p class="form-hint">Der Stripe-Zahlungsweg wird im nächsten Buchungsbaustein aktiviert.</p>
+                    </div>
+                </div>
+            </section>
+        <?php endif; ?>
 
         <section class="card stack">
             <div class="school-year-heading">
@@ -198,10 +222,6 @@ $money = static fn (int $cents): string => number_format($cents / 100, 2, ',', '
                     </table>
                 </div>
             <?php endif; ?>
-        </section>
-
-        <section class="card">
-            <p><strong>Nächster Schritt:</strong> Die ausgewählte Reservierung wird später mit Zahlung bzw. BuT-Prüfung verbunden. Erst danach entsteht eine verbindliche Buchung.</p>
         </section>
     <?php endif; ?>
 </main>
