@@ -18,11 +18,26 @@ final class StripePhpGateway implements StripeGateway
     public function __construct(
         string $secretKey,
         private readonly string $webhookSecret,
+        string $mode = 'test',
     ) {
         $secretKey = trim($secretKey);
         if ($secretKey === '') {
             throw new DomainException('Stripe ist nicht vollständig konfiguriert.');
         }
+
+        $mode = mb_strtolower(trim($mode));
+        if (!in_array($mode, ['test', 'live'], true)) {
+            throw new DomainException('Der Stripe-Modus muss test oder live sein.');
+        }
+        $expectedPrefix = $mode === 'live' ? 'sk_live_' : 'sk_test_';
+        if (!str_starts_with($secretKey, $expectedPrefix)) {
+            throw new DomainException(
+                $mode === 'live'
+                    ? 'Für den Stripe-Live-Modus ist ein sk_live_-Schlüssel erforderlich.'
+                    : 'Für den Stripe-Testmodus ist ein sk_test_-Schlüssel erforderlich.',
+            );
+        }
+
         $this->client = new StripeClient($secretKey);
     }
 
@@ -36,18 +51,16 @@ final class StripePhpGateway implements StripeGateway
             return trim($existingCustomerId);
         }
 
-        $customerParams = [
+        $customerData = [
             'email' => $email,
             'metadata' => [
                 'fachdock_parent_contact_id' => (string) $parentContactId,
             ],
         ];
-        $name = $name !== null ? trim($name) : '';
-        if ($name !== '') {
-            $customerParams['name'] = $name;
+        if ($name !== null && trim($name) !== '') {
+            $customerData['name'] = trim($name);
         }
-
-        $customer = $this->client->customers->create($customerParams, [
+        $customer = $this->client->customers->create($customerData, [
             'idempotency_key' => 'fachdock-parent-' . $parentContactId,
         ]);
 
