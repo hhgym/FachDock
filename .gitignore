@@ -1,4 +1,5 @@
 /vendor/
+/config/app.local.php
 /config/secrets.local.php
 /storage/*
 !/storage/.gitkeep

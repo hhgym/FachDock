@@ -1,6 +1,6 @@
 # Development
 
-FachDock follows Git Flow.
+FachDock follows Git Flow with `develop` as the integration branch.
 
 ## Branches
 
@@ -14,13 +14,22 @@ FachDock follows Git Flow.
 
 Semantic Versioning is used. During initial development the project uses `0.x.y`; `1.0.0` will be the first production-ready major release.
 
-## Quality gates
+## Local quality checks
 
-Before merging feature work into `develop`, the project is intended to pass:
+Install development dependencies with Composer and run:
 
-- PHP syntax checks
+```bash
+composer check
+```
+
+This executes:
+
 - PHPUnit
 - PHPStan
-- PSR-12/code-style validation
+- PHP-CS-Fixer in dry-run mode
 
-CI is expanded incrementally as the corresponding tooling is added.
+PHP syntax is additionally checked in GitHub Actions.
+
+## Pull requests
+
+Feature branches are merged into `develop` through pull requests after successful CI checks. Release branches are stabilized before merging into `main` and `develop`.
