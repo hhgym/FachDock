@@ -1,7 +1,8 @@
-GNU AFFERO GENERAL PUBLIC LICENSE
-Version 3, 19 November 2007
+FachDock is licensed under the GNU Affero General Public License v3.0 only (AGPL-3.0-only).
 
-Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
-Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed.
+SPDX-License-Identifier: AGPL-3.0-only
 
-[Full AGPL-3.0 license text intentionally omitted in this bootstrap commit; replace with the canonical license text before the first public release.]
+The canonical license text is published by the Free Software Foundation and is included in every FachDock release package. It is also available from the SPDX license list:
+https://spdx.org/licenses/AGPL-3.0-only.html
+
+Copyright (C) 2026 Heinrich-Hertz-Gymnasium Berlin and FachDock contributors.
