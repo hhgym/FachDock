@@ -227,55 +227,55 @@ final class StripePaymentServiceIntegrationTest extends TestCase
     {
         $pdo = $this->pdo();
         $pdo->exec(
-            "INSERT INTO buildings (id, code, name, active, created_at, updated_at) VALUES "
+            'INSERT INTO buildings (id, code, name, active, created_at, updated_at) VALUES '
             . "(1, 'A', 'Hauptgebäude', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         );
         $pdo->exec(
-            "INSERT INTO floors (id, building_id, code, name, sort_order, active, created_at, updated_at) VALUES "
+            'INSERT INTO floors (id, building_id, code, name, sort_order, active, created_at, updated_at) VALUES '
             . "(1, 1, 'EG', 'Erdgeschoss', 0, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         );
         $pdo->exec(
-            "INSERT INTO areas (id, floor_id, code, name, active, created_at, updated_at) VALUES "
+            'INSERT INTO areas (id, floor_id, code, name, active, created_at, updated_at) VALUES '
             . "(1, 1, 'N', 'Nord', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         );
         $pdo->exec(
-            "INSERT INTO corpus_types (id, code, name, compartment_count, active, created_at, updated_at) VALUES "
+            'INSERT INTO corpus_types (id, code, name, compartment_count, active, created_at, updated_at) VALUES '
             . "(1, 'T1', 'Testkorpus', 1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         );
         $pdo->exec(
-            "INSERT INTO cabinet_groups (id, area_id, code, name, active, created_at, updated_at) VALUES "
+            'INSERT INTO cabinet_groups (id, area_id, code, name, active, created_at, updated_at) VALUES '
             . "(1, 1, 'G1', 'Gruppe 1', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         );
         $pdo->exec(
-            "INSERT INTO corpuses (id, cabinet_group_id, corpus_type_id, position_no, active, created_at, updated_at) VALUES "
-            . "(1, 1, 1, 1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            'INSERT INTO corpuses (id, cabinet_group_id, corpus_type_id, position_no, active, created_at, updated_at) VALUES '
+            . '(1, 1, 1, 1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
         );
         $pdo->exec(
-            "INSERT INTO lockers (id, corpus_id, position_no, short_name, barrier_friendly, bookable, active, operating_status, created_at, updated_at) VALUES "
+            'INSERT INTO lockers (id, corpus_id, position_no, short_name, barrier_friendly, bookable, active, operating_status, created_at, updated_at) VALUES '
             . "(1, 1, 1, 'A-001', 0, 1, 1, 'operational', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         );
         $pdo->exec(
-            "INSERT INTO students (id, matrikelnummer, first_name, last_name, class_name, grade, active, created_at, updated_at) VALUES "
+            'INSERT INTO students (id, matrikelnummer, first_name, last_name, class_name, grade, active, created_at, updated_at) VALUES '
             . "(1, '1001', 'Max', 'Muster', '8-1', 8, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         );
         $pdo->exec(
-            "INSERT INTO school_years (id, label, starts_on, ends_on, status, new_booking_opens_on, annual_fee_cents, created_at, updated_at) VALUES "
+            'INSERT INTO school_years (id, label, starts_on, ends_on, status, new_booking_opens_on, annual_fee_cents, created_at, updated_at) VALUES '
             . "(1, '2027/28', '2027-08-01', '2028-07-31', 'future', '2026-01-01', 2400, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         );
         $pdo->exec(
-            "INSERT INTO parent_contacts (id, email, first_name, last_name, status, verified_at, active, created_at, updated_at) VALUES "
+            'INSERT INTO parent_contacts (id, email, first_name, last_name, status, verified_at, active, created_at, updated_at) VALUES '
             . "(1, 'parent@example.test', 'Erika', 'Muster', 'verified', CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         );
         $pdo->exec(
-            "INSERT INTO parent_student_links (id, parent_contact_id, student_id, link_origin, started_at, created_at) VALUES "
+            'INSERT INTO parent_student_links (id, parent_contact_id, student_id, link_origin, started_at, created_at) VALUES '
             . "(1, 1, 1, 'staff', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         );
         $pdo->exec(
-            "INSERT INTO parent_student_link_slots (parent_contact_id, student_id, link_id, created_at) VALUES "
+            'INSERT INTO parent_student_link_slots (parent_contact_id, student_id, link_id, created_at) VALUES '
             . '(1, 1, 1, CURRENT_TIMESTAMP)'
         );
         $pdo->exec(
-            "INSERT INTO locker_reservations (id, student_id, school_year_id, locker_id, projected_grade, status, expires_at, rule_snapshot, created_at, updated_at) VALUES "
+            'INSERT INTO locker_reservations (id, student_id, school_year_id, locker_id, projected_grade, status, expires_at, rule_snapshot, created_at, updated_at) VALUES '
             . "(1, 1, 1, 1, 9, 'active', DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 2 HOUR), '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         );
         $pdo->exec(
