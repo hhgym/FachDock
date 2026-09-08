@@ -43,9 +43,6 @@ final class InstallerService
         (new MigrationRunner($pdo, $this->root . '/migrations'))->migrate();
 
         $hash = password_hash($adminPassword, PASSWORD_DEFAULT);
-        if (!is_string($hash)) {
-            throw new RuntimeException('Das Administrator-Passwort konnte nicht sicher gespeichert werden.');
-        }
 
         $pdo->beginTransaction();
         try {
