@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use FachDock\Application;
+use FachDock\Booking\BookingPaymentAdminEntryPoint;
 use FachDock\Http\Request;
 use FachDock\Payment\StripePaymentEntryPoint;
 
@@ -22,6 +23,11 @@ $app = Application::boot($root);
 $request = Request::fromGlobals();
 if (StripePaymentEntryPoint::handles($request)) {
     StripePaymentEntryPoint::run($root, $request);
+
+    exit;
+}
+if (BookingPaymentAdminEntryPoint::handles($request)) {
+    BookingPaymentAdminEntryPoint::run($root, $request);
 
     exit;
 }
