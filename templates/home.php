@@ -23,6 +23,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
 <header class="topbar">
     <div><strong><?= $e($appName) ?></strong><?php if ($schoolName !== ''): ?> · <?= $e($schoolName) ?><?php endif; ?></div>
     <div class="topbar-actions">
+        <a href="/admin/locations">Standorte</a>
         <a href="/account/password">Passwort</a>
         <a href="/account/sessions">Sitzungen</a>
         <form method="post" action="/logout">
@@ -39,7 +40,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
     </header>
     <section class="card">
         <h2>FachDock-Grundsystem</h2>
-        <p>Die lokale Anmeldung und serverseitig widerrufbare Sitzungen sind aktiv. Weitere Verwaltungsbereiche werden schrittweise ergänzt.</p>
+        <p>Lokale Anmeldung, serverseitig widerrufbare Sitzungen und die Verwaltung der physischen Schließfachstruktur sind aktiv.</p>
     </section>
 </main>
 </body>
