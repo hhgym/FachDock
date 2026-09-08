@@ -37,12 +37,14 @@ final class ViewRendererTest extends TestCase
 
     public function testStylesheetsReceiveContentBasedVersions(): void
     {
-        $appVersion = substr(hash_file('sha256', $this->root . '/public/assets/app.css'), 0, 12);
-        $navigationVersion = substr(hash_file('sha256', $this->root . '/public/assets/navigation.css'), 0, 12);
+        $appHash = hash_file('sha256', $this->root . '/public/assets/app.css');
+        $navigationHash = hash_file('sha256', $this->root . '/public/assets/navigation.css');
+        self::assertIsString($appHash);
+        self::assertIsString($navigationHash);
 
         $html = (new ViewRenderer($this->root . '/templates'))->render('test.php');
 
-        self::assertStringContainsString('/assets/app.css?v=' . $appVersion, $html);
-        self::assertStringContainsString('/assets/navigation.css?v=' . $navigationVersion, $html);
+        self::assertStringContainsString('/assets/app.css?v=' . substr($appHash, 0, 12), $html);
+        self::assertStringContainsString('/assets/navigation.css?v=' . substr($navigationHash, 0, 12), $html);
     }
 }
