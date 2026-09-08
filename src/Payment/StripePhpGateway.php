@@ -36,13 +36,18 @@ final class StripePhpGateway implements StripeGateway
             return trim($existingCustomerId);
         }
 
-        $customer = $this->client->customers->create([
+        $customerParams = [
             'email' => $email,
-            'name' => $name,
             'metadata' => [
                 'fachdock_parent_contact_id' => (string) $parentContactId,
             ],
-        ], [
+        ];
+        $name = $name !== null ? trim($name) : '';
+        if ($name !== '') {
+            $customerParams['name'] = $name;
+        }
+
+        $customer = $this->client->customers->create($customerParams, [
             'idempotency_key' => 'fachdock-parent-' . $parentContactId,
         ]);
 
@@ -128,7 +133,7 @@ final class StripePhpGateway implements StripeGateway
             $event->id,
             $event->type,
             $object->id,
-            is_string($object->payment_status) ? $object->payment_status : '',
+            $object->payment_status,
             $paymentIntentId,
         );
     }
