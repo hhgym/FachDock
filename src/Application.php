@@ -11,6 +11,10 @@ use FachDock\Auth\AuthenticationService;
 use FachDock\Auth\PasswordHasher;
 use FachDock\Auth\StaffSessionService;
 use FachDock\Auth\StaffUserRepository;
+use FachDock\Booking\AllocationRuleAdminController;
+use FachDock\Booking\AllocationRuleEvaluator;
+use FachDock\Booking\AllocationRuleService;
+use FachDock\Booking\AllocationRuleTestService;
 use FachDock\Config\Config;
 use FachDock\Database\ConnectionFactory;
 use FachDock\Http\Request;
@@ -109,9 +113,11 @@ final class Application
             $this->configInt('auth.password_min_length', 12),
         );
         $audit = new AuditLogger($pdo);
+        $locations = new LocationCatalogService($pdo);
+        $schoolYears = new SchoolYearService($pdo);
 
         (new LocationAdminController(
-            new LocationCatalogService($pdo),
+            $locations,
             new CorpusTypeService($pdo),
             new CabinetGroupService($pdo),
             $sessions,
@@ -133,7 +139,20 @@ final class Application
         ))->register($router);
 
         (new SchoolYearAdminController(
-            new SchoolYearService($pdo),
+            $schoolYears,
+            $sessions,
+            $audit,
+            $this->logger,
+            $views,
+            $csrf,
+        ))->register($router);
+
+        $allocationEvaluator = new AllocationRuleEvaluator($pdo);
+        (new AllocationRuleAdminController(
+            new AllocationRuleService($pdo),
+            new AllocationRuleTestService($pdo, $allocationEvaluator),
+            $locations,
+            $schoolYears,
             $sessions,
             $audit,
             $this->logger,
