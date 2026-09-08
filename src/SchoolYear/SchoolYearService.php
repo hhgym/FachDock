@@ -226,7 +226,7 @@ final class SchoolYearService
     {
         $this->synchronizeStatuses();
         $statement = $this->pdo->query(
-            "SELECT sy.id, sy.label, sy.starts_on, sy.ends_on, sy.status, sy.new_booking_opens_on, "
+            'SELECT sy.id, sy.label, sy.starts_on, sy.ends_on, sy.status, sy.new_booking_opens_on, '
             . 'sy.annual_fee_cents, sy.max_parent_changes, sy.closed_at, sy.reopened_until, sy.reopen_reason, '
             . 'su.display_name AS reopened_by_name, '
             . "CASE WHEN sy.status <> 'closed' OR sy.reopened_until > CURRENT_TIMESTAMP THEN 1 ELSE 0 END AS editable "
@@ -268,7 +268,7 @@ final class SchoolYearService
     public function find(int $schoolYearId): ?array
     {
         $statement = $this->pdo->prepare(
-            "SELECT sy.id, sy.label, sy.starts_on, sy.ends_on, sy.status, sy.new_booking_opens_on, "
+            'SELECT sy.id, sy.label, sy.starts_on, sy.ends_on, sy.status, sy.new_booking_opens_on, '
             . 'sy.annual_fee_cents, sy.max_parent_changes, sy.closed_at, sy.reopened_until, sy.reopen_reason, '
             . 'su.display_name AS reopened_by_name, '
             . "CASE WHEN sy.status <> 'closed' OR sy.reopened_until > CURRENT_TIMESTAMP THEN 1 ELSE 0 END AS editable "
