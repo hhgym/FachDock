@@ -52,6 +52,7 @@ final class StripePaymentEntryPoint
             new StripePhpGateway(
                 (string) $config->get('stripe.secret_key', ''),
                 (string) $config->get('stripe.webhook_secret', ''),
+                (string) $config->get('stripe.mode', 'test'),
             ),
             $reservations,
             new BookingService($pdo),
