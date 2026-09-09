@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace FachDock\Http;
 
+use FachDock\Security\SecurityHeaders;
+
 final class Response
 {
     /** @param array<string, string> $headers */
@@ -44,7 +46,11 @@ final class Response
     public function send(): void
     {
         http_response_code($this->status);
+        $headers = SecurityHeaders::forRequest();
         foreach ($this->headers as $name => $value) {
+            $headers[$name] = $value;
+        }
+        foreach ($headers as $name => $value) {
             header($name . ': ' . $value);
         }
         echo $this->body;

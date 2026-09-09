@@ -1,0 +1,77 @@
+.floorplan-page { width: min(1500px, calc(100% - 32px)); margin: 32px auto 64px; }
+.page-heading { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
+.page-heading h1 { margin: 2px 0 6px; }
+.floorplan-filters, .floorplan-upload { margin-bottom: 18px; }
+.floorplan-filter-form { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
+.floorplan-upload summary { cursor: pointer; }
+.floorplan-upload[open] summary { margin-bottom: 18px; }
+.floorplan-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(290px, 360px); gap: 18px; align-items: start; }
+.floorplan-stage-card { min-width: 0; }
+.floorplan-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 12px; }
+.floorplan-toolbar > div:first-child { display: grid; }
+.floorplan-toolbar span { color: #667085; }
+.button-row { display: flex; align-items: center; gap: 8px; }
+.button-row .button { padding: 8px 12px; }
+.button-row output { min-width: 58px; text-align: center; font-variant-numeric: tabular-nums; }
+.floorplan-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 12px; color: #667085; font-size: .86rem; }
+.floorplan-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.floorplan-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; flex: 0 0 auto; background: #98a2b3; }
+.floorplan-dot-free { background: #1f9d55; }
+.floorplan-dot-full { background: #c2413b; }
+.floorplan-dot-warning { background: #d99318; }
+.floorplan-scroll { max-height: 74vh; overflow: auto; border: 1px solid #dfe4ec; border-radius: 12px; background: #eef1f5; }
+.floorplan-canvas { position: relative; width: 100%; min-width: 640px; transform-origin: left top; user-select: none; }
+.floorplan-canvas img { display: block; width: 100%; height: auto; pointer-events: none; }
+.floorplan-marker { position: absolute; z-index: 2; display: grid; place-items: center; align-content: center; min-width: 42px; min-height: 34px; padding: 3px; border: 2px solid rgba(255,255,255,.9); border-radius: 9px; box-shadow: 0 3px 12px rgba(0,0,0,.22); color: #fff; cursor: pointer; font: inherit; font-weight: 800; line-height: 1.05; touch-action: none; overflow: hidden; }
+.floorplan-marker small { display: block; margin-top: 2px; font-size: .67rem; font-weight: 650; }
+.floorplan-marker-free { background: rgba(31,157,85,.9); }
+.floorplan-marker-full { background: rgba(194,65,59,.92); }
+.floorplan-marker-warning { background: rgba(217,147,24,.94); }
+.floorplan-canvas[data-editable="1"] .floorplan-marker { cursor: grab; }
+.floorplan-canvas[data-editable="1"] .floorplan-marker:active { cursor: grabbing; }
+.floorplan-sidebar { display: grid; gap: 18px; min-width: 0; }
+.floorplan-sidebar .card { padding: 18px; }
+.floorplan-group-summary { display: grid; gap: 5px; }
+.floorplan-group-row { width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 9px; border: 0; border-radius: 9px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.floorplan-group-row:hover { background: #f5f7fa; }
+.floorplan-group-row > span:nth-child(2) { display: grid; min-width: 0; }
+.floorplan-group-row small { color: #667085; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.floorplan-group-row > span:last-child { color: #667085; font-size: .82rem; white-space: nowrap; }
+.floorplan-add-placement { padding: 0 0 16px; border-bottom: 1px solid #edf0f4; }
+.floorplan-placement-list { display: grid; gap: 10px; margin-top: 14px; }
+.floorplan-placement-form { display: grid; grid-template-columns: 1fr repeat(4, 62px) auto; align-items: end; gap: 6px; padding: 10px; border: 1px solid #e5e8ee; border-radius: 10px; }
+.floorplan-placement-form > div { display: grid; min-width: 0; }
+.floorplan-placement-form small { color: #667085; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.floorplan-placement-form label { font-size: .72rem; }
+.floorplan-placement-form input { padding: 7px; }
+.floorplan-placement-form .button { padding: 8px 10px; }
+.floorplan-placement-dirty { border-color: #d99318; box-shadow: 0 0 0 2px rgba(217,147,24,.12); }
+.inline-form { margin: -4px 0 4px 10px; }
+.danger-zone { border-color: #f1c7c4; }
+.button-danger { background: #a52821; }
+.empty-state { text-align: center; padding: 44px; }
+.floorplan-dialog { width: min(780px, calc(100vw - 32px)); max-height: 82vh; padding: 24px; border: 0; border-radius: 16px; box-shadow: 0 24px 70px rgba(15,23,42,.28); }
+.floorplan-dialog::backdrop { background: rgba(15,23,42,.48); }
+.floorplan-dialog > form { position: absolute; top: 10px; right: 12px; }
+.dialog-close { border: 0; background: transparent; color: #475467; font-size: 1.8rem; cursor: pointer; }
+.floorplan-dialog h2 { margin-top: 0; }
+.floorplan-dialog table { width: 100%; border-collapse: collapse; }
+.floorplan-dialog th, .floorplan-dialog td { padding: 9px 10px; border-bottom: 1px solid #edf0f4; text-align: left; }
+.floorplan-locker-status { display: inline-flex; padding: 3px 8px; border-radius: 999px; font-size: .78rem; font-weight: 750; }
+.floorplan-locker-status-free { background: #e3f6ea; color: #176238; }
+.floorplan-locker-status-occupied { background: #fde8e6; color: #8b2d27; }
+.floorplan-locker-status-unavailable { background: #fff3d8; color: #805b0d; }
+@media (max-width: 1100px) {
+    .floorplan-layout { grid-template-columns: 1fr; }
+    .floorplan-sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .floorplan-sidebar .danger-zone { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+    .floorplan-page { width: min(100% - 20px, 1500px); margin-top: 18px; }
+    .floorplan-filter-form { grid-template-columns: 1fr; }
+    .floorplan-toolbar { align-items: flex-start; flex-direction: column; }
+    .floorplan-sidebar { grid-template-columns: 1fr; }
+    .floorplan-sidebar .danger-zone { grid-column: auto; }
+    .floorplan-placement-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .floorplan-placement-form > div, .floorplan-placement-form .button { grid-column: 1 / -1; }
+}
