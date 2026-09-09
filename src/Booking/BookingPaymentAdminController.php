@@ -8,10 +8,14 @@ use DomainException;
 use FachDock\Audit\AuditLogger;
 use FachDock\Auth\AuthenticatedStaff;
 use FachDock\Auth\StaffSessionService;
+use FachDock\Config\Config;
+use FachDock\Database\ConnectionFactory;
 use FachDock\Http\Request;
 use FachDock\Http\Response;
 use FachDock\Http\Router;
 use FachDock\Mail\BookingLifecycleNotificationService;
+use FachDock\Mail\MailQueueService;
+use FachDock\Mail\MailTemplateRenderer;
 use FachDock\Payment\PaidPaymentRecoveryService;
 use FachDock\Security\Csrf;
 use FachDock\View\ViewRenderer;
@@ -20,18 +24,47 @@ use Throwable;
 
 final class BookingPaymentAdminController
 {
+    private readonly BookingLifecycleService $lifecycle;
+    private readonly BookingLifecycleAdminService $lifecycleAdmin;
+    private readonly BookingLifecycleNotificationService $lifecycleNotifications;
+
     public function __construct(
         private readonly BookingPaymentAdminService $service,
         private readonly PaidPaymentRecoveryService $recovery,
-        private readonly BookingLifecycleService $lifecycle,
-        private readonly BookingLifecycleAdminService $lifecycleAdmin,
-        private readonly BookingLifecycleNotificationService $lifecycleNotifications,
         private readonly StaffSessionService $sessions,
         private readonly AuditLogger $audit,
         private readonly LoggerInterface $logger,
         private readonly ViewRenderer $views,
         private readonly Csrf $csrf,
+        ?BookingLifecycleService $lifecycle = null,
+        ?BookingLifecycleAdminService $lifecycleAdmin = null,
+        ?BookingLifecycleNotificationService $lifecycleNotifications = null,
     ) {
+        if ($lifecycle !== null && $lifecycleAdmin !== null && $lifecycleNotifications !== null) {
+            $this->lifecycle = $lifecycle;
+            $this->lifecycleAdmin = $lifecycleAdmin;
+            $this->lifecycleNotifications = $lifecycleNotifications;
+
+            return;
+        }
+
+        $root = dirname(__DIR__, 2);
+        $config = Config::load($root);
+        $pdo = ConnectionFactory::fromConfig($config);
+        $allocationRules = new AllocationRuleEvaluator($pdo);
+        $this->lifecycle = $lifecycle ?? new BookingLifecycleService(
+            $pdo,
+            $allocationRules,
+            (int) $config->get('booking.but_rejection_payment_days', 14),
+        );
+        $this->lifecycleAdmin = $lifecycleAdmin ?? new BookingLifecycleAdminService($pdo, $allocationRules);
+        $this->lifecycleNotifications = $lifecycleNotifications ?? new BookingLifecycleNotificationService(
+            $pdo,
+            new MailQueueService($pdo, new MailTemplateRenderer()),
+            (string) $config->get('app.base_url', ''),
+            (string) $config->get('app.school_name', ''),
+            $logger,
+        );
     }
 
     public function register(Router $router): void
