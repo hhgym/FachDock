@@ -185,6 +185,7 @@ final class FloorPlanController
         ]);
     }
 
+    /** @param list<string> $errors */
     private function page(
         Request $request,
         ?AuthenticatedStaff $staff,
