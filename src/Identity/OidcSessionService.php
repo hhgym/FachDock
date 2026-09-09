@@ -77,7 +77,7 @@ final class OidcSessionService
         $statement->execute(['token_hash' => hash('sha256', $token)]);
         $row = $statement->fetch(PDO::FETCH_ASSOC);
         if (!is_array($row)) {
-            unset($_SESSION[self::SESSION_KEY]);
+            $this->logout();
 
             return null;
         }
