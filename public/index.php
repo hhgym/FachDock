@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use FachDock\Application;
+use FachDock\Identity\IdentityFrontController;
 use FachDock\Operations\OperationsFrontController;
 use FachDock\Platform\PlatformFrontController;
 
@@ -17,6 +18,12 @@ if (!is_file($autoload)) {
 }
 
 require $autoload;
+
+$identityResponse = IdentityFrontController::handle($root);
+if ($identityResponse !== null) {
+    $identityResponse->send();
+    exit;
+}
 
 $platformResponse = PlatformFrontController::handle($root);
 if ($platformResponse !== null) {

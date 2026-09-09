@@ -23,6 +23,15 @@ return [
         'parent_magic_link_minutes' => 15,
         'parent_session_lifetime_minutes' => 1440,
     ],
+    'oidc' => [
+        'enabled' => false,
+        'issuer' => '',
+        'client_id' => '',
+        'scopes' => 'openid profile email iserv:uuid iserv:groups iserv:roles',
+        'student_auto_match' => 'email',
+        'teacher_role_names' => 'Lehrer, Lehrkräfte',
+        'session_lifetime_minutes' => 480,
+    ],
     'booking' => [
         'recommendation_count' => 3,
         'reservation_minutes' => 15,

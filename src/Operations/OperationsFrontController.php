@@ -10,6 +10,8 @@ use FachDock\Config\Config;
 use FachDock\Database\ConnectionFactory;
 use FachDock\Http\Request;
 use FachDock\Http\Response;
+use FachDock\Identity\OidcConfiguration;
+use FachDock\Identity\OidcSessionService;
 use FachDock\Installation\InstallationState;
 use FachDock\Logging\LoggerFactory;
 use FachDock\Mail\MailQueueService;
@@ -67,6 +69,13 @@ final class OperationsFrontController
             $pdo,
             self::configInt($config, 'auth.session_max_lifetime_minutes', 480),
             self::configInt($config, 'auth.session_idle_timeout_minutes', 60),
+        );
+        $oidcConfiguration = new OidcConfiguration($config);
+        $oidcSessions = new OidcSessionService(
+            $pdo,
+            $oidcConfiguration->sessionLifetimeMinutes(),
+            60,
+            $oidcConfiguration->enabled(),
         );
         $parentSessions = new ParentSessionService(
             $pdo,
@@ -130,7 +139,11 @@ final class OperationsFrontController
             return $parentSupport->report($request);
         }
 
-        $studentSessions = new StudentSupportSessionService($support, new AccessCodeGenerator());
+        $studentSessions = new StudentSupportSessionService(
+            $support,
+            new AccessCodeGenerator(),
+            $oidcSessions,
+        );
         $studentSupport = new StudentSupportController(
             $support,
             $studentSessions,
