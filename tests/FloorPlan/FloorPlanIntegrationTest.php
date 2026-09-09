@@ -52,7 +52,7 @@ final class FloorPlanIntegrationTest extends TestCase
     private function fixtures(PDO $pdo): void
     {
         $pdo->exec(
-            "INSERT INTO staff_users (id, username, display_name, email, password_hash, role, active, created_at, updated_at) "
+            'INSERT INTO staff_users (id, username, display_name, email, password_hash, role, active, created_at, updated_at) '
             . "VALUES (1, 'admin', 'Admin Test', 'admin@example.test', 'hash', 'administrator', 1, NOW(), NOW())"
         );
         $pdo->exec("INSERT INTO buildings (id, code, name, active, created_at, updated_at) VALUES (1, 'H', 'Hauptgebäude', 1, NOW(), NOW())");
@@ -60,9 +60,9 @@ final class FloorPlanIntegrationTest extends TestCase
         $pdo->exec("INSERT INTO areas (id, floor_id, code, name, active, created_at, updated_at) VALUES (1, 1, 'A', 'Flur A', 1, NOW(), NOW())");
         $pdo->exec("INSERT INTO corpus_types (id, code, name, compartment_count, active, created_at, updated_at) VALUES (1, 'STD3', 'Standard 3', 3, 1, NOW(), NOW())");
         $pdo->exec("INSERT INTO cabinet_groups (id, area_id, code, name, active, structure_locked_at, created_at, updated_at) VALUES (1, 1, 'A', 'Gruppe A', 1, NOW(), NOW(), NOW())");
-        $pdo->exec("INSERT INTO corpuses (id, cabinet_group_id, corpus_type_id, position_no, active, created_at, updated_at) VALUES (1, 1, 1, 1, 1, NOW(), NOW())");
+        $pdo->exec('INSERT INTO corpuses (id, cabinet_group_id, corpus_type_id, position_no, active, created_at, updated_at) VALUES (1, 1, 1, 1, 1, NOW(), NOW())');
         $pdo->exec(
-            "INSERT INTO lockers (id, corpus_id, position_no, short_name, barrier_friendly, bookable, active, operating_status, created_at, updated_at) VALUES "
+            'INSERT INTO lockers (id, corpus_id, position_no, short_name, barrier_friendly, bookable, active, operating_status, created_at, updated_at) VALUES '
             . "(1, 1, 1, 'A-01-1', 0, 1, 1, 'operational', NOW(), NOW()),"
             . "(2, 1, 2, 'A-01-2', 1, 1, 1, 'operational', NOW(), NOW()),"
             . "(3, 1, 3, 'A-01-3', 0, 0, 1, 'defective', NOW(), NOW())"
@@ -70,10 +70,10 @@ final class FloorPlanIntegrationTest extends TestCase
         $pdo->exec("INSERT INTO students (id, matrikelnummer, first_name, last_name, class_name, grade, active, created_at, updated_at) VALUES (1, '1001', 'Ada', 'Test', '7-1', 7, 1, NOW(), NOW())");
         $pdo->exec("INSERT INTO school_years (id, label, starts_on, ends_on, status, annual_fee_cents, new_booking_opens_on, created_at, updated_at) VALUES (1, '26/27', '2026-08-01', '2027-07-31', 'current', 1000, '2026-06-01', NOW(), NOW())");
         $pdo->exec(
-            "INSERT INTO bookings (id, student_id, school_year_id, status, projected_grade, valid_from, valid_until, initiated_by_type, annual_fee_cents, charged_fee_cents, student_snapshot, rule_snapshot, created_at, updated_at) "
+            'INSERT INTO bookings (id, student_id, school_year_id, status, projected_grade, valid_from, valid_until, initiated_by_type, annual_fee_cents, charged_fee_cents, student_snapshot, rule_snapshot, created_at, updated_at) '
             . "VALUES (1, 1, 1, 'active', 7, '2026-08-01', '2027-07-31', 'staff', 1000, 1000, '{}', '{}', NOW(), NOW())"
         );
-        $pdo->exec("INSERT INTO locker_occupancies (school_year_id, locker_id, booking_id, assigned_at) VALUES (1, 2, 1, NOW())");
+        $pdo->exec('INSERT INTO locker_occupancies (school_year_id, locker_id, booking_id, assigned_at) VALUES (1, 2, 1, NOW())');
     }
 
     private function database(): PDO
