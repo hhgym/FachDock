@@ -52,7 +52,7 @@ final class OidcSessionService
     public function current(): ?AuthenticatedOidcIdentity
     {
         if (!$this->enabled) {
-            unset($_SESSION[self::SESSION_KEY]);
+            $this->logout();
 
             return null;
         }
