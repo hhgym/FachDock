@@ -140,7 +140,7 @@ final class PaidPaymentRecoveryService
     private function extendPaymentGrace(int $reservationId): void
     {
         $statement = $this->pdo->prepare(
-            "UPDATE locker_reservations SET payment_grace_expires_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 5 MINUTE), "
+            'UPDATE locker_reservations SET payment_grace_expires_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 5 MINUTE), '
             . 'updated_at = CURRENT_TIMESTAMP '
             . "WHERE id = :id AND status = 'payment_running'"
         );
