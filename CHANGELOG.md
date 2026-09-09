@@ -6,6 +6,27 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-09
+
+### Added
+- Zentrale Buchungsverwaltung mit Schuljahr-, Status- und Suchfiltern sowie Detailansichten für Schüler, Schuljahr, Schließfach, Gebühren, Zahlungsbezug und Zuweisungshistorie.
+- Zentrale Zahlungsverwaltung mit Stripe-Status, Elternkonto, Schließfachbezug, Fehlerdaten, technischen Stripe-Referenzen und zugeordnetem Webhook-Verlauf.
+- Operatives Verwaltungsdashboard mit Kennzahlen für aktive Buchungen, offene BuT-Prüfungen, fällige Zahlungen, laufende Zahlungsverarbeitung, manuelle Zahlungsprüfungen und aktive Reservierungen.
+- Dashboard-Warnungen für `manual_review`-Zahlungen und nicht vollständig verarbeitete Stripe-Webhook-Ereignisse.
+- Sichere administrative Wiederherstellung bereits per Stripe bestätigter `manual_review`-Zahlungen, wenn die automatische Reservierung-zu-Buchung-Konvertierung fehlgeschlagen ist.
+- Automatisierte Tests für den Stripe-Konfigurationsstatus und ein MySQL-8.4-Integrationstest für die idempotente Wiederherstellung einer bereits bezahlten Zahlung.
+
+### Changed
+- Das Elternportal bietet Stripe Checkout nur noch an, wenn Secret Key, Webhook-Secret und eine HTTPS-Basis-URL konsistent konfiguriert sind.
+- Der Stripe-Testmodus wird im Elternportal und im Dashboard ausdrücklich gekennzeichnet.
+- Kostenfreie Buchungen können auch ohne eingerichtete Stripe-Zugangsdaten verbindlich abgeschlossen werden.
+- Stripe-Zahlungs-, Webhook-, Konfigurations- sowie Buchungs-/Zahlungsverwaltungsrouten laufen nun durch den normalen Application-Router und damit einheitlich durch Wartungsmodus und globale Fehlerbehandlung.
+- Die Hauptnavigation enthält unter „Buchungen“ eigene Einträge für Buchungs- und Zahlungsverwaltung.
+
+### Fixed
+- Bereits bestätigte Stripe-Zahlungen, bei denen die automatische Buchungsumwandlung scheitert, können ohne erneute Belastung und unter Beibehaltung der Konkurrenzsicherungen gezielt wiederhergestellt werden.
+- Eine fehlende oder unvollständige Stripe-Konfiguration führt nicht mehr dazu, dass im Elternportal ein nicht funktionsfähiger Zahlungsbutton angeboten wird.
+
 ## [0.4.0] - 2026-09-08
 
 ### Added
