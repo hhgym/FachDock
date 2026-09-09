@@ -558,7 +558,11 @@ final class BookingLifecycleService
 
     private function currentDatabaseDate(): string
     {
-        $value = $this->pdo->query('SELECT CURRENT_DATE')->fetchColumn();
+        $statement = $this->pdo->query('SELECT CURRENT_DATE');
+        if ($statement === false) {
+            throw new RuntimeException('Das aktuelle Datenbankdatum konnte nicht ermittelt werden.');
+        }
+        $value = $statement->fetchColumn();
         if (!is_string($value) || $value === '') {
             throw new RuntimeException('Das aktuelle Datenbankdatum konnte nicht ermittelt werden.');
         }
