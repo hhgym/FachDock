@@ -138,14 +138,14 @@ final class NavigationRenderer
         $groups[] = [
             'label' => 'Konfiguration',
             'items' => [
+                [
+                    'label' => 'Einstellungen',
+                    'href' => '/admin/config',
+                    'matches' => ['/admin/config'],
+                ],
                 ['label' => 'Schuljahre', 'href' => '/admin/school-years'],
                 ['label' => 'Zuteilungsregeln', 'href' => '/admin/allocation-rules'],
-                ['label' => 'E-Mail', 'href' => '/admin/mail'],
-                [
-                    'label' => 'Stripe & Zahlung',
-                    'href' => '/admin/config/stripe',
-                    'matches' => ['/admin/config/stripe'],
-                ],
+                ['label' => 'E-Mail-Vorlagen & Warteschlange', 'href' => '/admin/mail'],
             ],
         ];
         $groups[] = [
