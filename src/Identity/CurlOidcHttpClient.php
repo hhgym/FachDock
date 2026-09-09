@@ -30,6 +30,9 @@ final class CurlOidcHttpClient implements OidcHttpClient
      */
     private function request(string $method, string $url, ?string $body, array $headers): array
     {
+        if ($method === '') {
+            throw new RuntimeException('OIDC-HTTP-Methode darf nicht leer sein.');
+        }
         if (!str_starts_with(strtolower($url), 'https://')) {
             throw new RuntimeException('OIDC-Endpunkte müssen HTTPS verwenden.');
         }
