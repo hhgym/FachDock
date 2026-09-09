@@ -27,6 +27,7 @@ return new class () implements Migration {
             . 'display_name VARCHAR(255) NULL,'
             . 'email VARCHAR(255) NULL,'
             . "identity_type ENUM('student','teacher','pending') NOT NULL DEFAULT 'pending',"
+            . "assignment_source ENUM('automatic','manual') NOT NULL DEFAULT 'automatic',"
             . 'student_id BIGINT UNSIGNED NULL,'
             . 'active TINYINT(1) NOT NULL DEFAULT 1,'
             . 'last_login_at DATETIME NULL,'
