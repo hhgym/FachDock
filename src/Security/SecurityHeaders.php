@@ -6,7 +6,10 @@ namespace FachDock\Security;
 
 final class SecurityHeaders
 {
-    /** @return array<string, string> */
+    /**
+     * @param array<string, mixed>|null $server
+     * @return array<string, string>
+     */
     public static function forRequest(?array $server = null): array
     {
         $server ??= $_SERVER;
@@ -35,7 +38,8 @@ final class SecurityHeaders
         if ($https === 'on' || $https === '1') {
             return true;
         }
-        $forwarded = strtolower(trim(explode(',', (string) ($server['HTTP_X_FORWARDED_PROTO'] ?? ''))[0] ?? ''));
+        $forwardedParts = explode(',', (string) ($server['HTTP_X_FORWARDED_PROTO'] ?? ''));
+        $forwarded = strtolower(trim($forwardedParts[0]));
 
         return $forwarded === 'https';
     }
