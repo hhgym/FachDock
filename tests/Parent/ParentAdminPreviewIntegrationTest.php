@@ -21,7 +21,7 @@ final class ParentAdminPreviewIntegrationTest extends TestCase
         $staffToken = 'admin-preview-token';
         $staffTokenHash = hash('sha256', $staffToken);
         $pdo->exec(
-            "INSERT INTO staff_users (id, username, display_name, email, password_hash, role, active, created_at, updated_at) "
+            'INSERT INTO staff_users (id, username, display_name, email, password_hash, role, active, created_at, updated_at) '
             . "VALUES (1, 'admin', 'Admin Test', 'admin@example.test', 'fixture', 'administrator', 1, NOW(), NOW())"
         );
         $statement = $pdo->prepare(
@@ -31,7 +31,7 @@ final class ParentAdminPreviewIntegrationTest extends TestCase
         );
         $statement->execute(['token_hash' => $staffTokenHash]);
         $pdo->exec(
-            "INSERT INTO parent_contacts (id, email, first_name, last_name, status, verified_at, active, created_at, updated_at) "
+            'INSERT INTO parent_contacts (id, email, first_name, last_name, status, verified_at, active, created_at, updated_at) '
             . "VALUES (1, 'parent@example.test', 'Erika', 'Muster', 'pending', NULL, 1, NOW(), NOW())"
         );
 
@@ -53,7 +53,7 @@ final class ParentAdminPreviewIntegrationTest extends TestCase
 
             (new AuditLogger($pdo))->parent($parent, 'parent.preview.action', 'parent_contact', 1);
             $audit = $pdo->query(
-                "SELECT actor_type, staff_user_id, parent_contact_id, metadata FROM audit_log "
+                'SELECT actor_type, staff_user_id, parent_contact_id, metadata FROM audit_log '
                 . "WHERE action = 'parent.preview.action' ORDER BY id DESC LIMIT 1"
             )->fetch(PDO::FETCH_ASSOC);
             self::assertIsArray($audit);
