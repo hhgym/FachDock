@@ -62,7 +62,7 @@ final class FloorPlanService
             throw new RuntimeException('Die Schuljahre konnten nicht geladen werden.');
         }
 
-        return array_map(
+        return array_values(array_map(
             static fn (array $row): array => [
                 'id' => (int) $row['id'],
                 'label' => (string) $row['label'],
@@ -71,7 +71,7 @@ final class FloorPlanService
                 'ends_on' => (string) $row['ends_on'],
             ],
             $statement->fetchAll(PDO::FETCH_ASSOC),
-        );
+        ));
     }
 
     public function defaultSchoolYearId(): ?int
@@ -99,7 +99,7 @@ final class FloorPlanService
         );
         $statement->execute(['floor_id' => $floorId]);
 
-        return array_map(
+        return array_values(array_map(
             static fn (array $row): array => [
                 'id' => (int) $row['id'],
                 'floor_id' => (int) $row['floor_id'],
@@ -109,7 +109,7 @@ final class FloorPlanService
                 'sort_order' => (int) $row['sort_order'],
             ],
             $statement->fetchAll(PDO::FETCH_ASSOC),
-        );
+        ));
     }
 
     /** @return array<string, mixed> */
