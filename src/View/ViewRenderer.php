@@ -53,7 +53,7 @@ final class ViewRenderer
     ): string {
         $name = htmlspecialchars($parent->displayName(), ENT_QUOTES, 'UTF-8');
         $csrf = htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8');
-        $banner = '<aside class="admin-parent-preview-banner" role="status">'
+        $banner = '<aside class="alert alert-neutral admin-parent-preview-banner" role="status">'
             . '<div><strong>Administrator-Testansicht</strong>'
             . '<span>Du siehst das Elternportal als ' . $name
             . '. Für diesen Zugriff wurde keine E-Mail-Anmeldung durchgeführt.</span></div>';
