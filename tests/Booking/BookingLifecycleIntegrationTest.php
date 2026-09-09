@@ -77,8 +77,8 @@ final class BookingLifecycleIntegrationTest extends TestCase
         $this->notifications()->lockerChanged(1);
 
         self::assertSame(2, (int) $this->pdo()->query('SELECT locker_id FROM locker_occupancies WHERE booking_id = 1')->fetchColumn());
-        self::assertSame(1, (int) $this->pdo()->query("SELECT COUNT(*) FROM locker_assignment_history WHERE booking_id = 1 AND locker_id = 1 AND ends_at IS NOT NULL")->fetchColumn());
-        self::assertSame(1, (int) $this->pdo()->query("SELECT COUNT(*) FROM locker_assignment_history WHERE booking_id = 1 AND locker_id = 2 AND ends_at IS NULL")->fetchColumn());
+        self::assertSame(1, (int) $this->pdo()->query('SELECT COUNT(*) FROM locker_assignment_history WHERE booking_id = 1 AND locker_id = 1 AND ends_at IS NOT NULL')->fetchColumn());
+        self::assertSame(1, (int) $this->pdo()->query('SELECT COUNT(*) FROM locker_assignment_history WHERE booking_id = 1 AND locker_id = 2 AND ends_at IS NULL')->fetchColumn());
         self::assertSame('locker_changed', $this->pdo()->query('SELECT event_type FROM booking_lifecycle_events WHERE booking_id = 1')->fetchColumn());
         self::assertSame(1, $this->queuedTemplateCount('booking_locker_changed'));
     }
