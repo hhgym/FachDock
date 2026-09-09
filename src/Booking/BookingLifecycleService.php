@@ -522,7 +522,7 @@ final class BookingLifecycleService
     private function cancelPendingPaymentMails(int $bookingId): void
     {
         $this->pdo->prepare(
-            "UPDATE mail_queue q INNER JOIN mail_templates t ON t.id = q.mail_template_id "
+            'UPDATE mail_queue q INNER JOIN mail_templates t ON t.id = q.mail_template_id '
             . "SET q.status = 'canceled', q.canceled_at = CURRENT_TIMESTAMP, q.updated_at = CURRENT_TIMESTAMP "
             . "WHERE q.relation_type = 'booking' AND q.relation_id = :booking_id AND q.status = 'waiting' "
             . "AND t.template_key IN ('payment_due_reminder','but_rejected_payment_due')"
@@ -542,7 +542,7 @@ final class BookingLifecycleService
         $this->pdo->prepare(
             'INSERT INTO booking_lifecycle_events '
             . '(booking_id, event_type, related_booking_id, old_locker_id, new_locker_id, effective_on, reason, '
-            . "actor_type, actor_id, created_at) VALUES (:booking_id, :event_type, :related_booking_id, "
+            . 'actor_type, actor_id, created_at) VALUES (:booking_id, :event_type, :related_booking_id, '
             . ":old_locker_id, :new_locker_id, :effective_on, :reason, 'staff', :actor_id, CURRENT_TIMESTAMP)"
         )->execute([
             'booking_id' => $bookingId,
