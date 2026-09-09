@@ -27,7 +27,7 @@ final class PaidPaymentRecoveryIntegrationTest extends TestCase
         self::assertSame('converted', $pdo->query('SELECT status FROM locker_reservations WHERE id = 1')->fetchColumn());
         self::assertSame('1', (string) $pdo->query('SELECT COUNT(*) FROM bookings')->fetchColumn());
         self::assertSame('1', (string) $pdo->query('SELECT COUNT(*) FROM locker_occupancies')->fetchColumn());
-        self::assertFalse($pdo->query('SELECT failure_code FROM payments WHERE id = 1')->fetchColumn());
+        self::assertNull($pdo->query('SELECT failure_code FROM payments WHERE id = 1')->fetchColumn());
     }
 
     private function database(): PDO
