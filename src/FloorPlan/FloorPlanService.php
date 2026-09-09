@@ -54,7 +54,7 @@ final class FloorPlanService
     public function schoolYears(): array
     {
         $statement = $this->pdo->query(
-            "SELECT id, label, status, starts_on, ends_on FROM school_years "
+            'SELECT id, label, status, starts_on, ends_on FROM school_years '
             . "WHERE status IN ('current', 'future') OR ends_on >= DATE_SUB(CURRENT_DATE, INTERVAL 1 YEAR) "
             . 'ORDER BY starts_on DESC LIMIT 6'
         );
@@ -77,7 +77,7 @@ final class FloorPlanService
     public function defaultSchoolYearId(): ?int
     {
         $statement = $this->pdo->query(
-            "SELECT id FROM school_years ORDER BY "
+            'SELECT id FROM school_years ORDER BY '
             . "CASE status WHEN 'current' THEN 0 WHEN 'future' THEN 1 ELSE 2 END, "
             . 'ABS(DATEDIFF(starts_on, CURRENT_DATE)), starts_on DESC LIMIT 1'
         );
