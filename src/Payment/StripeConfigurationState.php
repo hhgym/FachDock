@@ -36,8 +36,30 @@ final readonly class StripeConfigurationState
         );
     }
 
+    public function credentialsConfigured(): bool
+    {
+        return $this->secretConfigured && $this->webhookConfigured;
+    }
+
     public function checkoutAvailable(): bool
     {
-        return $this->secretConfigured && $this->webhookConfigured && $this->baseUrlSecure;
+        return $this->credentialsConfigured() && $this->baseUrlSecure;
+    }
+
+    /** @return list<string> */
+    public function problems(): array
+    {
+        $problems = [];
+        if (!$this->secretConfigured) {
+            $problems[] = 'Stripe Secret Key fehlt oder passt nicht zum gewählten Modus.';
+        }
+        if (!$this->webhookConfigured) {
+            $problems[] = 'Stripe Webhook-Secret fehlt oder ist ungültig.';
+        }
+        if (!$this->baseUrlSecure) {
+            $problems[] = 'Die Basis-URL ist nicht als HTTPS-Adresse konfiguriert.';
+        }
+
+        return $problems;
     }
 }
