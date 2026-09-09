@@ -77,7 +77,7 @@ final class DataRetentionIntegrationTest extends TestCase
         $pdo->exec("INSERT INTO areas (id, floor_id, code, name, active, created_at, updated_at) VALUES (1, 1, 'A', 'A', 1, NOW(), NOW())");
         $pdo->exec("INSERT INTO corpus_types (id, code, name, compartment_count, active, created_at, updated_at) VALUES (1, 'T', 'Typ', 1, 1, NOW(), NOW())");
         $pdo->exec("INSERT INTO cabinet_groups (id, area_id, code, name, active, created_at, updated_at) VALUES (1, 1, 'A', 'A', 1, NOW(), NOW())");
-        $pdo->exec("INSERT INTO corpuses (id, cabinet_group_id, corpus_type_id, position_no, active, created_at, updated_at) VALUES (1, 1, 1, 1, 1, NOW(), NOW())");
+        $pdo->exec('INSERT INTO corpuses (id, cabinet_group_id, corpus_type_id, position_no, active, created_at, updated_at) VALUES (1, 1, 1, 1, 1, NOW(), NOW())');
         $pdo->exec("INSERT INTO lockers (id, corpus_id, position_no, short_name, barrier_friendly, bookable, active, operating_status, created_at, updated_at) VALUES (1, 1, 1, 'A-01-1', 0, 1, 1, 'operational', NOW(), NOW())");
         $pdo->exec("INSERT INTO students (id, matrikelnummer, first_name, last_name, class_name, grade, email, active, created_at, updated_at) VALUES (1, '1001', 'Ada', 'Alt', '12', 12, 'ada@example.test', 0, '2020-01-01', '2020-01-01')");
         $pdo->exec("INSERT INTO school_years (id, label, starts_on, ends_on, status, annual_fee_cents, new_booking_opens_on, created_at, updated_at) VALUES (1, '20/21', '2020-08-01', '2021-07-31', 'closed', 1000, '2020-06-01', '2020-01-01', '2021-08-01')");
