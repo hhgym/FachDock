@@ -12,6 +12,45 @@ final class LocalConfigWriter
     {
     }
 
+    public function saveGeneralSettings(string $schoolName, string $baseUrl): void
+    {
+        $this->save([
+            'app' => [
+                'school_name' => $schoolName,
+                'base_url' => $baseUrl,
+            ],
+        ]);
+    }
+
+    /** @param array<string, int> $settings */
+    public function saveAuthSettings(array $settings): void
+    {
+        $this->save(['auth' => $settings]);
+    }
+
+    /** @param array<string, int> $settings */
+    public function saveBookingSettings(array $settings): void
+    {
+        $this->save(['booking' => $settings]);
+    }
+
+    /**
+     * @param array{worker_batch_size:int,max_per_hour:int,retry_minutes:list<int>,processing_timeout_minutes:int} $mail
+     * @param array{host:string,port:int,username:string,encryption:string,from_email:string,from_name:string} $smtp
+     */
+    public function saveMailSettings(array $mail, array $smtp, ?string $password): void
+    {
+        $secrets = [];
+        if ($password !== null) {
+            $secrets = ['smtp' => ['password' => $password]];
+        }
+
+        $this->save([
+            'mail' => $mail,
+            'smtp' => $smtp,
+        ], $secrets);
+    }
+
     public function saveStripeSettings(
         string $mode,
         string $currency,
@@ -20,46 +59,56 @@ final class LocalConfigWriter
         ?string $webhookSecret,
         ?string $baseUrl = null,
     ): void {
+        $appChanges = [
+            'stripe' => [
+                'mode' => $mode,
+                'currency' => $currency,
+                'checkout_minutes' => $checkoutMinutes,
+            ],
+        ];
+        if ($baseUrl !== null) {
+            $appChanges['app'] = ['base_url' => $baseUrl];
+        }
+
+        $secretChanges = [];
+        if ($secretKey !== null) {
+            $secretChanges['stripe']['secret_key'] = $secretKey;
+        }
+        if ($webhookSecret !== null) {
+            $secretChanges['stripe']['webhook_secret'] = $webhookSecret;
+        }
+
+        $this->save($appChanges, $secretChanges);
+    }
+
+    /**
+     * @param array<string, mixed> $appChanges
+     * @param array<string, mixed> $secretChanges
+     */
+    private function save(array $appChanges, array $secretChanges = []): void
+    {
         $appFile = $this->root . '/config/app.local.php';
         $secretsFile = $this->root . '/config/secrets.local.php';
 
-        $app = $this->loadArray($appFile);
-        $secrets = $this->loadArray($secretsFile);
-
-        $currentStripe = isset($app['stripe']) && is_array($app['stripe']) ? $app['stripe'] : [];
-        $app['stripe'] = array_replace($currentStripe, [
-            'mode' => $mode,
-            'currency' => $currency,
-            'checkout_minutes' => $checkoutMinutes,
-        ]);
-
-        if ($baseUrl !== null) {
-            $currentApp = isset($app['app']) && is_array($app['app']) ? $app['app'] : [];
-            $app['app'] = array_replace($currentApp, [
-                'base_url' => $baseUrl,
-            ]);
-        }
-
-        $currentSecrets = isset($secrets['stripe']) && is_array($secrets['stripe']) ? $secrets['stripe'] : [];
-        if ($secretKey !== null) {
-            $currentSecrets['secret_key'] = $secretKey;
-        }
-        if ($webhookSecret !== null) {
-            $currentSecrets['webhook_secret'] = $webhookSecret;
-        }
-        if ($currentSecrets !== []) {
-            $secrets['stripe'] = $currentSecrets;
-        }
+        $app = array_replace_recursive($this->loadArray($appFile), $appChanges);
+        $secrets = array_replace_recursive($this->loadArray($secretsFile), $secretChanges);
 
         $appTemp = $this->prepare($appFile, $app, 0640);
-        $secretsTemp = $this->prepare($secretsFile, $secrets, 0600);
+        $secretsTemp = null;
+        if ($secretChanges !== []) {
+            $secretsTemp = $this->prepare($secretsFile, $secrets, 0600);
+        }
 
         try {
-            $this->publish($secretsTemp, $secretsFile, 0600);
+            if ($secretsTemp !== null) {
+                $this->publish($secretsTemp, $secretsFile, 0600);
+            }
             $this->publish($appTemp, $appFile, 0640);
         } catch (RuntimeException $exception) {
             @unlink($appTemp);
-            @unlink($secretsTemp);
+            if ($secretsTemp !== null) {
+                @unlink($secretsTemp);
+            }
             throw $exception;
         }
     }
