@@ -17,11 +17,11 @@ return new class () implements Migration {
 
     public function up(PDO $pdo): void
     {
+        $pdo->exec('ALTER TABLE payments DROP FOREIGN KEY fk_payment_reservation');
+        $pdo->exec('ALTER TABLE payments MODIFY reservation_id BIGINT UNSIGNED NULL');
         $pdo->exec(
-            'ALTER TABLE payments '
-            . 'DROP FOREIGN KEY fk_payment_reservation, '
-            . 'MODIFY reservation_id BIGINT UNSIGNED NULL, '
-            . 'ADD CONSTRAINT fk_payment_reservation FOREIGN KEY (reservation_id) REFERENCES locker_reservations(id)'
+            'ALTER TABLE payments ADD CONSTRAINT fk_payment_reservation_nullable '
+            . 'FOREIGN KEY (reservation_id) REFERENCES locker_reservations(id)'
         );
 
         $pdo->exec(
