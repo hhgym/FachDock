@@ -12,6 +12,8 @@ final readonly class AuthenticatedParent
         public ?string $firstName,
         public ?string $lastName,
         public int $sessionId,
+        public bool $adminPreview = false,
+        public ?int $previewStaffUserId = null,
     ) {
     }
 
