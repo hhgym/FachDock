@@ -159,7 +159,10 @@ final class BookingLifecycleNotificationService
         ];
     }
 
-    /** @param array<string, mixed> $row @return array<string, mixed> */
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
     private function normalizedContext(array $row): array
     {
         $email = $row['parent_email'] ?? null;
@@ -176,7 +179,10 @@ final class BookingLifecycleNotificationService
         ];
     }
 
-    /** @param array<string, mixed> $context @param array<string, scalar|null> $placeholders */
+    /**
+     * @param array<string, mixed> $context
+     * @param array<string, scalar|null> $placeholders
+     */
     private function enqueue(
         string $templateKey,
         array $context,
