@@ -15,11 +15,15 @@ final class OidcSessionService
         private readonly PDO $pdo,
         private readonly int $maxLifetimeMinutes = 480,
         private readonly int $idleTimeoutMinutes = 60,
+        private readonly bool $enabled = true,
     ) {
     }
 
     public function create(int $identityId, string $ipAddress, string $userAgent): AuthenticatedOidcIdentity
     {
+        if (!$this->enabled) {
+            throw new RuntimeException('Die IServ-Anmeldung ist nicht aktiviert.');
+        }
         $token = bin2hex(random_bytes(32));
         $lifetime = max(15, $this->maxLifetimeMinutes);
         $statement = $this->pdo->prepare(
@@ -47,6 +51,11 @@ final class OidcSessionService
 
     public function current(): ?AuthenticatedOidcIdentity
     {
+        if (!$this->enabled) {
+            unset($_SESSION[self::SESSION_KEY]);
+
+            return null;
+        }
         $token = $_SESSION[self::SESSION_KEY] ?? null;
         if (!is_string($token) || $token === '') {
             return null;
