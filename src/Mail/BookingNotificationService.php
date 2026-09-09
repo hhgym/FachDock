@@ -25,6 +25,7 @@ final class BookingNotificationService
     public function bookingConfirmed(int $bookingId): void
     {
         $this->safely('booking_confirmed', function () use ($bookingId): void {
+            $this->cancelPaymentReminder($bookingId);
             $context = $this->bookingContext($bookingId);
             $this->enqueue(
                 'booking_confirmed',
@@ -69,6 +70,7 @@ final class BookingNotificationService
     public function butApproved(int $bookingId): void
     {
         $this->safely('but_approved', function () use ($bookingId): void {
+            $this->cancelPaymentReminder($bookingId);
             $context = $this->bookingContext($bookingId);
             $this->enqueue(
                 'but_approved',
@@ -182,6 +184,9 @@ final class BookingNotificationService
     {
         $this->safely('payment_received', function () use ($paymentId): void {
             $context = $this->paymentContext($paymentId);
+            if ($context['booking_id'] !== null) {
+                $this->cancelPaymentReminder($context['booking_id']);
+            }
             $bookingUrl = $context['booking_id'] === null ? $this->parentHomeUrl() : $this->bookingUrl($context['booking_id']);
             $this->enqueue(
                 'payment_received',
@@ -444,6 +449,29 @@ final class BookingNotificationService
     private function formatDate(string $dateTime): string
     {
         return (new DateTimeImmutable($dateTime))->format('d.m.Y');
+    }
+
+    private function cancelPaymentReminder(int $bookingId): void
+    {
+        $key = 'payment-due-reminder:' . $bookingId;
+        $select = $this->pdo->prepare(
+            "SELECT id FROM mail_queue WHERE deduplication_key = :key AND status = 'waiting' LIMIT 1"
+        );
+        $select->execute(['key' => $key]);
+        $queueId = $select->fetchColumn();
+        if ($queueId === false) {
+            return;
+        }
+
+        $statement = $this->pdo->prepare(
+            "UPDATE mail_queue SET status = 'canceled', canceled_at = CURRENT_TIMESTAMP, html_body = NULL, "
+            . "text_body = NULL, locked_at = NULL, updated_at = CURRENT_TIMESTAMP "
+            . "WHERE id = :id AND status = 'waiting'"
+        );
+        $statement->execute(['id' => (int) $queueId]);
+        if ($statement->rowCount() === 1) {
+            $this->mailQueue->recordHistory((int) $queueId, 'canceled', null);
+        }
     }
 
     private function safely(string $notification, callable $callback): void
