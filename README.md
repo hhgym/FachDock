@@ -6,9 +6,9 @@ FachDock ist eine webbasierte Verwaltungs- und Buchungslösung für schulische S
 
 ## Projektstatus
 
-Aktuelle veröffentlichte Version: **0.5.0**
+Aktuelle veröffentlichte Version: **0.6.0**
 
-> FachDock befindet sich noch vor Version 1.0.0. Version 0.5.0 ist ein installierbarer Teststand für Web-Installer und Update-Routine sowie für die inzwischen durchgängigen Verwaltungs-, Reservierungs-, Elternportal-, BuT- und Stripe-Zahlungsabläufe. Buchungen und Zahlungen können nun zentral administriert und problematische, bereits bestätigte Zahlungen nachvollziehbar bearbeitet werden. Die Version ist weiterhin nicht für den produktiven Schulbetrieb vorgesehen.
+> FachDock befindet sich noch vor Version 1.0.0. Version 0.6.0 ist ein installierbarer Teststand für Web-Installer und Update-Routine sowie für die inzwischen durchgängigen Verwaltungs-, Reservierungs-, Elternportal-, BuT- und Stripe-Zahlungsabläufe. Zusätzlich sind die zentralen Buchungs- und Zahlungsereignisse nun mit deduplizierten E-Mail-Benachrichtigungen verbunden; nach einer BuT-Ablehnung kann die bestehende Buchung direkt bezahlt werden. Die Version ist weiterhin nicht für den produktiven Schulbetrieb vorgesehen.
 
 ## Bereits enthalten
 
@@ -32,14 +32,18 @@ Aktuelle veröffentlichte Version: **0.5.0**
 - Elternkontakte mit historisierten Eltern-Kind-Verknüpfungen
 - passwortloses Elternportal über einmalige, gehashte E-Mail-Magic-Links
 - persistente E-Mail-Queue mit SMTP-Versand, Retry-Logik und versionierten E-Mail-Templates
+- automatische und deduplizierte E-Mail-Benachrichtigungen für Buchungsbestätigung, Zahlungseingang, fehlgeschlagene oder abgelaufene Zahlungen sowie technische Prüfzustände
 - verbindlicher BuT-Buchungsworkflow mit anschließender administrativer Prüfung
+- E-Mail-Benachrichtigungen für BuT-Antrag, Genehmigung, Ablehnung und terminierte Zahlungserinnerung
+- direkte Stripe-Zahlung einer bereits bestehenden `payment_due`-Buchung nach BuT-Ablehnung
+- automatische Stornierung hinfälliger Zahlungserinnerungen nach erfolgreicher Zahlung oder Aktivierung
 - Stripe Checkout für Elternbuchungen mit Test-/Live-Trennung
 - Online-Zahlung im Elternportal nur bei vollständig gültiger Stripe- und HTTPS-Konfiguration
 - kostenfreie verbindliche Buchung auch ohne eingerichtete Stripe-Zugangsdaten
 - signierte und idempotente Stripe-Webhooks für erfolgreiche, fehlgeschlagene und abgelaufene Zahlungen
 - sichere administrative Wiederherstellung bereits bezahlter `manual_review`-Vorgänge ohne erneute Zahlung
 - einheitliches Application-Routing für Eltern-, Zahlungs-, Webhook- und Verwaltungsrouten
-- MySQL-Integrationstests für Zahlungsworkflow und Wiederherstellung problematischer Zahlungen
+- MySQL-Integrationstests für Zahlungsworkflow, BuT-Folgezahlung, Benachrichtigungen und Wiederherstellung problematischer Zahlungen
 - stabiler GitHub-Updatekanal mit SHA-256-Prüfung und automatischen Datenbankmigrationen
 
 ## Geplante Kernfunktionen
@@ -73,7 +77,7 @@ FachDock verwendet Git Flow:
 - `release/*` – Release-Stabilisierung
 - `hotfix/*` – dringende Korrekturen veröffentlichter Versionen
 
-Stabile Teststände werden als GitHub Releases mit Tags wie `v0.5.0` und später `v1.0.0` veröffentlicht. FachDock berücksichtigt beim integrierten Update ausschließlich stabile Releases.
+Stabile Teststände werden als GitHub Releases mit Tags wie `v0.6.0` und später `v1.0.0` veröffentlicht. FachDock berücksichtigt beim integrierten Update ausschließlich stabile Releases.
 
 ## Installation
 

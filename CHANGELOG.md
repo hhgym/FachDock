@@ -6,6 +6,26 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-09
+
+### Added
+- Neun versionierte E-Mail-Vorlagen für Buchungsbestätigung, Zahlungseingang, fehlgeschlagene und abgelaufene Zahlungen, technische Zahlungsprüfung sowie den vollständigen BuT-Entscheidungsweg.
+- Automatische, deduplizierte Buchungs- und Zahlungsbenachrichtigungen an Elternkontakte.
+- Terminierte Zahlungserinnerung drei Tage vor Ablauf der Zahlungsfrist nach einer BuT-Ablehnung.
+- Direkte Stripe-Zahlung für bereits bestehende Buchungen mit Status `payment_due`, insbesondere nach abgelehnter BuT-Befreiung.
+- Konkurrenzsicherung für parallele Zahlungsversuche zu bestehenden Buchungen.
+- MySQL-8.4-Integrationstests für BuT-Folgezahlungen, Webhook-Idempotenz, Zahlungsablauf und erneuten Checkout sowie terminierte Erinnerungen.
+
+### Changed
+- Eine bestehende `payment_due`-Buchung bleibt während des Stripe-Checkouts belegt und wird bei erfolgreicher Zahlung atomar aktiviert.
+- Zahlungsverwaltung, Zahlungsdetail und Wiederherstellungsworkflow unterstützen sowohl reservierungsbasierte Stripe-Zahlungen als auch Zahlungen zu bereits bestehenden Buchungen.
+- Der Mail-Worker prüft vor dem Versand einer Zahlungserinnerung zusätzlich, ob die zugehörige Buchung noch zahlungspflichtig ist.
+
+### Fixed
+- Nach erfolgreicher Zahlung oder anderweitiger Aktivierung werden noch wartende Zahlungserinnerungen automatisch storniert und nicht mehr versendet.
+- Fehlgeschlagene oder abgelaufene Zahlungen zu einer bestehenden Buchung lassen die Buchung weiterhin zahlungspflichtig und erneut zahlbar, statt die Belegung aufzulösen.
+- Bereits belastete, aber technisch nicht aktivierbare Folgezahlungen können weiterhin ohne zweite Belastung über `manual_review` wiederhergestellt werden.
+
 ## [0.5.0] - 2026-09-09
 
 ### Added
