@@ -37,6 +37,7 @@ return [
         'reservation_minutes' => 15,
         'payment_grace_minutes' => 30,
         'but_rejection_payment_days' => 14,
+        'self_service_change_limit' => 2,
     ],
     'stripe' => [
         'mode' => 'test',
