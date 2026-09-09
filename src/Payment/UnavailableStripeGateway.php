@@ -6,7 +6,7 @@ namespace FachDock\Payment;
 
 use DomainException;
 
-final class UnavailableStripeGateway implements StripeGateway
+final class UnavailableStripeGateway implements BookingPaymentGateway
 {
     public function ensureCustomer(
         int $parentContactId,
@@ -33,6 +33,32 @@ final class UnavailableStripeGateway implements StripeGateway
         unset(
             $paymentId,
             $reservationId,
+            $customerId,
+            $amountCents,
+            $currency,
+            $description,
+            $successUrl,
+            $cancelUrl,
+            $expiresAt,
+        );
+
+        throw new DomainException('Die Online-Zahlung ist derzeit nicht vollständig eingerichtet.');
+    }
+
+    public function createBookingCheckoutSession(
+        int $paymentId,
+        int $bookingId,
+        string $customerId,
+        int $amountCents,
+        string $currency,
+        string $description,
+        string $successUrl,
+        string $cancelUrl,
+        int $expiresAt,
+    ): StripeCheckoutSession {
+        unset(
+            $paymentId,
+            $bookingId,
             $customerId,
             $amountCents,
             $currency,
