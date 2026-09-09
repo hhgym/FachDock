@@ -75,6 +75,7 @@ final class NavigationRenderer
             $currentPath,
             ['/parent/booking', '/parent/payment'],
         );
+        $floorPlan = $this->link('Lageplan', '/parent/floorplans', $currentPath);
         $support = $this->link('Problem melden', '/parent/support', $currentPath);
 
         return '<header class="topbar app-header">'
@@ -83,6 +84,7 @@ final class NavigationRenderer
             . '<nav class="primary-nav" aria-label="Elternportal">'
             . $overview
             . $booking
+            . $floorPlan
             . $support
             . '</nav>'
             . $this->parentAccountMenu($parent, $csrfToken)
@@ -104,6 +106,7 @@ final class NavigationRenderer
                 'label' => 'Schließfächer',
                 'items' => [
                     ['label' => 'Standorte', 'href' => '/admin/locations'],
+                    ['label' => 'Lagepläne', 'href' => '/admin/floorplans'],
                     ['label' => 'Betrieb & Meldungen', 'href' => '/admin/operations'],
                 ],
             ],
@@ -147,6 +150,7 @@ final class NavigationRenderer
                     'matches' => ['/admin/config'],
                 ],
                 ['label' => 'Schuljahre', 'href' => '/admin/school-years'],
+                ['label' => 'Schuljahreswechsel', 'href' => '/admin/school-year-transition'],
                 ['label' => 'Zuteilungsregeln', 'href' => '/admin/allocation-rules'],
                 ['label' => 'E-Mail-Vorlagen & Warteschlange', 'href' => '/admin/mail'],
             ],
@@ -155,6 +159,7 @@ final class NavigationRenderer
             'label' => 'System',
             'items' => [
                 ['label' => 'Status', 'href' => '/admin/system/status'],
+                ['label' => 'Datenschutz & Produktionscheck', 'href' => '/admin/privacy'],
                 ['label' => 'Updates', 'href' => '/admin/system/update'],
             ],
         ];
@@ -257,6 +262,7 @@ final class NavigationRenderer
             $currentPath,
             ['/parent/booking', '/parent/payment'],
         );
+        $html .= $this->link('Lageplan', '/parent/floorplans', $currentPath);
         $html .= $this->link('Problem melden', '/parent/support', $currentPath);
         $html .= '</div>';
         $html .= '<div class="mobile-account-card">';
