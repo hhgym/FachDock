@@ -44,7 +44,10 @@ $error = $error ?? null;
             <button class="button" type="submit">Anmeldelink anfordern</button>
         </form>
         <p class="form-hint">Aus Datenschutzgründen zeigt FachDock nicht an, ob eine eingegebene E-Mail-Adresse registriert ist.</p>
-        <p><a href="/login">Zur Anmeldung für Mitarbeitende</a></p>
+        <div class="compact-actions">
+            <a class="button button-secondary" href="/student/support/login">Zum Schüler-Schließfachservice</a>
+            <a href="/login">Zur Anmeldung für Mitarbeitende</a>
+        </div>
     </section>
 </main>
 </body>

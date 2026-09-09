@@ -75,6 +75,7 @@ final class NavigationRenderer
             $currentPath,
             ['/parent/booking', '/parent/payment'],
         );
+        $support = $this->link('Problem melden', '/parent/support', $currentPath);
 
         return '<header class="topbar app-header">'
             . '<div class="topbar-inner">'
@@ -82,6 +83,7 @@ final class NavigationRenderer
             . '<nav class="primary-nav" aria-label="Elternportal">'
             . $overview
             . $booking
+            . $support
             . '</nav>'
             . $this->parentAccountMenu($parent, $csrfToken)
             . $this->mobileParentMenu($parent, $csrfToken, $currentPath)
@@ -102,6 +104,7 @@ final class NavigationRenderer
                 'label' => 'Schließfächer',
                 'items' => [
                     ['label' => 'Standorte', 'href' => '/admin/locations'],
+                    ['label' => 'Betrieb & Meldungen', 'href' => '/admin/operations'],
                 ],
             ],
             [
@@ -151,6 +154,7 @@ final class NavigationRenderer
         $groups[] = [
             'label' => 'System',
             'items' => [
+                ['label' => 'Status', 'href' => '/admin/system/status'],
                 ['label' => 'Updates', 'href' => '/admin/system/update'],
             ],
         ];
@@ -253,6 +257,7 @@ final class NavigationRenderer
             $currentPath,
             ['/parent/booking', '/parent/payment'],
         );
+        $html .= $this->link('Problem melden', '/parent/support', $currentPath);
         $html .= '</div>';
         $html .= '<div class="mobile-account-card">';
         $html .= '<span class="mobile-account-label">Elternkonto</span>';
