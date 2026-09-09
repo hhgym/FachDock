@@ -597,6 +597,7 @@ final class BookingSelfServiceService
         return $result;
     }
 
+    /** @phpstan-impure */
     private function lockerAvailable(int $schoolYearId, int $lockerId): bool
     {
         $occupied = $this->pdo->prepare(
