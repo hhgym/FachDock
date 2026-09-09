@@ -18,6 +18,7 @@ final class LocalConfigWriter
         int $checkoutMinutes,
         ?string $secretKey,
         ?string $webhookSecret,
+        ?string $baseUrl = null,
     ): void {
         $appFile = $this->root . '/config/app.local.php';
         $secretsFile = $this->root . '/config/secrets.local.php';
@@ -31,6 +32,13 @@ final class LocalConfigWriter
             'currency' => $currency,
             'checkout_minutes' => $checkoutMinutes,
         ]);
+
+        if ($baseUrl !== null) {
+            $currentApp = isset($app['app']) && is_array($app['app']) ? $app['app'] : [];
+            $app['app'] = array_replace($currentApp, [
+                'base_url' => $baseUrl,
+            ]);
+        }
 
         $currentSecrets = isset($secrets['stripe']) && is_array($secrets['stripe']) ? $secrets['stripe'] : [];
         if ($secretKey !== null) {
