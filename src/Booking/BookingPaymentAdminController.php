@@ -5,19 +5,26 @@ declare(strict_types=1);
 namespace FachDock\Booking;
 
 use DomainException;
+use FachDock\Audit\AuditLogger;
 use FachDock\Auth\AuthenticatedStaff;
 use FachDock\Auth\StaffSessionService;
 use FachDock\Http\Request;
 use FachDock\Http\Response;
 use FachDock\Http\Router;
+use FachDock\Payment\PaidPaymentRecoveryService;
 use FachDock\Security\Csrf;
 use FachDock\View\ViewRenderer;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
 final class BookingPaymentAdminController
 {
     public function __construct(
         private readonly BookingPaymentAdminService $service,
+        private readonly PaidPaymentRecoveryService $recovery,
         private readonly StaffSessionService $sessions,
+        private readonly AuditLogger $audit,
+        private readonly LoggerInterface $logger,
         private readonly ViewRenderer $views,
         private readonly Csrf $csrf,
     ) {
@@ -29,6 +36,7 @@ final class BookingPaymentAdminController
         $router->get('/admin/bookings/detail', fn (Request $request): Response => $this->bookingDetail($request));
         $router->get('/admin/payments', fn (Request $request): Response => $this->payments($request));
         $router->get('/admin/payments/detail', fn (Request $request): Response => $this->paymentDetail($request));
+        $router->post('/admin/payments/recover', fn (Request $request): Response => $this->recoverPayment($request));
     }
 
     private function bookings(Request $request): Response
@@ -112,23 +120,100 @@ final class BookingPaymentAdminController
 
         try {
             $paymentId = $this->positiveInt($this->queryString($request, 'id'), 'Zahlung');
+        } catch (DomainException $exception) {
+            return $this->paymentNotFound($staff, $exception->getMessage());
+        }
+
+        return $this->paymentDetailPage(
+            $staff,
+            $paymentId,
+            [],
+            $this->queryString($request, 'recovered') === '1',
+        );
+    }
+
+    private function recoverPayment(Request $request): Response
+    {
+        $staff = $this->staff();
+        if ($staff instanceof Response) {
+            return $staff;
+        }
+        if (!$this->csrf->verify($request->postString('_csrf'))) {
+            return Response::html('<h1>Ungültige Sitzung</h1>', 419);
+        }
+
+        $paymentId = 0;
+        try {
+            $paymentId = $this->positiveInt($request->postString('payment_id'), 'Zahlung');
+            $bookingId = $this->recovery->recover($paymentId);
+            $this->audit->staff($staff, 'payment.manual_review.recovered', 'payment', $paymentId, [
+                'booking_id' => $bookingId,
+            ]);
+            $this->csrf->rotate();
+
+            return Response::redirect('/admin/payments/detail?id=' . $paymentId . '&recovered=1');
+        } catch (DomainException $exception) {
+            if ($paymentId < 1) {
+                return $this->paymentNotFound($staff, $exception->getMessage());
+            }
+
+            return $this->paymentDetailPage($staff, $paymentId, [$exception->getMessage()], false, 422);
+        } catch (Throwable $exception) {
+            $errorId = bin2hex(random_bytes(6));
+            $this->logger->error('Manual payment recovery failed', [
+                'error_id' => $errorId,
+                'staff_user_id' => $staff->id,
+                'payment_id' => $paymentId > 0 ? $paymentId : null,
+                'exception' => $exception,
+            ]);
+
+            if ($paymentId < 1) {
+                return Response::html('<h1>Ein Fehler ist aufgetreten.</h1><p>Fehler-ID: ' . $errorId . '</p>', 500);
+            }
+
+            return $this->paymentDetailPage(
+                $staff,
+                $paymentId,
+                ['Die Wiederherstellung konnte nicht abgeschlossen werden. Fehler-ID: ' . $errorId],
+                false,
+                500,
+            );
+        }
+    }
+
+    /** @param list<string> $errors */
+    private function paymentDetailPage(
+        AuthenticatedStaff $staff,
+        int $paymentId,
+        array $errors,
+        bool $recovered,
+        int $status = 200,
+    ): Response {
+        try {
             $payment = $this->service->payment($paymentId);
         } catch (DomainException $exception) {
-            return Response::html($this->views->render('admin-record-not-found.php', [
-                'staff' => $staff,
-                'title' => 'Zahlung nicht gefunden',
-                'message' => $exception->getMessage(),
-                'backUrl' => '/admin/payments',
-                'backLabel' => 'Zur Zahlungsübersicht',
-                'csrfToken' => $this->csrf->token(),
-            ]), 404);
+            return $this->paymentNotFound($staff, $exception->getMessage());
         }
 
         return Response::html($this->views->render('admin-payment-detail.php', [
             'staff' => $staff,
             'payment' => $payment,
             'csrfToken' => $this->csrf->token(),
-        ]));
+            'errors' => $errors,
+            'recovered' => $recovered,
+        ]), $status);
+    }
+
+    private function paymentNotFound(AuthenticatedStaff $staff, string $message): Response
+    {
+        return Response::html($this->views->render('admin-record-not-found.php', [
+            'staff' => $staff,
+            'title' => 'Zahlung nicht gefunden',
+            'message' => $message,
+            'backUrl' => '/admin/payments',
+            'backLabel' => 'Zur Zahlungsübersicht',
+            'csrfToken' => $this->csrf->token(),
+        ]), 404);
     }
 
     private function staff(): AuthenticatedStaff|Response
