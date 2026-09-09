@@ -94,7 +94,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
 
     <section class="card stack">
         <h2>Bekannte IServ-Identitäten</h2>
-        <p class="form-hint">Automatisch nicht eindeutig zuordenbare Konten bleiben auf „Nicht zugeordnet“. Eine manuelle Zuordnung ist jederzeit möglich.</p>
+        <p class="form-hint">Automatische Zuordnungen werden bei jeder IServ-Anmeldung erneut geprüft. Manuelle Zuordnungen bleiben bestehen, bis wieder auf Automatik umgestellt wird.</p>
         <div class="table-scroll"><table>
             <thead><tr><th>IServ-Konto</th><th>Typ</th><th>Zuordnung</th><th>Letzte Anmeldung</th><th>Aktionen</th></tr></thead>
             <tbody>
@@ -108,7 +108,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
                         'student' => 'Schüler',
                         'teacher' => 'Lehrkraft',
                         default => 'Nicht zugeordnet',
-                    }) ?><?= empty($identity['active']) ? ' · deaktiviert' : '' ?></td>
+                    }) ?> · <?= ($identity['assignment_source'] ?? 'automatic') === 'manual' ? 'manuell' : 'automatisch' ?><?= empty($identity['active']) ? ' · deaktiviert' : '' ?></td>
                     <td><?= !empty($identity['student_id']) ? $e((string) $identity['student_name'] . ' · ' . (string) $identity['class_name'] . ' · ' . (string) $identity['matrikelnummer']) : '—' ?></td>
                     <td><?= $e((string) ($identity['last_login_at'] ?? '—')) ?></td>
                     <td><div class="stack">
@@ -125,6 +125,14 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
                             <input name="matrikelnummer" placeholder="Matrikelnummer" required>
                             <button class="button button-secondary" type="submit">Schüler zuordnen</button>
                         </form>
+                        <?php if (($identity['assignment_source'] ?? 'automatic') === 'manual'): ?>
+                            <form method="post" action="/admin/config/oidc/identity">
+                                <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+                                <input type="hidden" name="identity_id" value="<?= (int) $identity['id'] ?>">
+                                <input type="hidden" name="action" value="automatic">
+                                <button class="button button-secondary" type="submit">Automatik verwenden</button>
+                            </form>
+                        <?php endif; ?>
                         <form method="post" action="/admin/config/oidc/identity">
                             <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
                             <input type="hidden" name="identity_id" value="<?= (int) $identity['id'] ?>">
