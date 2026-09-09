@@ -107,6 +107,16 @@ final class NavigationRenderer
             [
                 'label' => 'Buchungen',
                 'items' => [
+                    [
+                        'label' => 'Buchungen',
+                        'href' => '/admin/bookings',
+                        'matches' => ['/admin/bookings'],
+                    ],
+                    [
+                        'label' => 'Zahlungen',
+                        'href' => '/admin/payments',
+                        'matches' => ['/admin/payments'],
+                    ],
                     ['label' => 'BuT-Prüfung', 'href' => '/admin/but'],
                 ],
             ],
@@ -131,6 +141,11 @@ final class NavigationRenderer
                 ['label' => 'Schuljahre', 'href' => '/admin/school-years'],
                 ['label' => 'Zuteilungsregeln', 'href' => '/admin/allocation-rules'],
                 ['label' => 'E-Mail', 'href' => '/admin/mail'],
+                [
+                    'label' => 'Stripe & Zahlung',
+                    'href' => '/admin/config/stripe',
+                    'matches' => ['/admin/config/stripe'],
+                ],
             ],
         ];
         $groups[] = [
@@ -185,11 +200,18 @@ final class NavigationRenderer
         string $csrfToken,
         string $currentPath,
     ): string {
-        $html = '<details class="mobile-navigation"><summary>Menü</summary><div class="mobile-navigation-panel">';
-        $html .= $this->link('Dashboard', '/', $currentPath);
+        $html = '<details class="mobile-navigation">'
+            . '<summary><span class="mobile-menu-icon" aria-hidden="true">☰</span>'
+            . '<span class="mobile-menu-label">Menü</span></summary>'
+            . '<div class="mobile-navigation-panel">';
+        $html .= '<div class="mobile-nav-home">' . $this->link('Dashboard', '/', $currentPath) . '</div>';
+
         foreach ($groups as $group) {
-            $html .= '<div class="mobile-nav-group">';
-            $html .= '<strong>' . $this->escape($group['label']) . '</strong>';
+            $active = $this->groupIsActive($group['items'], $currentPath);
+            $html .= '<details class="mobile-nav-section' . ($active ? ' mobile-nav-section-active' : '') . '"'
+                . ($active ? ' open' : '') . '>';
+            $html .= '<summary>' . $this->escape($group['label']) . '</summary>';
+            $html .= '<div class="mobile-nav-section-links">';
             foreach ($group['items'] as $item) {
                 $html .= $this->link(
                     $item['label'],
@@ -198,14 +220,18 @@ final class NavigationRenderer
                     $item['matches'] ?? [],
                 );
             }
-            $html .= '</div>';
+            $html .= '</div></details>';
         }
-        $html .= '<div class="mobile-nav-group"><strong>Konto</strong>';
-        $html .= '<span class="mobile-account-name">' . $this->escape($staff->displayName) . '</span>';
+
+        $html .= '<div class="mobile-account-card">';
+        $html .= '<span class="mobile-account-label">Konto</span>';
+        $html .= '<strong class="mobile-account-name">' . $this->escape($staff->displayName) . '</strong>';
+        $html .= '<span class="mobile-account-role">' . $this->escape($staff->role->label()) . '</span>';
+        $html .= '<div class="mobile-account-links">';
         $html .= $this->link('Passwort', '/account/password', $currentPath);
         $html .= $this->link('Sitzungen', '/account/sessions', $currentPath);
         $html .= $this->logoutForm('/logout', $csrfToken);
-        $html .= '</div></div></details>';
+        $html .= '</div></div></div></details>';
 
         return $html;
     }
@@ -215,7 +241,11 @@ final class NavigationRenderer
         string $csrfToken,
         string $currentPath,
     ): string {
-        $html = '<details class="mobile-navigation"><summary>Menü</summary><div class="mobile-navigation-panel">';
+        $html = '<details class="mobile-navigation">'
+            . '<summary><span class="mobile-menu-icon" aria-hidden="true">☰</span>'
+            . '<span class="mobile-menu-label">Menü</span></summary>'
+            . '<div class="mobile-navigation-panel">';
+        $html .= '<div class="mobile-parent-links">';
         $html .= $this->link('Übersicht', '/parent', $currentPath);
         $html .= $this->link(
             'Schließfach buchen',
@@ -223,9 +253,11 @@ final class NavigationRenderer
             $currentPath,
             ['/parent/booking', '/parent/payment'],
         );
-        $html .= '<div class="mobile-nav-group"><strong>Konto</strong>';
-        $html .= '<span class="mobile-account-name">' . $this->escape($parent->displayName()) . '</span>';
-        $html .= $this->logoutForm('/parent/logout', $csrfToken);
+        $html .= '</div>';
+        $html .= '<div class="mobile-account-card">';
+        $html .= '<span class="mobile-account-label">Elternkonto</span>';
+        $html .= '<strong class="mobile-account-name">' . $this->escape($parent->displayName()) . '</strong>';
+        $html .= '<div class="mobile-account-links">' . $this->logoutForm('/parent/logout', $csrfToken) . '</div>';
         $html .= '</div></div></details>';
 
         return $html;

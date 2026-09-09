@@ -3,8 +3,6 @@
 declare(strict_types=1);
 
 use FachDock\Application;
-use FachDock\Http\Request;
-use FachDock\Payment\StripePaymentEntryPoint;
 
 $root = dirname(__DIR__);
 $autoload = $root . '/vendor/autoload.php';
@@ -18,12 +16,4 @@ if (!is_file($autoload)) {
 
 require $autoload;
 
-$app = Application::boot($root);
-$request = Request::fromGlobals();
-if (StripePaymentEntryPoint::handles($request)) {
-    StripePaymentEntryPoint::run($root, $request);
-
-    exit;
-}
-
-$app->run();
+Application::boot($root)->run();

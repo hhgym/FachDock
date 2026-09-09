@@ -10,6 +10,8 @@ use FachDock\Parent\AuthenticatedParent;
 /** @var int|null $selectedStudentId */
 /** @var int|null $selectedSchoolYearId */
 /** @var array<string, mixed>|null $selection */
+/** @var bool $stripeCheckoutAvailable */
+/** @var string $stripeMode */
 /** @var string $csrfToken */
 /** @var list<string> $errors */
 $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
@@ -130,27 +132,47 @@ $money = static fn (int $cents): string => number_format($cents / 100, 2, ',', '
         <?php if ($active !== null && !$paymentRunning): ?>
             <section class="card stack">
                 <h2>Buchung abschließen</h2>
-                <p>Wählen Sie zwischen einer BuT-Gebührenbefreiung und der Online-Zahlung. Bei einer Online-Zahlung werden Sie zu Stripe Checkout weitergeleitet.</p>
-                <div class="entity-list">
-                    <div class="entity-row stack">
-                        <strong>BuT-Gebührenbefreiung</strong>
-                        <p class="form-hint">Wenn für Ihr Kind eine Gebührenbefreiung nach Bildung und Teilhabe geltend gemacht wird, wird das Schließfach sofort verbindlich gebucht und anschließend durch die Schließfachverwaltung geprüft.</p>
-                        <form method="post" action="/parent/booking/but">
-                            <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
-                            <input type="hidden" name="reservation_id" value="<?= (int) $active['reservation_id'] ?>">
-                            <button class="button" type="submit">BuT-Befreiung beantragen und verbindlich buchen</button>
-                        </form>
+                <?php if ((int) $year['annual_fee_cents'] === 0): ?>
+                    <p>Für dieses Schuljahr ist keine Schließfachgebühr hinterlegt. Die Buchung kann direkt verbindlich abgeschlossen werden.</p>
+                    <form method="post" action="/parent/payment/start">
+                        <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+                        <input type="hidden" name="reservation_id" value="<?= (int) $active['reservation_id'] ?>">
+                        <button class="button" type="submit">Kostenfrei verbindlich buchen</button>
+                    </form>
+                <?php else: ?>
+                    <p>Wählen Sie zwischen einer BuT-Gebührenbefreiung und der Online-Zahlung.</p>
+                    <div class="entity-list">
+                        <div class="entity-row stack">
+                            <strong>BuT-Gebührenbefreiung</strong>
+                            <p class="form-hint">Wenn für Ihr Kind eine Gebührenbefreiung nach Bildung und Teilhabe geltend gemacht wird, wird das Schließfach sofort verbindlich gebucht und anschließend durch die Schließfachverwaltung geprüft.</p>
+                            <form method="post" action="/parent/booking/but">
+                                <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+                                <input type="hidden" name="reservation_id" value="<?= (int) $active['reservation_id'] ?>">
+                                <button class="button" type="submit">BuT-Befreiung beantragen und verbindlich buchen</button>
+                            </form>
+                        </div>
+                        <div class="entity-row stack">
+                            <?php if ($stripeCheckoutAvailable): ?>
+                                <div class="school-year-heading">
+                                    <strong>Online bezahlen</strong>
+                                    <?php if ($stripeMode === 'test'): ?><span class="badge">Testmodus</span><?php endif; ?>
+                                </div>
+                                <p class="form-hint">Der fällige Betrag wird anhand des Schuljahres und des Buchungszeitpunkts berechnet. Die verbindliche Buchung entsteht nach bestätigtem Zahlungseingang.</p>
+                                <?php if ($stripeMode === 'test'): ?>
+                                    <div class="alert alert-neutral"><strong>Testbetrieb:</strong> Diese Zahlungsumgebung ist noch nicht für echte Zahlungen freigeschaltet.</div>
+                                <?php endif; ?>
+                                <form method="post" action="/parent/payment/start">
+                                    <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+                                    <input type="hidden" name="reservation_id" value="<?= (int) $active['reservation_id'] ?>">
+                                    <button class="button" type="submit">Mit Stripe bezahlen</button>
+                                </form>
+                            <?php else: ?>
+                                <strong>Online-Zahlung derzeit nicht verfügbar</strong>
+                                <p class="form-hint">Die Online-Zahlung ist von der Schule noch nicht vollständig eingerichtet. Es wird kein Zahlungsvorgang gestartet.</p>
+                            <?php endif; ?>
+                        </div>
                     </div>
-                    <div class="entity-row stack">
-                        <strong>Online bezahlen</strong>
-                        <p class="form-hint">Der fällige Betrag wird anhand des Schuljahres und des Buchungszeitpunkts berechnet. Die verbindliche Buchung entsteht nach bestätigtem Zahlungseingang.</p>
-                        <form method="post" action="/parent/payment/start">
-                            <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
-                            <input type="hidden" name="reservation_id" value="<?= (int) $active['reservation_id'] ?>">
-                            <button class="button" type="submit">Mit Stripe bezahlen</button>
-                        </form>
-                    </div>
-                </div>
+                <?php endif; ?>
             </section>
         <?php endif; ?>
 
