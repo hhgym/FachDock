@@ -3,6 +3,7 @@
 
 declare(strict_types=1);
 
+use FachDock\Booking\AllocationRuleEvaluator;
 use FachDock\Config\Config;
 use FachDock\Database\ConnectionFactory;
 use FachDock\Installation\InstallationState;
@@ -12,6 +13,7 @@ use FachDock\Mail\MailTemplateRenderer;
 use FachDock\Mail\MailWorker;
 use FachDock\Mail\PhpMailerSmtpSender;
 use FachDock\Migration\MigrationRunner;
+use FachDock\SchoolYear\SchoolYearTransitionService;
 use FachDock\System\WorkerHeartbeatService;
 
 $root = dirname(__DIR__);
@@ -29,12 +31,13 @@ $command = $argv[1] ?? 'help';
 if ($command === 'help' || $command === '--help' || $command === '-h') {
     echo "FachDock CLI\n\n";
     echo "Commands:\n";
-    echo "  migrate     Run all pending database migrations\n";
-    echo "  mail:work   Process one batch of queued emails\n";
+    echo "  migrate           Run all pending database migrations\n";
+    echo "  mail:work         Process one batch of queued emails\n";
+    echo "  school-year:tick  Queue due renewal reminders and perform overdue August rollover\n";
     exit(0);
 }
 
-if (!in_array($command, ['migrate', 'mail:work'], true)) {
+if (!in_array($command, ['migrate', 'mail:work', 'school-year:tick'], true)) {
     fwrite(STDERR, "Unknown command: {$command}\n");
     exit(2);
 }
@@ -53,6 +56,31 @@ try {
         echo $count === 1
             ? "1 migration applied.\n"
             : sprintf("%d migrations applied.\n", $count);
+        exit(0);
+    }
+
+    if ($command === 'school-year:tick') {
+        $heartbeat = new WorkerHeartbeatService($pdo, 'school_year');
+        $heartbeat->started();
+        try {
+            $service = new SchoolYearTransitionService(
+                $pdo,
+                new AllocationRuleEvaluator($pdo),
+                new MailQueueService($pdo, new MailTemplateRenderer()),
+                (string) $config->get('app.base_url', ''),
+                (string) $config->get('app.school_name', ''),
+            );
+            $result = $service->dailyTick();
+            $heartbeat->succeeded($result);
+        } catch (Throwable $exception) {
+            $heartbeat->failed($exception->getMessage());
+            throw $exception;
+        }
+        printf(
+            "School year job: %d reminder(s) queued, %d rollover(s) performed.\n",
+            $result['reminders'],
+            $result['rollovers'],
+        );
         exit(0);
     }
 
