@@ -38,6 +38,22 @@ final class AuditLogger
         int|string|null $entityId = null,
         array $metadata = [],
     ): void {
+        if ($parent->adminPreview && $parent->previewStaffUserId !== null) {
+            $metadata['admin_parent_preview'] = true;
+            $metadata['preview_parent_contact_id'] = $parent->id;
+            $this->write(
+                'staff',
+                $parent->previewStaffUserId,
+                $parent->id,
+                $action,
+                $entityType,
+                $entityId,
+                $metadata,
+            );
+
+            return;
+        }
+
         $this->write('parent', null, $parent->id, $action, $entityType, $entityId, $metadata);
     }
 
