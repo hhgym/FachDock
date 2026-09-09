@@ -187,7 +187,9 @@ final class BookingNotificationService
             if ($context['booking_id'] !== null) {
                 $this->cancelPaymentReminder($context['booking_id']);
             }
-            $bookingUrl = $context['booking_id'] === null ? $this->parentHomeUrl() : $this->bookingUrl($context['booking_id']);
+            $bookingUrl = $context['booking_id'] === null
+                ? $this->parentHomeUrl()
+                : $this->bookingUrl($context['booking_id']);
             $this->enqueue(
                 'payment_received',
                 $context,
@@ -234,25 +236,28 @@ final class BookingNotificationService
 
     public function paymentFailed(int $paymentId, bool $expired): void
     {
-        $this->safely($expired ? 'payment_checkout_expired' : 'payment_failed', function () use ($paymentId, $expired): void {
-            $context = $this->paymentContext($paymentId);
-            $template = $expired ? 'payment_checkout_expired' : 'payment_failed';
-            $this->enqueue(
-                $template,
-                $context,
-                [
-                    'school_name' => $this->resolvedSchoolName(),
-                    'parent_name_suffix' => $this->parentNameSuffix($context),
-                    'student_name' => $context['student_name'],
-                    'amount' => $this->formatMoney($context['amount_cents'], $context['currency']),
-                    'retry_url' => $this->retryUrl($context),
-                ],
-                'payment',
-                $paymentId,
-                $template . ':' . $paymentId,
-                40,
-            );
-        });
+        $this->safely(
+            $expired ? 'payment_checkout_expired' : 'payment_failed',
+            function () use ($paymentId, $expired): void {
+                $context = $this->paymentContext($paymentId);
+                $template = $expired ? 'payment_checkout_expired' : 'payment_failed';
+                $this->enqueue(
+                    $template,
+                    $context,
+                    [
+                        'school_name' => $this->resolvedSchoolName(),
+                        'parent_name_suffix' => $this->parentNameSuffix($context),
+                        'student_name' => $context['student_name'],
+                        'amount' => $this->formatMoney($context['amount_cents'], $context['currency']),
+                        'retry_url' => $this->retryUrl($context),
+                    ],
+                    'payment',
+                    $paymentId,
+                    $template . ':' . $paymentId,
+                    40,
+                );
+            },
+        );
     }
 
     /**
@@ -271,7 +276,9 @@ final class BookingNotificationService
         ?string $notAfter = null,
         ?string $availableAt = null,
     ): void {
-        $recipientName = trim((string) ($context['parent_first_name'] ?? '') . ' ' . (string) ($context['parent_last_name'] ?? ''));
+        $recipientName = trim(
+            (string) ($context['parent_first_name'] ?? '') . ' ' . (string) ($context['parent_last_name'] ?? '')
+        );
         $this->mailQueue->enqueue(
             $templateKey,
             (string) $context['parent_email'],
@@ -316,7 +323,9 @@ final class BookingNotificationService
         );
         $statement->execute(['id' => $bookingId]);
         $row = $statement->fetch(PDO::FETCH_ASSOC);
-        if (!is_array($row) || !is_string($row['parent_email'] ?? null) || !filter_var($row['parent_email'], FILTER_VALIDATE_EMAIL)) {
+        if (!is_array($row)
+            || !is_string($row['parent_email'] ?? null)
+            || !filter_var($row['parent_email'], FILTER_VALIDATE_EMAIL)) {
             throw new RuntimeException('Für die Buchungsbenachrichtigung ist kein gültiger Elternkontakt vorhanden.');
         }
 
@@ -366,7 +375,9 @@ final class BookingNotificationService
         );
         $statement->execute(['id' => $paymentId]);
         $row = $statement->fetch(PDO::FETCH_ASSOC);
-        if (!is_array($row) || !is_string($row['parent_email'] ?? null) || !filter_var($row['parent_email'], FILTER_VALIDATE_EMAIL)) {
+        if (!is_array($row)
+            || !is_string($row['parent_email'] ?? null)
+            || !filter_var($row['parent_email'], FILTER_VALIDATE_EMAIL)) {
             throw new RuntimeException('Für die Zahlungsbenachrichtigung ist kein gültiger Elternkontakt vorhanden.');
         }
         if ($row['student_id'] === null || $row['school_year_id'] === null) {
@@ -465,7 +476,7 @@ final class BookingNotificationService
 
         $statement = $this->pdo->prepare(
             "UPDATE mail_queue SET status = 'canceled', canceled_at = CURRENT_TIMESTAMP, html_body = NULL, "
-            . "text_body = NULL, locked_at = NULL, updated_at = CURRENT_TIMESTAMP "
+            . 'text_body = NULL, locked_at = NULL, updated_at = CURRENT_TIMESTAMP '
             . "WHERE id = :id AND status = 'waiting'"
         );
         $statement->execute(['id' => (int) $queueId]);
