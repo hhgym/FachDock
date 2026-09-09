@@ -6,9 +6,9 @@ FachDock ist eine webbasierte Verwaltungs- und Buchungslösung für schulische S
 
 ## Projektstatus
 
-Aktuelle veröffentlichte Version: **0.6.0**
+Aktuelle veröffentlichte Version: **0.6.1**
 
-> FachDock befindet sich noch vor Version 1.0.0. Version 0.6.0 ist ein installierbarer Teststand für Web-Installer und Update-Routine sowie für die inzwischen durchgängigen Verwaltungs-, Reservierungs-, Elternportal-, BuT- und Stripe-Zahlungsabläufe. Zusätzlich sind die zentralen Buchungs- und Zahlungsereignisse nun mit deduplizierten E-Mail-Benachrichtigungen verbunden; nach einer BuT-Ablehnung kann die bestehende Buchung direkt bezahlt werden. Die Version ist weiterhin nicht für den produktiven Schulbetrieb vorgesehen.
+> FachDock befindet sich noch vor Version 1.0.0. Version 0.6.1 ist ein installierbarer Teststand für Web-Installer und Update-Routine sowie für die inzwischen durchgängigen Verwaltungs-, Reservierungs-, Elternportal-, BuT- und Stripe-Zahlungsabläufe. Der Patchrelease ergänzt die direkt editierbare öffentliche HTTPS-Basis-URL in der Stripe-Konfiguration und behebt horizontales Überlaufen auf kleinen Displays. Die Version ist weiterhin nicht für den produktiven Schulbetrieb vorgesehen.
 
 ## Bereits enthalten
 
@@ -38,6 +38,7 @@ Aktuelle veröffentlichte Version: **0.6.0**
 - direkte Stripe-Zahlung einer bereits bestehenden `payment_due`-Buchung nach BuT-Ablehnung
 - automatische Stornierung hinfälliger Zahlungserinnerungen nach erfolgreicher Zahlung oder Aktivierung
 - Stripe Checkout für Elternbuchungen mit Test-/Live-Trennung
+- öffentliche HTTPS-Basis-URL direkt in der Stripe-Konfiguration pflegbar; Webhook-Endpunkt wird daraus automatisch angezeigt
 - Online-Zahlung im Elternportal nur bei vollständig gültiger Stripe- und HTTPS-Konfiguration
 - kostenfreie verbindliche Buchung auch ohne eingerichtete Stripe-Zugangsdaten
 - signierte und idempotente Stripe-Webhooks für erfolgreiche, fehlgeschlagene und abgelaufene Zahlungen
@@ -77,7 +78,7 @@ FachDock verwendet Git Flow:
 - `release/*` – Release-Stabilisierung
 - `hotfix/*` – dringende Korrekturen veröffentlichter Versionen
 
-Stabile Teststände werden als GitHub Releases mit Tags wie `v0.6.0` und später `v1.0.0` veröffentlicht. FachDock berücksichtigt beim integrierten Update ausschließlich stabile Releases.
+Stabile Teststände werden als GitHub Releases mit Tags wie `v0.6.1` und später `v1.0.0` veröffentlicht. FachDock berücksichtigt beim integrierten Update ausschließlich stabile Releases.
 
 ## Installation
 
