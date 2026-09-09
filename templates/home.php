@@ -22,6 +22,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= $e($appName) ?></title>
     <link rel="stylesheet" href="/assets/app.css">
+    <link rel="stylesheet" href="/assets/dashboard.css?v=<?= $e($version) ?>">
 </head>
 <body>
 <header class="topbar">
