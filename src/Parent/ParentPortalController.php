@@ -131,10 +131,12 @@ final class ParentPortalController
         if (!$this->csrf->verify($request->postString('_csrf'))) {
             return Response::html('<h1>Ungültige Sitzung</h1>', 419);
         }
+        $parent = $this->sessions->current();
+        $returnToAdministration = $parent !== null && $parent->adminPreview;
         $this->sessions->logout();
         $this->csrf->rotate();
 
-        return Response::redirect('/parent/login');
+        return Response::redirect($returnToAdministration ? '/admin/parents' : '/parent/login');
     }
 
     private function magicLinkError(string $message): Response

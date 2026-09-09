@@ -9,6 +9,7 @@ enum LockerOperatingStatus: string
     case Operational = 'operational';
     case Blocked = 'blocked';
     case Defective = 'defective';
+    case Maintenance = 'maintenance';
     case OutOfService = 'out_of_service';
 
     public function label(): string
@@ -17,6 +18,7 @@ enum LockerOperatingStatus: string
             self::Operational => 'Betriebsbereit',
             self::Blocked => 'Gesperrt',
             self::Defective => 'Defekt',
+            self::Maintenance => 'Wartung',
             self::OutOfService => 'Außer Betrieb',
         };
     }

@@ -6,9 +6,9 @@ FachDock ist eine webbasierte Verwaltungs- und Buchungslösung für schulische S
 
 ## Projektstatus
 
-Aktuelle veröffentlichte Version: **0.7.0**
+Aktuelle veröffentlichte Version: **0.8.0**
 
-> FachDock befindet sich noch vor Version 1.0.0. Version 0.7.0 ist ein installierbarer Teststand für Web-Installer und Update-Routine sowie für die inzwischen durchgängigen Verwaltungs-, Reservierungs-, Elternportal-, BuT-, Stripe-Zahlungs- und Buchungslebenszyklus-Abläufe. Neu sind insbesondere Verlängerungen in spätere Schuljahre, regelkonforme Schließfachwechsel sowie das Beenden und Stornieren von Buchungen einschließlich Historie und Benachrichtigungen. Die Version ist weiterhin nicht für den produktiven Schulbetrieb vorgesehen.
+> FachDock befindet sich noch vor Version 1.0.0. Version 0.8.0 ist ein installierbarer Teststand für Web-Installer und Update-Routine sowie für die inzwischen durchgängigen Verwaltungs-, Reservierungs-, Elternportal-, BuT-, Stripe-Zahlungs- und Buchungslebenszyklus-Abläufe. Neu sind insbesondere der operative Schließfachbetrieb mit Defekt- und Notöffnungsverwaltung, Eltern-/Schüler-Selbstservice sowie ein zentraler Systemstatus mit Worker-Monitoring. Die Version ist weiterhin nicht für den produktiven Schulbetrieb vorgesehen.
 
 ## Bereits enthalten
 
@@ -16,10 +16,19 @@ Aktuelle veröffentlichte Version: **0.7.0**
 - lokale Anmeldung für Administratoren und Schließfachverwalter
 - serverseitig widerrufbare Sitzungen und Passwortänderung
 - zentrale responsive und rollenabhängige Navigation für Verwaltung und Elternportal
+- zentrale Konfigurationsverwaltung für allgemeine Einstellungen, Authentifizierung, Buchung, Stripe und E-Mail
 - operatives Dashboard mit Kennzahlen und Warnungen zu Buchungen, Reservierungen, BuT und Zahlungen
+- zentraler Systemstatus mit Datenbank-, SMTP-, Stripe-, Dateisystem- und Mail-Worker-Prüfung
+- persistenter Mail-Worker-Heartbeat mit letztem Start, Erfolg und Fehlerstatus
 - Gebäude, Etagen, Bereiche, Korpustypen und Schrankgruppen
 - barrierearme Fachpositionen und gemischte Korpustypen
 - automatische Fachbezeichnungen wie `A-07-2` und `1OG-78-A-07-2`
+- technische Schließfachzustände `Betriebsbereit`, `Gesperrt`, `Defekt`, `Wartung` und `Außer Betrieb`
+- operative Vorgangsverwaltung für Defekte, Schloss-/Türprobleme, Beschädigungen, vergessene Codes und Notöffnungen
+- dokumentierte Notöffnungen sowie technische Schließfach- und Vorgangshistorie
+- automatische Sperre defekter Fächer für neue Buchungen ohne Beendigung laufender Buchungen
+- Eltern-Selbstservice zur Meldung von Schließfachproblemen mit Statusanzeige und E-Mail-Benachrichtigung
+- Schüler-Selbstservice als Fallback über Matrikelnummer und bestehenden FachDock-Zugangscode
 - CSV-Schülerimport mit Vorschau, Validierung und Importprofilen
 - permanente, nur gehasht gespeicherte Schüler-Zugangscodes mit einmaligem Export neu erzeugter Codes
 - vollständige Schuljahresverwaltung
@@ -49,18 +58,18 @@ Aktuelle veröffentlichte Version: **0.7.0**
 - sichere administrative Wiederherstellung bereits bezahlter `manual_review`-Vorgänge ohne erneute Zahlung
 - Sperre von Lebenszyklusänderungen während laufender oder technisch/manuell zu prüfender Zahlungsvorgänge
 - einheitliches Application-Routing für Eltern-, Zahlungs-, Webhook- und Verwaltungsrouten
-- MySQL-Integrationstests für Zahlungsworkflow, BuT-Folgezahlung, Benachrichtigungen, Buchungslebenszyklus und Wiederherstellung problematischer Zahlungen
+- MySQL-Integrationstests für Zahlungsworkflow, BuT-Folgezahlung, Benachrichtigungen, Buchungslebenszyklus, Schließfachsupport, Worker-Monitoring und Wiederherstellung problematischer Zahlungen
 - stabiler GitHub-Updatekanal mit SHA-256-Prüfung und automatischen Datenbankmigrationen
 
 ## Geplante Kernfunktionen
 
 - interaktive Lagepläne je Etage
 - Schüler- und Lehrkräftezugang über IServ/OIDC
-- Defektmeldungen und Notöffnungen
+- automatisierter Schuljahreswechsel einschließlich Verlängerungs- und Freigabelogik
 - Web-Push und weitere Systemjobs
 - PDF-/CSV-Exporte und Dokumentenarchiv
-- erweiterte Audit-, Aufbewahrungs- und Anonymisierungsfunktionen
-- weitere Konsolidierung der Administrations- und Konfigurationsoberflächen vor Version 1.0.0
+- erweiterte Audit-, Aufbewahrungs-, Datenschutz- und Anonymisierungsfunktionen
+- weitere Sicherheits- und Produktionshärtung vor Version 1.0.0
 
 ## Technische Basis
 
@@ -82,7 +91,7 @@ FachDock verwendet Git Flow:
 - `release/*` – Release-Stabilisierung
 - `hotfix/*` – dringende Korrekturen veröffentlichter Versionen
 
-Stabile Teststände werden als GitHub Releases mit Tags wie `v0.7.0` und später `v1.0.0` veröffentlicht. FachDock berücksichtigt beim integrierten Update ausschließlich stabile Releases.
+Stabile Teststände werden als GitHub Releases mit Tags wie `v0.8.0` und später `v1.0.0` veröffentlicht. FachDock berücksichtigt beim integrierten Update ausschließlich stabile Releases.
 
 ## Installation
 

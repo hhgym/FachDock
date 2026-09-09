@@ -12,6 +12,7 @@ use FachDock\Mail\MailTemplateRenderer;
 use FachDock\Mail\MailWorker;
 use FachDock\Mail\PhpMailerSmtpSender;
 use FachDock\Migration\MigrationRunner;
+use FachDock\System\WorkerHeartbeatService;
 
 $root = dirname(__DIR__);
 $autoload = $root . '/vendor/autoload.php';
@@ -91,7 +92,15 @@ try {
         $intConfig($config, 'mail.max_per_hour', 50),
         $intConfig($config, 'mail.processing_timeout_minutes', 15),
     );
-    $result = $worker->run($intConfig($config, 'mail.worker_batch_size', 50));
+    $heartbeat = new WorkerHeartbeatService($pdo, 'mail');
+    $heartbeat->started();
+    try {
+        $result = $worker->run($intConfig($config, 'mail.worker_batch_size', 50));
+        $heartbeat->succeeded($result);
+    } catch (Throwable $exception) {
+        $heartbeat->failed($exception->getMessage());
+        throw $exception;
+    }
     printf(
         "Mail worker: %d processed, %d sent, %d deferred, %d failed, %d expired.\n",
         $result['processed'],

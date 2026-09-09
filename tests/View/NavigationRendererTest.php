@@ -35,11 +35,14 @@ final class NavigationRendererTest extends TestCase
         self::assertStringContainsString('Personen', $html);
         self::assertStringContainsString('Konfiguration', $html);
         self::assertStringContainsString('System', $html);
+        self::assertStringContainsString('href="/admin/operations"', $html);
         self::assertStringContainsString('href="/admin/bookings"', $html);
         self::assertStringContainsString('href="/admin/payments"', $html);
+        self::assertStringContainsString('href="/admin/system/status"', $html);
         self::assertStringContainsString('href="/admin/system/update"', $html);
-        self::assertStringContainsString('Stripe &amp; Zahlung', $html);
-        self::assertStringContainsString('href="/admin/config/stripe" aria-current="page"', $html);
+        self::assertStringContainsString('Einstellungen', $html);
+        self::assertStringContainsString('href="/admin/config" aria-current="page"', $html);
+        self::assertStringContainsString('E-Mail-Vorlagen &amp; Warteschlange', $html);
         self::assertStringContainsString('mobile-menu-icon', $html);
         self::assertStringContainsString('mobile-nav-section-active" open', $html);
         self::assertStringContainsString('name="_csrf" value="csrf-admin"', $html);
@@ -61,15 +64,17 @@ final class NavigationRendererTest extends TestCase
         $html = $renderer->inject(self::CONTENT, [
             'staff' => $staff,
             'csrfToken' => 'csrf-locker',
-        ], '/admin/payments');
+        ], '/admin/operations');
 
         self::assertStringContainsString('href="/admin/locations"', $html);
+        self::assertStringContainsString('href="/admin/operations" aria-current="page"', $html);
         self::assertStringContainsString('href="/admin/bookings"', $html);
-        self::assertStringContainsString('href="/admin/payments" aria-current="page"', $html);
+        self::assertStringContainsString('href="/admin/payments"', $html);
         self::assertStringContainsString('href="/admin/but"', $html);
         self::assertStringNotContainsString('href="/admin/students"', $html);
         self::assertStringNotContainsString('href="/admin/recommendations"', $html);
-        self::assertStringNotContainsString('href="/admin/config/stripe"', $html);
+        self::assertStringNotContainsString('href="/admin/config"', $html);
+        self::assertStringNotContainsString('href="/admin/system/status"', $html);
         self::assertStringNotContainsString('href="/admin/system/update"', $html);
     }
 
@@ -92,6 +97,8 @@ final class NavigationRendererTest extends TestCase
         self::assertStringContainsString('Elternportal', $html);
         self::assertStringContainsString('href="/parent"', $html);
         self::assertStringContainsString('href="/parent/booking" aria-current="page"', $html);
+        self::assertStringContainsString('href="/parent/support"', $html);
+        self::assertStringContainsString('Problem melden', $html);
         self::assertStringContainsString('action="/parent/logout"', $html);
         self::assertStringContainsString('mobile-menu-icon', $html);
         self::assertStringContainsString('Erika Muster', $html);

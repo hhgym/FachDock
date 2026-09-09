@@ -101,7 +101,10 @@ $formValue = static function (array $form, string $key): string {
 
     <section class="card stack">
         <div class="school-year-heading">
-            <div><h2>Elternkontakte</h2><p class="form-hint">Die Verifikation erfolgt ausschließlich über einen einmaligen Link an die gespeicherte E-Mail-Adresse.</p></div>
+            <div>
+                <h2>Elternkontakte</h2>
+                <p class="form-hint">Die reguläre Verifikation erfolgt ausschließlich über einen einmaligen Link an die gespeicherte E-Mail-Adresse. Administratoren können das Elternportal zusätzlich als aktiven Kontakt testen; dabei wird keine E-Mail versendet und die Testansicht wird sichtbar gekennzeichnet und protokolliert.</p>
+            </div>
             <span class="badge"><?= count($contacts) ?> Kontakte</span>
         </div>
         <?php if ($contacts === []): ?>
@@ -119,12 +122,21 @@ $formValue = static function (array $form, string $key): string {
                             <td><?= $contact['verified_at'] !== null ? $e((string) $contact['verified_at']) : '–' ?></td>
                             <td><?= (int) $contact['active_link_count'] ?></td>
                             <td>
-                                <?php if ($contact['active'] && $contact['verified_at'] === null): ?>
-                                    <form method="post" action="/admin/parents/send-verification">
-                                        <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
-                                        <input type="hidden" name="parent_contact_id" value="<?= (int) $contact['id'] ?>">
-                                        <button class="button button-secondary" type="submit">Bestätigungslink senden</button>
-                                    </form>
+                                <?php if ($contact['active']): ?>
+                                    <div class="stack">
+                                        <form method="post" action="/admin/parents/preview">
+                                            <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+                                            <input type="hidden" name="parent_contact_id" value="<?= (int) $contact['id'] ?>">
+                                            <button class="button button-secondary" type="submit">Als Elternteil testen</button>
+                                        </form>
+                                        <?php if ($contact['verified_at'] === null): ?>
+                                            <form method="post" action="/admin/parents/send-verification">
+                                                <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+                                                <input type="hidden" name="parent_contact_id" value="<?= (int) $contact['id'] ?>">
+                                                <button class="button button-secondary" type="submit">Bestätigungslink senden</button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </div>
                                 <?php else: ?>–<?php endif; ?>
                             </td>
                         </tr>
