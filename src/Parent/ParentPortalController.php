@@ -132,7 +132,7 @@ final class ParentPortalController
             return Response::html('<h1>Ungültige Sitzung</h1>', 419);
         }
         $parent = $this->sessions->current();
-        $returnToAdministration = $parent?->adminPreview ?? false;
+        $returnToAdministration = $parent !== null && $parent->adminPreview;
         $this->sessions->logout();
         $this->csrf->rotate();
 
