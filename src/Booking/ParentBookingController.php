@@ -12,6 +12,7 @@ use FachDock\Http\Router;
 use FachDock\Parent\AuthenticatedParent;
 use FachDock\Parent\ParentPortalAccessService;
 use FachDock\Parent\ParentSessionService;
+use FachDock\Payment\StripeConfigurationState;
 use FachDock\Security\Csrf;
 use FachDock\View\ViewRenderer;
 use Psr\Log\LoggerInterface;
@@ -27,6 +28,7 @@ final class ParentBookingController
         private readonly LoggerInterface $logger,
         private readonly ViewRenderer $views,
         private readonly Csrf $csrf,
+        private readonly StripeConfigurationState $stripe,
         private readonly int $recommendationCount = 3,
     ) {
     }
@@ -183,6 +185,8 @@ final class ParentBookingController
             'selectedStudentId' => $selectedStudentId,
             'selectedSchoolYearId' => $selectedSchoolYearId,
             'selection' => $selection,
+            'stripeCheckoutAvailable' => $this->stripe->checkoutAvailable(),
+            'stripeMode' => $this->stripe->mode,
             'csrfToken' => $this->csrf->token(),
             'errors' => $errors,
         ]), $status);

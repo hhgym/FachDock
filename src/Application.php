@@ -15,6 +15,8 @@ use FachDock\Booking\AllocationRuleAdminController;
 use FachDock\Booking\AllocationRuleEvaluator;
 use FachDock\Booking\AllocationRuleService;
 use FachDock\Booking\AllocationRuleTestService;
+use FachDock\Booking\BookingPaymentAdminController;
+use FachDock\Booking\BookingPaymentAdminService;
 use FachDock\Booking\BookingSelectionAdminController;
 use FachDock\Booking\BookingService;
 use FachDock\Booking\ButBookingController;
@@ -28,6 +30,7 @@ use FachDock\Booking\ParentBookingService;
 use FachDock\Booking\ProjectedGradeResolver;
 use FachDock\Booking\ReservationService;
 use FachDock\Config\Config;
+use FachDock\Config\LocalConfigWriter;
 use FachDock\Database\ConnectionFactory;
 use FachDock\Http\Request;
 use FachDock\Http\Response;
@@ -51,6 +54,13 @@ use FachDock\Parent\ParentPortalAccessService;
 use FachDock\Parent\ParentPortalController;
 use FachDock\Parent\ParentSessionService;
 use FachDock\Parent\ParentVerificationAdminController;
+use FachDock\Payment\PaidPaymentRecoveryService;
+use FachDock\Payment\StripeConfigurationState;
+use FachDock\Payment\StripePaymentController;
+use FachDock\Payment\StripePaymentService;
+use FachDock\Payment\StripePhpGateway;
+use FachDock\Payment\StripeSettingsController;
+use FachDock\Payment\UnavailableStripeGateway;
 use FachDock\SchoolYear\SchoolYearAdminController;
 use FachDock\SchoolYear\SchoolYearService;
 use FachDock\Security\Csrf;
@@ -138,6 +148,7 @@ final class Application
         $audit = new AuditLogger($pdo);
         $locations = new LocationCatalogService($pdo);
         $schoolYears = new SchoolYearService($pdo);
+        $stripeState = StripeConfigurationState::fromConfig($this->config);
 
         (new LocationAdminController(
             $locations,
@@ -262,6 +273,10 @@ final class Application
             $allocationEvaluator,
             $gradeResolver,
         );
+        $bookingService = new BookingService($pdo);
+        $feeCalculator = new FeeCalculator();
+        $bookingAdmin = new BookingPaymentAdminService($pdo);
+
         (new BookingSelectionAdminController(
             $recommendations,
             $reservations,
@@ -281,19 +296,66 @@ final class Application
             $this->logger,
             $views,
             $csrf,
+            $stripeState,
             $recommendationCount,
         ))->register($router);
 
         $butBookings = new ButBookingService(
             $pdo,
-            new BookingService($pdo),
-            new FeeCalculator(),
+            $bookingService,
+            $feeCalculator,
             $this->configInt('booking.but_rejection_payment_days', 14),
         );
         (new ButBookingController(
             $butBookings,
             $parentSessions,
             $sessions,
+            $audit,
+            $this->logger,
+            $views,
+            $csrf,
+        ))->register($router);
+
+        (new BookingPaymentAdminController(
+            $bookingAdmin,
+            new PaidPaymentRecoveryService($pdo, $bookingService),
+            $sessions,
+            $audit,
+            $this->logger,
+            $views,
+            $csrf,
+        ))->register($router);
+
+        (new StripeSettingsController(
+            $this->config,
+            new LocalConfigWriter($this->root),
+            $sessions,
+            $audit,
+            $this->logger,
+            $views,
+            $csrf,
+        ))->register($router);
+
+        $stripeGateway = $stripeState->credentialsConfigured()
+            ? new StripePhpGateway(
+                (string) $this->config->get('stripe.secret_key', ''),
+                (string) $this->config->get('stripe.webhook_secret', ''),
+                $stripeState->mode,
+            )
+            : new UnavailableStripeGateway();
+        $stripePayments = new StripePaymentService(
+            $pdo,
+            $stripeGateway,
+            $reservations,
+            $bookingService,
+            $feeCalculator,
+            (string) $this->config->get('app.base_url', ''),
+            (string) $this->config->get('stripe.currency', 'EUR'),
+            $this->configInt('stripe.checkout_minutes', 30),
+        );
+        (new StripePaymentController(
+            $stripePayments,
+            $parentSessions,
             $audit,
             $this->logger,
             $views,
@@ -360,7 +422,7 @@ final class Application
             return Response::redirect('/login');
         });
 
-        $router->get('/', function (Request $request) use ($views, $csrf, $sessions): Response {
+        $router->get('/', function (Request $request) use ($views, $csrf, $sessions, $bookingAdmin, $stripeState): Response {
             unset($request);
             $staff = $sessions->current();
             if ($staff === null) {
@@ -372,6 +434,10 @@ final class Application
                 'version' => (string) $this->config->get('app.version', '0.1.0-dev'),
                 'schoolName' => (string) $this->config->get('app.school_name', ''),
                 'staff' => $staff,
+                'dashboard' => $bookingAdmin->dashboard(),
+                'stripeMode' => $stripeState->mode,
+                'stripeCheckoutAvailable' => $stripeState->checkoutAvailable(),
+                'stripeProblems' => $stripeState->problems(),
                 'csrfToken' => $csrf->token(),
             ]));
         });
