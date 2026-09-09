@@ -168,6 +168,7 @@ final class BookingLifecycleService
         $this->pdo->beginTransaction();
         try {
             $source = $this->renewableBooking($bookingId);
+            $this->assertNoInFlightPayment($bookingId);
             $targetYear = $this->targetSchoolYear($targetSchoolYearId);
             if ($targetYear['starts_on'] <= $source['school_year_starts_on']) {
                 throw new DomainException('Eine Verlängerung ist nur in ein späteres Schuljahr möglich.');
@@ -181,14 +182,24 @@ final class BookingLifecycleService
             }
 
             $this->assertStudentYearAvailable($source['student_id'], $targetSchoolYearId);
-            $this->assertLockerAvailable($targetSchoolYearId, $source['locker_id']);
-            $locker = $this->bookableLocker($source['locker_id']);
-            $decision = $this->allocationRules->evaluate($targetSchoolYearId, $projectedGrade, $source['locker_id']);
-            if (!$decision->allowed) {
+            $forceChange = $source['projected_grade'] <= 6 && $projectedGrade >= 7;
+            $selection = (new RenewalLockerSelector($this->pdo, $this->allocationRules))->selectForUpdate(
+                $targetSchoolYearId,
+                $projectedGrade,
+                $source['locker_id'],
+                $forceChange,
+            );
+            if ($selection === null) {
                 throw new DomainException(
-                    $decision->reason ?? 'Das bisherige Schließfach ist im Zielschuljahr nach den Zuteilungsregeln nicht zulässig.',
+                    $forceChange
+                        ? 'Für den Wechsel in Klassenstufe 7 ist derzeit kein freies regelkonformes anderes Schließfach verfügbar.'
+                        : 'Für das Zielschuljahr ist derzeit kein freies regelkonformes Schließfach verfügbar.',
                 );
             }
+            $lockerId = $selection['id'];
+            $locker = $selection['locker'];
+            $decision = $selection['decision'];
+            $this->assertLockerAvailable($targetSchoolYearId, $lockerId);
 
             $studentSnapshot = $this->studentSnapshot($source['student_id']);
             $annualFee = $targetYear['annual_fee_cents'];
@@ -250,26 +261,29 @@ final class BookingLifecycleService
                 . 'VALUES (:school_year_id, :locker_id, :booking_id, CURRENT_TIMESTAMP)'
             )->execute([
                 'school_year_id' => $targetSchoolYearId,
-                'locker_id' => $source['locker_id'],
+                'locker_id' => $lockerId,
                 'booking_id' => $newBookingId,
             ]);
             $this->insertAssignment(
                 $newBookingId,
                 $targetSchoolYearId,
-                $source['locker_id'],
+                $lockerId,
                 $locker,
                 'renewal',
                 $staff->id,
             );
-            $this->lockCabinetGroup($locker['cabinet_group_id']);
+            $this->lockCabinetGroup((int) $locker['cabinet_group_id']);
+            $reason = $selection['reuse_current']
+                ? 'Verlängerung in das Schuljahr ' . $targetYear['label'] . '; bisheriges Schließfach übernommen'
+                : 'Verlängerung in das Schuljahr ' . $targetYear['label'] . '; Schließfachwechsel erforderlich';
             $this->insertEvent(
                 $bookingId,
                 'renewed',
                 $newBookingId,
                 $source['locker_id'],
-                $source['locker_id'],
+                $lockerId,
                 $targetYear['starts_on'],
-                'Verlängerung in das Schuljahr ' . $targetYear['label'],
+                $reason,
                 $staff->id,
             );
             $this->pdo->commit();
@@ -382,6 +396,18 @@ final class BookingLifecycleService
         $statement->execute(['school_year_id' => $schoolYearId, 'locker_id' => $lockerId]);
         if ($statement->fetchColumn() !== false) {
             throw new DomainException('Das Schließfach ist im gewählten Schuljahr bereits belegt.');
+        }
+
+        $reservation = $this->pdo->prepare(
+            'SELECT rs.reservation_id FROM reservation_slots rs '
+            . 'INNER JOIN locker_reservations lr ON lr.id = rs.reservation_id '
+            . 'WHERE rs.school_year_id = :school_year_id AND rs.locker_id = :locker_id '
+            . "AND ((lr.status = 'active' AND lr.expires_at > CURRENT_TIMESTAMP) "
+            . "OR (lr.status = 'payment_running' AND lr.payment_grace_expires_at > CURRENT_TIMESTAMP)) LIMIT 1 FOR UPDATE"
+        );
+        $reservation->execute(['school_year_id' => $schoolYearId, 'locker_id' => $lockerId]);
+        if ($reservation->fetchColumn() !== false) {
+            throw new DomainException('Das Schließfach ist im gewählten Schuljahr bereits reserviert.');
         }
     }
 
