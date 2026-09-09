@@ -63,7 +63,12 @@ final class IdentityFrontController
         $request = Request::fromGlobals();
         $configuration = new OidcConfiguration($config);
         $identityService = new OidcIdentityService($pdo, $configuration, new CurlOidcHttpClient());
-        $oidcSessions = new OidcSessionService($pdo, $configuration->sessionLifetimeMinutes());
+        $oidcSessions = new OidcSessionService(
+            $pdo,
+            $configuration->sessionLifetimeMinutes(),
+            60,
+            $configuration->enabled(),
+        );
         $staffSessions = new StaffSessionService(
             $pdo,
             self::configInt($config, 'auth.session_max_lifetime_minutes', 480),
@@ -241,8 +246,13 @@ final class IdentityFrontController
                 $logger,
             );
             $support = new LockerSupportService($pdo, $notifications);
-            (new StudentSupportSessionService($support, new AccessCodeGenerator()))->createForStudentId(
+            (new StudentSupportSessionService(
+                $support,
+                new AccessCodeGenerator(),
+                $oidcSessions,
+            ))->createForStudentId(
                 (int) $authenticated->studentId,
+                $authenticated->id,
             );
 
             return Response::redirect('/student/support');
@@ -373,6 +383,8 @@ final class IdentityFrontController
             $metadata['student_id'] = $studentId;
         } elseif ($action === 'pending') {
             $identityService->setPending($id);
+        } elseif ($action === 'automatic') {
+            $identityService->useAutomaticAssignment($id);
         } elseif ($action === 'enable') {
             $identityService->setActive($id, true);
         } elseif ($action === 'disable') {
@@ -386,8 +398,9 @@ final class IdentityFrontController
         return Response::redirect('/admin/config/oidc');
     }
 
-    /** @param list<string> $errors
-     *  @param array<string, string>|null $testResult
+    /**
+     * @param list<string> $errors
+     * @param array<string, string>|null $testResult
      */
     private static function adminPage(
         ViewRenderer $views,
