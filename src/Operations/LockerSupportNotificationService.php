@@ -21,8 +21,10 @@ final class LockerSupportNotificationService
     /** @param array<string, mixed> $incident */
     public function received(array $incident): void
     {
+        $category = LockerIncidentCategory::tryFrom((string) ($incident['category'] ?? ''));
         $this->enqueue('locker_issue_received', $incident, [
             'school_name' => $this->schoolName !== '' ? $this->schoolName : 'der Schule',
+            'category_label' => $category?->label() ?? 'Schließfachproblem',
             'description' => (string) ($incident['description'] ?? ''),
         ], 'received');
     }
@@ -51,14 +53,12 @@ final class LockerSupportNotificationService
 
         $reportedBy = (string) ($incident['reported_by_type'] ?? '');
         $path = $reportedBy === 'student' ? '/student/support' : '/parent/support';
-        $category = LockerIncidentCategory::tryFrom((string) ($incident['category'] ?? ''));
         $name = trim((string) ($incident['reporter_name'] ?? ''));
         $placeholders = [
             'incident_reference' => '#' . $id,
             'recipient_name_suffix' => $name === '' ? '' : ' ' . $name,
             'locker_name' => (string) ($incident['locker_name'] ?? ''),
             'student_name' => (string) ($incident['student_name'] ?? ''),
-            'category_label' => $category?->label() ?? 'Schließfachproblem',
             'status_url' => rtrim($this->baseUrl, '/') . $path,
         ] + $extra;
 
