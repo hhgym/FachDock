@@ -13,6 +13,7 @@ use FachDock\Http\Response;
 use FachDock\Http\Router;
 use FachDock\Parent\AuthenticatedParent;
 use FachDock\Parent\ParentSessionService;
+use FachDock\Payment\StripeConfigurationState;
 use FachDock\Security\Csrf;
 use FachDock\View\ViewRenderer;
 use Psr\Log\LoggerInterface;
@@ -28,6 +29,7 @@ final class ButBookingController
         private readonly LoggerInterface $logger,
         private readonly ViewRenderer $views,
         private readonly Csrf $csrf,
+        private readonly StripeConfigurationState $stripeState,
     ) {
     }
 
@@ -80,6 +82,8 @@ final class ButBookingController
             return Response::html($this->views->render('parent-booking-status.php', [
                 'parent' => $parent,
                 'booking' => $booking,
+                'stripeCheckoutAvailable' => $this->stripeState->checkoutAvailable(),
+                'stripeMode' => $this->stripeState->mode,
                 'csrfToken' => $this->csrf->token(),
             ]));
         } catch (DomainException $exception) {
