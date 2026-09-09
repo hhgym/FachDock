@@ -35,6 +35,7 @@ final class MailQueueService
         ?string $deduplicationKey = null,
         int $priority = 100,
         ?string $notAfter = null,
+        ?string $availableAt = null,
     ): int {
         $templateKey = trim($templateKey);
         $recipientEmail = mb_strtolower(trim($recipientEmail));
@@ -71,7 +72,7 @@ final class MailQueueService
             . 'priority, status, attempts, available_at, not_after, created_at, updated_at) VALUES '
             . '(:template_id, :recipient_email, :recipient_name, :subject, :html_body, :text_body, '
             . ':placeholder_snapshot, :relation_type, :relation_id, :business_reference, :deduplication_key, '
-            . ":priority, 'waiting', 0, CURRENT_TIMESTAMP, :not_after, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            . ":priority, 'waiting', 0, COALESCE(:available_at, CURRENT_TIMESTAMP), :not_after, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         );
 
         try {
@@ -89,6 +90,7 @@ final class MailQueueService
                 'deduplication_key' => $this->nullable($deduplicationKey),
                 'priority' => $priority,
                 'not_after' => $this->nullable($notAfter),
+                'available_at' => $this->nullable($availableAt),
             ]);
         } catch (PDOException $exception) {
             if ((string) $exception->getCode() !== '23000' || $this->nullable($deduplicationKey) === null) {
