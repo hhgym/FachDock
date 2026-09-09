@@ -7,6 +7,8 @@ use FachDock\Auth\AuthenticatedStaff;
 /** @var AuthenticatedStaff $staff */
 /** @var array<string, mixed> $payment */
 /** @var string $csrfToken */
+/** @var list<string> $errors */
+/** @var bool $recovered */
 $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 $statusLabel = static fn (string $status): string => match ($status) {
     'creating' => 'Wird angelegt',
@@ -20,6 +22,9 @@ $statusLabel = static fn (string $status): string => match ($status) {
 };
 /** @var list<array<string, mixed>> $events */
 $events = is_array($payment['webhook_events'] ?? null) ? $payment['webhook_events'] : [];
+$recoverable = (string) $payment['status'] === 'manual_review'
+    && (string) ($payment['failure_code'] ?? '') === 'paid_booking_failed'
+    && $payment['paid_at'] !== null;
 ?>
 <!doctype html>
 <html lang="de">
@@ -38,6 +43,18 @@ $events = is_array($payment['webhook_events'] ?? null) ? $payment['webhook_event
         <p><a href="/admin/payments">← Zur Zahlungsübersicht</a></p>
     </header>
 
+    <?php if ($errors !== []): ?>
+        <div class="alert alert-error" role="alert">
+            <ul><?php foreach ($errors as $error): ?><li><?= $e($error) ?></li><?php endforeach; ?></ul>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($recovered): ?>
+        <div class="alert alert-success" role="status">
+            <strong>Wiederherstellung abgeschlossen.</strong> Die bereits bestätigte Zahlung ist jetzt einer verbindlichen Buchung zugeordnet.
+        </div>
+    <?php endif; ?>
+
     <?php if ((string) $payment['status'] === 'manual_review'): ?>
         <div class="alert alert-error">
             <strong>Manuelle Prüfung erforderlich.</strong>
@@ -47,6 +64,19 @@ $events = is_array($payment['webhook_events'] ?? null) ? $payment['webhook_event
         <div class="alert alert-neutral">
             <strong>Zahlung wird verarbeitet.</strong> Der bestätigte Zahlungseingang wird gerade in eine Buchung überführt.
         </div>
+    <?php endif; ?>
+
+    <?php if ($recoverable): ?>
+        <section class="card stack">
+            <h2>Bezahlte Buchung wiederherstellen</h2>
+            <p>Diese Aktion fordert <strong>keine neue Zahlung</strong> an. FachDock versucht ausschließlich, die bereits durch einen signierten Stripe-Webhook bestätigte Zahlung erneut in die zugehörige Schließfachbuchung zu überführen.</p>
+            <p class="form-hint">Die Wiederherstellung ist konkurrenzsicher. Ist Schüler oder Schließfach inzwischen anderweitig gebunden, bleibt der Vorgang in manueller Prüfung und es wird nichts überschrieben.</p>
+            <form method="post" action="/admin/payments/recover">
+                <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+                <input type="hidden" name="payment_id" value="<?= (int) $payment['id'] ?>">
+                <button class="button" type="submit">Buchungsumwandlung erneut versuchen</button>
+            </form>
+        </section>
     <?php endif; ?>
 
     <section class="card stack">
