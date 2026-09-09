@@ -27,6 +27,9 @@ final class PaidPaymentRecoveryService
         }
 
         $payment = $this->claim($paymentId);
+        if ($payment['booking_id'] !== null) {
+            return $payment['booking_id'];
+        }
 
         try {
             $bookingId = $this->convertedBookingForReservation($payment['reservation_id']);
@@ -73,7 +76,8 @@ final class PaidPaymentRecoveryService
      *     parent_contact_id: int,
      *     amount_cents: int,
      *     annual_fee_cents: int,
-     *     proration_months: int
+     *     proration_months: int,
+     *     booking_id: int|null
      * }
      */
     private function claim(int $paymentId): array
@@ -100,6 +104,7 @@ final class PaidPaymentRecoveryService
                     'amount_cents' => (int) $row['amount_cents'],
                     'annual_fee_cents' => (int) $row['annual_fee_cents'],
                     'proration_months' => (int) $row['proration_months'],
+                    'booking_id' => (int) $row['booking_id'],
                 ];
             }
 
@@ -122,6 +127,7 @@ final class PaidPaymentRecoveryService
                 'amount_cents' => (int) $row['amount_cents'],
                 'annual_fee_cents' => (int) $row['annual_fee_cents'],
                 'proration_months' => (int) $row['proration_months'],
+                'booking_id' => null,
             ];
         } catch (Throwable $exception) {
             if ($this->pdo->inTransaction()) {
