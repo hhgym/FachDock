@@ -160,7 +160,7 @@ final class BookingDueStripePaymentIntegrationTest extends TestCase
     public function testBuTRejectionQueuesDecisionAndScheduledReminder(): void
     {
         $templateCount = $this->pdo()->query(
-            "SELECT COUNT(*) FROM mail_templates WHERE template_key IN ("
+            'SELECT COUNT(*) FROM mail_templates WHERE template_key IN ('
             . "'booking_confirmed','payment_received','payment_failed','payment_checkout_expired',"
             . "'payment_received_booking_pending','but_request_received','but_approved',"
             . "'but_rejected_payment_due','payment_due_reminder')"
@@ -172,7 +172,7 @@ final class BookingDueStripePaymentIntegrationTest extends TestCase
         self::assertSame(1, $this->queuedTemplateCount('payment_due_reminder'));
 
         $row = $this->row(
-            "SELECT q.available_at, b.payment_due_at FROM mail_queue q "
+            'SELECT q.available_at, b.payment_due_at FROM mail_queue q '
             . 'INNER JOIN mail_templates t ON t.id = q.mail_template_id '
             . "CROSS JOIN bookings b WHERE t.template_key = 'payment_due_reminder' AND b.id = 1 LIMIT 1"
         );
