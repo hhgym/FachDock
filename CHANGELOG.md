@@ -6,6 +6,17 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-09-09
+
+### Changed
+- Die öffentliche kanonische HTTPS-Basis-URL kann direkt unter **Konfiguration → Stripe & Zahlung** gepflegt werden.
+- Der angezeigte Stripe-Webhook-Endpunkt wird automatisch als `<Basis-URL>/webhooks/stripe` aus der gespeicherten Basis-URL abgeleitet.
+- Die Basis-URL wird in `config/app.local.php` gespeichert, ohne andere lokale Anwendungseinstellungen zu überschreiben.
+
+### Fixed
+- Die Stripe-Konfigurationsseite zeigt bei einer fehlenden Basis-URL nicht mehr nur einen nicht auflösbaren Hinweis, sondern bietet die benötigte Konfiguration direkt an.
+- Lange Webhook-URLs, Stripe-Eventnamen und andere Codewerte verursachen auf kleinen Displays keinen horizontalen Seitenüberlauf mehr.
+
 ## [0.6.0] - 2026-09-09
 
 ### Added
