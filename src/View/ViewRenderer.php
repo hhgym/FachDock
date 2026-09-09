@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FachDock\View;
 
+use FachDock\Parent\AuthenticatedParent;
 use RuntimeException;
 
 final class ViewRenderer
@@ -35,7 +36,38 @@ final class ViewRenderer
             $currentPath = '/';
         }
 
-        return (new NavigationRenderer())->inject($content, $data, $currentPath);
+        $content = (new NavigationRenderer())->inject($content, $data, $currentPath);
+        $parent = $data['parent'] ?? null;
+        if ($parent instanceof AuthenticatedParent && $parent->adminPreview) {
+            $csrfToken = isset($data['csrfToken']) && is_string($data['csrfToken']) ? $data['csrfToken'] : '';
+            $content = $this->injectAdminParentPreviewBanner($content, $parent, $csrfToken);
+        }
+
+        return $content;
+    }
+
+    private function injectAdminParentPreviewBanner(
+        string $content,
+        AuthenticatedParent $parent,
+        string $csrfToken,
+    ): string {
+        $name = htmlspecialchars($parent->displayName(), ENT_QUOTES, 'UTF-8');
+        $csrf = htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8');
+        $banner = '<aside class="admin-parent-preview-banner" role="status">'
+            . '<div><strong>Administrator-Testansicht</strong>'
+            . '<span>Du siehst das Elternportal als ' . $name
+            . '. Für diesen Zugriff wurde keine E-Mail-Anmeldung durchgeführt.</span></div>';
+        if ($csrfToken !== '') {
+            $banner .= '<form method="post" action="/admin/parents/preview/stop">'
+                . '<input type="hidden" name="_csrf" value="' . $csrf . '">'
+                . '<button class="button button-secondary" type="submit">Testansicht beenden</button>'
+                . '</form>';
+        }
+        $banner .= '</aside>';
+
+        $updated = preg_replace('~</header>~', '</header>' . $banner, $content, 1);
+
+        return is_string($updated) ? $updated : $content;
     }
 
     private function versionStylesheets(string $content): string
