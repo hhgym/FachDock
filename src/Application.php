@@ -43,6 +43,7 @@ use FachDock\Location\CorpusTypeService;
 use FachDock\Location\LocationAdminController;
 use FachDock\Location\LocationCatalogService;
 use FachDock\Logging\LoggerFactory;
+use FachDock\Mail\BookingNotificationService;
 use FachDock\Mail\MailAdminController;
 use FachDock\Mail\MailQueueService;
 use FachDock\Mail\MailTemplateRenderer;
@@ -54,6 +55,7 @@ use FachDock\Parent\ParentPortalAccessService;
 use FachDock\Parent\ParentPortalController;
 use FachDock\Parent\ParentSessionService;
 use FachDock\Parent\ParentVerificationAdminController;
+use FachDock\Payment\BookingDueStripePaymentService;
 use FachDock\Payment\PaidPaymentRecoveryService;
 use FachDock\Payment\StripeConfigurationState;
 use FachDock\Payment\StripePaymentController;
@@ -182,6 +184,13 @@ final class Application
         ))->register($router);
 
         $mailQueue = new MailQueueService($pdo, new MailTemplateRenderer());
+        $bookingNotifications = new BookingNotificationService(
+            $pdo,
+            $mailQueue,
+            (string) $this->config->get('app.base_url', ''),
+            (string) $this->config->get('app.school_name', ''),
+            $this->logger,
+        );
         $smtpHost = trim((string) $this->config->get('smtp.host', ''));
         $smtpFrom = trim((string) $this->config->get('smtp.from_email', ''));
         $smtpConfigured = $smtpHost !== '' && filter_var($smtpFrom, FILTER_VALIDATE_EMAIL) !== false;
@@ -257,7 +266,6 @@ final class Application
             $gradeResolver,
         );
         $recommendationCount = $this->configInt('booking.recommendation_count', 3);
-
         (new LockerRecommendationAdminController(
             $recommendations,
             $schoolYears,
@@ -305,6 +313,7 @@ final class Application
             $bookingService,
             $feeCalculator,
             $this->configInt('booking.but_rejection_payment_days', 14),
+            $bookingNotifications,
         );
         (new ButBookingController(
             $butBookings,
@@ -314,11 +323,12 @@ final class Application
             $this->logger,
             $views,
             $csrf,
+            $stripeState,
         ))->register($router);
 
         (new BookingPaymentAdminController(
             $bookingAdmin,
-            new PaidPaymentRecoveryService($pdo, $bookingService),
+            new PaidPaymentRecoveryService($pdo, $bookingService, $bookingNotifications),
             $sessions,
             $audit,
             $this->logger,
@@ -353,8 +363,17 @@ final class Application
             (string) $this->config->get('stripe.currency', 'EUR'),
             $this->configInt('stripe.checkout_minutes', 30),
         );
+        $bookingDuePayments = new BookingDueStripePaymentService(
+            $pdo,
+            $stripeGateway,
+            (string) $this->config->get('app.base_url', ''),
+            (string) $this->config->get('stripe.currency', 'EUR'),
+            $this->configInt('stripe.checkout_minutes', 30),
+        );
         (new StripePaymentController(
             $stripePayments,
+            $bookingDuePayments,
+            $bookingNotifications,
             $parentSessions,
             $audit,
             $this->logger,

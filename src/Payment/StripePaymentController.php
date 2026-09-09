@@ -9,6 +9,7 @@ use FachDock\Audit\AuditLogger;
 use FachDock\Http\Request;
 use FachDock\Http\Response;
 use FachDock\Http\Router;
+use FachDock\Mail\BookingNotificationService;
 use FachDock\Parent\AuthenticatedParent;
 use FachDock\Parent\ParentSessionService;
 use FachDock\Security\Csrf;
@@ -22,6 +23,8 @@ final class StripePaymentController
 {
     public function __construct(
         private readonly StripePaymentService $payments,
+        private readonly BookingDueStripePaymentService $bookingPayments,
+        private readonly BookingNotificationService $notifications,
         private readonly ParentSessionService $sessions,
         private readonly AuditLogger $audit,
         private readonly LoggerInterface $logger,
@@ -48,6 +51,18 @@ final class StripePaymentController
         }
 
         try {
+            $bookingValue = trim($request->postString('booking_id'));
+            if ($bookingValue !== '') {
+                $bookingId = $this->positiveInt($bookingValue, 'Buchung');
+                $result = $this->bookingPayments->start($parent, $bookingId);
+                $this->csrf->rotate();
+                $this->audit->parent($parent, 'payment.stripe_booking_checkout.started', 'payment', $result->paymentId, [
+                    'booking_id' => $bookingId,
+                ]);
+
+                return Response::redirect($result->checkoutUrl(), 303);
+            }
+
             $reservationId = $this->positiveInt($request->postString('reservation_id'), 'Reservierung');
             $result = $this->payments->start($parent, $reservationId);
             $this->csrf->rotate();
@@ -56,6 +71,7 @@ final class StripePaymentController
                 $this->audit->parent($parent, 'payment.no_fee_booking.created', 'booking', $result->bookingId, [
                     'reservation_id' => $reservationId,
                 ]);
+                $this->notifications->bookingConfirmed($result->bookingId);
 
                 return Response::redirect('/parent?booking_created=1');
             }
@@ -121,10 +137,12 @@ final class StripePaymentController
     private function webhook(Request $request): Response
     {
         try {
-            $this->payments->handleWebhook(
-                $request->rawBody(),
-                $request->header('Stripe-Signature'),
-            );
+            $payload = $request->rawBody();
+            $signature = $request->header('Stripe-Signature');
+            if (!$this->bookingPayments->handleWebhookIfBookingPayment($payload, $signature)) {
+                $this->payments->handleWebhook($payload, $signature);
+            }
+            $this->notifications->stripeEventProcessed($payload);
 
             return Response::text('ok');
         } catch (SignatureVerificationException|UnexpectedValueException|DomainException $exception) {
