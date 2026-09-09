@@ -159,7 +159,7 @@ final class LockerSupportIntegrationTest extends TestCase
         );
         $pdo->exec(
             'INSERT INTO corpuses (id, cabinet_group_id, corpus_type_id, position_no, active, created_at, updated_at) '
-            . "VALUES (1, 1, 1, 1, 1, NOW(), NOW())"
+            . 'VALUES (1, 1, 1, 1, 1, NOW(), NOW())'
         );
         $pdo->exec(
             "INSERT INTO lockers (id, corpus_id, position_no, short_name, barrier_friendly, bookable, active, operating_status, created_at, updated_at) VALUES (1, 1, 1, 'A-01-1', 0, 1, 1, 'operational', NOW(), NOW())"
