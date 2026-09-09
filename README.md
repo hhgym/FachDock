@@ -6,9 +6,9 @@ FachDock ist eine webbasierte Verwaltungs- und Buchungslösung für schulische S
 
 ## Projektstatus
 
-Aktuelle veröffentlichte Version: **0.4.0**
+Aktuelle veröffentlichte Version: **0.5.0**
 
-> FachDock befindet sich noch vor Version 1.0.0. Version 0.4.0 ist ein installierbarer Teststand für Web-Installer und Update-Routine sowie für die inzwischen weitgehend durchgängigen Verwaltungs-, Reservierungs-, Elternportal-, BuT- und Stripe-Zahlungsabläufe. Sie ist weiterhin nicht für den produktiven Schulbetrieb vorgesehen.
+> FachDock befindet sich noch vor Version 1.0.0. Version 0.5.0 ist ein installierbarer Teststand für Web-Installer und Update-Routine sowie für die inzwischen durchgängigen Verwaltungs-, Reservierungs-, Elternportal-, BuT- und Stripe-Zahlungsabläufe. Buchungen und Zahlungen können nun zentral administriert und problematische, bereits bestätigte Zahlungen nachvollziehbar bearbeitet werden. Die Version ist weiterhin nicht für den produktiven Schulbetrieb vorgesehen.
 
 ## Bereits enthalten
 
@@ -16,6 +16,7 @@ Aktuelle veröffentlichte Version: **0.4.0**
 - lokale Anmeldung für Administratoren und Schließfachverwalter
 - serverseitig widerrufbare Sitzungen und Passwortänderung
 - zentrale responsive und rollenabhängige Navigation für Verwaltung und Elternportal
+- operatives Dashboard mit Kennzahlen und Warnungen zu Buchungen, Reservierungen, BuT und Zahlungen
 - Gebäude, Etagen, Bereiche, Korpustypen und Schrankgruppen
 - barrierearme Fachpositionen und gemischte Korpustypen
 - automatische Fachbezeichnungen wie `A-07-2` und `1OG-78-A-07-2`
@@ -25,20 +26,27 @@ Aktuelle veröffentlichte Version: **0.4.0**
 - Zuteilungsregeln mit Testfunktion und regelbasierten Schließfachempfehlungen
 - transaktionale, konkurrenzsichere Reservierungen und Buchungsumwandlung
 - administrative Buchungsauswahl
+- zentrale Buchungsverwaltung mit Schuljahr-, Status- und Suchfiltern sowie Detailansichten
+- zentrale Zahlungsverwaltung mit Stripe-Status, Fehlerdaten, Referenzen und Webhook-Verlauf
+- Zuweisungshistorie und Zahlungsbezug in der Buchungsdetailansicht
 - Elternkontakte mit historisierten Eltern-Kind-Verknüpfungen
 - passwortloses Elternportal über einmalige, gehashte E-Mail-Magic-Links
 - persistente E-Mail-Queue mit SMTP-Versand, Retry-Logik und versionierten E-Mail-Templates
 - verbindlicher BuT-Buchungsworkflow mit anschließender administrativer Prüfung
 - Stripe Checkout für Elternbuchungen mit Test-/Live-Trennung
+- Online-Zahlung im Elternportal nur bei vollständig gültiger Stripe- und HTTPS-Konfiguration
+- kostenfreie verbindliche Buchung auch ohne eingerichtete Stripe-Zugangsdaten
 - signierte und idempotente Stripe-Webhooks für erfolgreiche, fehlgeschlagene und abgelaufene Zahlungen
-- MySQL-Integrationstests für den Zahlungsworkflow
+- sichere administrative Wiederherstellung bereits bezahlter `manual_review`-Vorgänge ohne erneute Zahlung
+- einheitliches Application-Routing für Eltern-, Zahlungs-, Webhook- und Verwaltungsrouten
+- MySQL-Integrationstests für Zahlungsworkflow und Wiederherstellung problematischer Zahlungen
 - stabiler GitHub-Updatekanal mit SHA-256-Prüfung und automatischen Datenbankmigrationen
 
 ## Geplante Kernfunktionen
 
 - interaktive Lagepläne je Etage
 - Schüler- und Lehrkräftezugang über IServ/OIDC
-- Verlängerung und Fachwechsel
+- Verlängerung, Fachwechsel und weiterer Buchungslebenszyklus
 - Defektmeldungen und Notöffnungen
 - Web-Push und weitere Systemjobs
 - PDF-/CSV-Exporte und Dokumentenarchiv
@@ -65,7 +73,7 @@ FachDock verwendet Git Flow:
 - `release/*` – Release-Stabilisierung
 - `hotfix/*` – dringende Korrekturen veröffentlichter Versionen
 
-Stabile Teststände werden als GitHub Releases mit Tags wie `v0.4.0` und später `v1.0.0` veröffentlicht. FachDock berücksichtigt beim integrierten Update ausschließlich stabile Releases.
+Stabile Teststände werden als GitHub Releases mit Tags wie `v0.5.0` und später `v1.0.0` veröffentlicht. FachDock berücksichtigt beim integrierten Update ausschließlich stabile Releases.
 
 ## Installation
 
