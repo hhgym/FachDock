@@ -52,6 +52,7 @@ final class OidcIdentityIntegrationTest extends TestCase
             ];
             $studentResult = $service->finish('student-code', (string) $query['state']);
             self::assertSame('student', $studentResult['identity']['identity_type']);
+            self::assertSame('automatic', $studentResult['identity']['assignment_source']);
             self::assertSame('1', (string) $studentResult['identity']['student_id']);
             self::assertSame('student', $studentResult['area']);
             self::assertStringStartsWith('Basic ', $http->lastPostHeaders['Authorization'] ?? '');
@@ -75,6 +76,7 @@ final class OidcIdentityIntegrationTest extends TestCase
             ];
             $teacherResult = $service->finish('teacher-code', (string) $teacherQuery['state']);
             self::assertSame('teacher', $teacherResult['identity']['identity_type']);
+            self::assertSame('automatic', $teacherResult['identity']['assignment_source']);
             self::assertNull($teacherResult['identity']['student_id']);
 
             $unknownAuthorization = $service->begin('student');
@@ -88,8 +90,81 @@ final class OidcIdentityIntegrationTest extends TestCase
             ];
             $unknownResult = $service->finish('unknown-code', (string) $unknownQuery['state']);
             self::assertSame('pending', $unknownResult['identity']['identity_type']);
+            self::assertSame('automatic', $unknownResult['identity']['assignment_source']);
             self::assertNull($unknownResult['identity']['student_id']);
             self::assertCount(3, $service->identities());
+        } finally {
+            $_SESSION = $originalSession;
+            $this->removeDirectory($root);
+        }
+    }
+
+    public function testAutomaticTeacherRoleIsRevalidatedAndManualAssignmentPersists(): void
+    {
+        $pdo = $this->database();
+        (new MigrationRunner($pdo, dirname(__DIR__, 2) . '/migrations'))->migrate();
+        $root = $this->configRoot();
+        $originalSession = $_SESSION ?? [];
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            @session_start();
+        }
+
+        try {
+            $_SESSION = [];
+            $http = new FakeOidcHttpClient();
+            $service = new OidcIdentityService(
+                $pdo,
+                new OidcConfiguration(Config::load($root)),
+                $http,
+            );
+            $http->userinfo = [
+                'sub' => 'teacher-subject',
+                'preferred_username' => 'lehrer.test',
+                'name' => 'Lehrer Test',
+                'email' => 'lehrer@iserv.test',
+                'iserv:roles' => [['displayName' => 'Lehrer']],
+            ];
+            $authorization = $service->begin('teacher');
+            parse_str((string) parse_url($authorization, PHP_URL_QUERY), $query);
+            $result = $service->finish('teacher-code', (string) $query['state']);
+            $identityId = (int) $result['identity']['id'];
+            self::assertSame('teacher', $result['identity']['identity_type']);
+            self::assertSame('automatic', $result['identity']['assignment_source']);
+
+            $sessions = new OidcSessionService($pdo, 480, 60);
+            $teacher = $sessions->create($identityId, '127.0.0.1', 'PHPUnit');
+            self::assertTrue($teacher->isTeacher());
+            $sessionId = $teacher->sessionId;
+
+            $http->userinfo['iserv:roles'] = [];
+            $authorization = $service->begin('teacher');
+            parse_str((string) parse_url($authorization, PHP_URL_QUERY), $query);
+            $revalidated = $service->finish('teacher-code-2', (string) $query['state']);
+            self::assertSame('pending', $revalidated['identity']['identity_type']);
+            self::assertSame('automatic', $revalidated['identity']['assignment_source']);
+            self::assertNull($sessions->current());
+            self::assertNotNull($pdo->query(
+                'SELECT revoked_at FROM oidc_sessions WHERE id = ' . $sessionId,
+            )->fetchColumn());
+
+            $service->approveTeacher($identityId);
+            $authorization = $service->begin('teacher');
+            parse_str((string) parse_url($authorization, PHP_URL_QUERY), $query);
+            $manual = $service->finish('teacher-code-3', (string) $query['state']);
+            self::assertSame('teacher', $manual['identity']['identity_type']);
+            self::assertSame('manual', $manual['identity']['assignment_source']);
+
+            $teacher = $sessions->create($identityId, '127.0.0.1', 'PHPUnit');
+            $disabledSessions = new OidcSessionService($pdo, 480, 60, false);
+            self::assertNull($disabledSessions->current());
+            self::assertNotNull($pdo->query(
+                'SELECT revoked_at FROM oidc_sessions WHERE id = ' . $teacher->sessionId,
+            )->fetchColumn());
+
+            $service->useAutomaticAssignment($identityId);
+            $identity = $service->identities()[0];
+            self::assertSame('pending', $identity['identity_type']);
+            self::assertSame('automatic', $identity['assignment_source']);
         } finally {
             $_SESSION = $originalSession;
             $this->removeDirectory($root);
