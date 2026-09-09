@@ -6,6 +6,33 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-09
+
+### Added
+- Mehrere interaktive Bild-Lagepläne je Etage mit PNG-, JPEG- und WebP-Upload, Speicherung außerhalb des Webroots, Zoom und administrativer Positionierung von Schrankgruppen.
+- Live-Anzeige der Schrankgruppen und ihrer Schließfächer im Lageplan einschließlich freier, belegter und technisch nicht verfügbarer Fächer für ein ausgewähltes Schuljahr.
+- Lesender Lageplanzugriff im Elternportal sowie eigene administrative Lageplanverwaltung.
+- Automatisierter Schuljahreswechsel mit Vorschau für unmittelbar aufeinanderfolgende Schuljahre und Prüfung vorhandener Folgebuchungen, Klassenstufen, Verfügbarkeit und Zuteilungsregeln.
+- Deduplizierte Verlängerungserinnerungen zum 01.06., 01.07. und 20.07. sowie versionierte E-Mail-Vorlagen für Erinnerung und Schuljahresabschluss.
+- Idempotenter Roll-over ab dem 01.08. mit protokollierten Läufen und CLI-Befehl `php bin/fachdock school-year:tick` einschließlich eigenem Worker-Heartbeat.
+- Konfigurierbare Datenschutz-Aufbewahrungsfristen, Vorschau und protokollierte Anonymisierungsläufe für historische personenbezogene Daten.
+- Produktionsbereitschaftsprüfung für Umgebung, Debug-Modus, HTTPS, SMTP, Worker, Dateisystem, Administratorkonto und Stripe-Konfiguration.
+- Administrative CSV-Exporte für Buchungen, Zahlungen, Schließfachmeldungen und Auditdaten.
+- Zentrale Security-Header mit Content-Security-Policy, Frame-Schutz, `nosniff`, Referrer-Policy, Permissions-Policy, Cross-Origin-Opener-Policy und HSTS bei HTTPS.
+- MySQL-8.4-Integrationstests für Lagepläne, Schuljahreswechsel und Datenschutz sowie Unit-Tests für die Security-Header.
+
+### Changed
+- Der Schuljahreswechsel beendet noch aktive Buchungen des abgelaufenen Schuljahres kontrolliert, gibt Buchungsslot und Schließfachbelegung frei, schließt die Zuweisungshistorie und aktualisiert Quell- und Zielschuljahr.
+- Verpasste Erinnerungsstufen werden beim nächsten täglichen Schuljahresjob nachgeholt, ohne bereits versandte Stufen erneut einzureihen.
+- Historische Schüler- und Elterndaten werden nach Ablauf der Aufbewahrungsfrist pseudonymisiert bzw. anonymisiert, während notwendige Geschäftsdatensätze erhalten bleiben.
+- Alte Mail-Inhalte und personenbezogene Audit-Metadaten werden nach den konfigurierten Fristen bereinigt.
+- HTTP-Antworten verwenden die zentralen Security-Header anwendungsweit.
+
+### Fixed
+- Wiederholte Schuljahreswechsel erzeugen weder doppelte Buchungsabschlüsse noch doppelte Abschlussbenachrichtigungen.
+- Die Lageplan-Verfügbarkeitsanzeige unterscheidet technische Nichtverfügbarkeit zuverlässig von Belegung oder Reservierung.
+- HSTS wird nur bei tatsächlich per HTTPS aufgerufenen bzw. korrekt als HTTPS weitergeleiteten Requests gesetzt.
+
 ## [0.8.0] - 2026-09-09
 
 ### Added

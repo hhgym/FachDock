@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use FachDock\Application;
 use FachDock\Operations\OperationsFrontController;
+use FachDock\Platform\PlatformFrontController;
 
 $root = dirname(__DIR__);
 $autoload = $root . '/vendor/autoload.php';
@@ -16,6 +17,12 @@ if (!is_file($autoload)) {
 }
 
 require $autoload;
+
+$platformResponse = PlatformFrontController::handle($root);
+if ($platformResponse !== null) {
+    $platformResponse->send();
+    exit;
+}
 
 $operationsResponse = OperationsFrontController::handle($root);
 if ($operationsResponse !== null) {

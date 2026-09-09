@@ -88,11 +88,30 @@ final class ViewRenderer
 
         $navigationVersion = $this->assetVersion($root . '/public/assets/navigation.css');
         if ($navigationVersion !== null && !str_contains($content, '/assets/navigation.css')) {
-            $stylesheet = '    <link rel="stylesheet" href="/assets/navigation.css?v=' . $navigationVersion . '">' . "\n";
-            $content = str_replace('</head>', $stylesheet . '</head>', $content);
+            $content = $this->injectStylesheet($content, 'navigation.css', $navigationVersion);
+        }
+
+        if (str_contains($content, 'floorplan-page')) {
+            $version = $this->assetVersion($root . '/public/assets/floorplans.css');
+            if ($version !== null && !str_contains($content, '/assets/floorplans.css')) {
+                $content = $this->injectStylesheet($content, 'floorplans.css', $version);
+            }
+        }
+        if (str_contains($content, 'platform-page')) {
+            $version = $this->assetVersion($root . '/public/assets/platform.css');
+            if ($version !== null && !str_contains($content, '/assets/platform.css')) {
+                $content = $this->injectStylesheet($content, 'platform.css', $version);
+            }
         }
 
         return $content;
+    }
+
+    private function injectStylesheet(string $content, string $name, string $version): string
+    {
+        $stylesheet = '    <link rel="stylesheet" href="/assets/' . $name . '?v=' . $version . '">' . "\n";
+
+        return str_replace('</head>', $stylesheet . '</head>', $content);
     }
 
     private function assetVersion(string $file): ?string
