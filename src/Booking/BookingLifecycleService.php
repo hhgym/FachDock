@@ -124,8 +124,11 @@ final class BookingLifecycleService
             $this->closeCurrentAssignment($bookingId);
             $this->cancelPendingPaymentMails($bookingId);
 
+            $validityUpdate = $cancelled
+                ? ''
+                : 'valid_until = GREATEST(valid_from, LEAST(valid_until, CURRENT_DATE)), ';
             $this->pdo->prepare(
-                'UPDATE bookings SET status = :status, valid_until = LEAST(valid_until, CURRENT_DATE), '
+                'UPDATE bookings SET status = :status, ' . $validityUpdate
                 . 'payment_due_at = NULL, ended_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP '
                 . 'WHERE id = :id'
             )->execute([
@@ -138,7 +141,7 @@ final class BookingLifecycleService
                 null,
                 $booking['locker_id'],
                 null,
-                date('Y-m-d'),
+                $this->currentDatabaseDate(),
                 $reason,
                 $staff->id,
             );
@@ -198,6 +201,10 @@ final class BookingLifecycleService
             $initiatedById = $source['initiated_by_type'] === 'parent'
                 ? $source['initiated_by_id']
                 : $staff->id;
+            $paymentDays = max(1, min(365, $this->renewalPaymentDays));
+            $paymentDueExpression = $status === BookingStatus::PaymentDue
+                ? 'DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ' . $paymentDays . ' DAY)'
+                : 'NULL';
 
             $statement = $this->pdo->prepare(
                 'INSERT INTO bookings '
@@ -207,7 +214,7 @@ final class BookingLifecycleService
                 . 'VALUES (:student_id, :school_year_id, :status, :projected_grade, :valid_from, :valid_until, '
                 . ':initiated_by_type, :initiated_by_id, :annual_fee_cents, :charged_fee_cents, 12, :fee_exemption_type, '
                 . ':previous_booking_id, :student_snapshot, :rule_snapshot, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, '
-                . ':payment_due_at)'
+                . $paymentDueExpression . ')'
             );
             $statement->execute([
                 'student_id' => $source['student_id'],
@@ -224,9 +231,6 @@ final class BookingLifecycleService
                 'previous_booking_id' => $bookingId,
                 'student_snapshot' => json_encode($studentSnapshot, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
                 'rule_snapshot' => json_encode($decision->snapshot, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
-                'payment_due_at' => $status === BookingStatus::PaymentDue
-                    ? date('Y-m-d H:i:s', time() + (max(1, min(365, $this->renewalPaymentDays)) * 86400))
-                    : null,
             ]);
             $newBookingId = (int) $this->pdo->lastInsertId();
             if ($newBookingId < 1) {
@@ -550,6 +554,16 @@ final class BookingLifecycleService
             'reason' => $reason,
             'actor_id' => $staffUserId,
         ]);
+    }
+
+    private function currentDatabaseDate(): string
+    {
+        $value = $this->pdo->query('SELECT CURRENT_DATE')->fetchColumn();
+        if (!is_string($value) || $value === '') {
+            throw new RuntimeException('Das aktuelle Datenbankdatum konnte nicht ermittelt werden.');
+        }
+
+        return $value;
     }
 
     private function reason(string $reason): string
