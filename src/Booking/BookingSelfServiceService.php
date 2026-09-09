@@ -391,7 +391,7 @@ final class BookingSelfServiceService
     private function parentChangeCount(int $bookingId): int
     {
         $statement = $this->pdo->prepare(
-            "SELECT COUNT(*) FROM booking_lifecycle_events WHERE booking_id = :booking_id "
+            'SELECT COUNT(*) FROM booking_lifecycle_events WHERE booking_id = :booking_id '
             . "AND event_type = 'locker_changed' AND actor_type = 'parent'"
         );
         $statement->execute(['booking_id' => $bookingId]);
