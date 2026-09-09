@@ -11,7 +11,7 @@ use Stripe\PaymentIntent;
 use Stripe\StripeClient;
 use Stripe\Webhook;
 
-final class StripePhpGateway implements StripeGateway
+final class StripePhpGateway implements BookingPaymentGateway
 {
     private readonly StripeClient $client;
 
@@ -82,42 +82,47 @@ final class StripePhpGateway implements StripeGateway
         string $cancelUrl,
         int $expiresAt,
     ): StripeCheckoutSession {
-        $session = $this->client->checkout->sessions->create([
-            'mode' => 'payment',
-            'customer' => $customerId,
-            'client_reference_id' => (string) $paymentId,
-            'line_items' => [[
-                'price_data' => [
-                    'currency' => mb_strtolower($currency),
-                    'unit_amount' => $amountCents,
-                    'product_data' => [
-                        'name' => $description,
-                    ],
-                ],
-                'quantity' => 1,
-            ]],
-            'success_url' => $successUrl,
-            'cancel_url' => $cancelUrl,
-            'expires_at' => $expiresAt,
-            'metadata' => [
+        return $this->createSession(
+            $paymentId,
+            $customerId,
+            $amountCents,
+            $currency,
+            $description,
+            $successUrl,
+            $cancelUrl,
+            $expiresAt,
+            [
                 'fachdock_payment_id' => (string) $paymentId,
                 'fachdock_reservation_id' => (string) $reservationId,
             ],
-            'payment_intent_data' => [
-                'metadata' => [
-                    'fachdock_payment_id' => (string) $paymentId,
-                    'fachdock_reservation_id' => (string) $reservationId,
-                ],
+        );
+    }
+
+    public function createBookingCheckoutSession(
+        int $paymentId,
+        int $bookingId,
+        string $customerId,
+        int $amountCents,
+        string $currency,
+        string $description,
+        string $successUrl,
+        string $cancelUrl,
+        int $expiresAt,
+    ): StripeCheckoutSession {
+        return $this->createSession(
+            $paymentId,
+            $customerId,
+            $amountCents,
+            $currency,
+            $description,
+            $successUrl,
+            $cancelUrl,
+            $expiresAt,
+            [
+                'fachdock_payment_id' => (string) $paymentId,
+                'fachdock_booking_id' => (string) $bookingId,
             ],
-        ], [
-            'idempotency_key' => 'fachdock-payment-' . $paymentId,
-        ]);
-
-        if ($session->id === '' || !is_string($session->url) || $session->url === '') {
-            throw new RuntimeException('Stripe hat keine gültige Checkout Session zurückgegeben.');
-        }
-
-        return new StripeCheckoutSession($session->id, $session->url);
+        );
     }
 
     public function verifyWebhook(string $payload, string $signature): StripeWebhookEvent
@@ -149,5 +154,51 @@ final class StripePhpGateway implements StripeGateway
             $object->payment_status,
             $paymentIntentId,
         );
+    }
+
+    /**
+     * @param array<string, string> $metadata
+     */
+    private function createSession(
+        int $paymentId,
+        string $customerId,
+        int $amountCents,
+        string $currency,
+        string $description,
+        string $successUrl,
+        string $cancelUrl,
+        int $expiresAt,
+        array $metadata,
+    ): StripeCheckoutSession {
+        $session = $this->client->checkout->sessions->create([
+            'mode' => 'payment',
+            'customer' => $customerId,
+            'client_reference_id' => (string) $paymentId,
+            'line_items' => [[
+                'price_data' => [
+                    'currency' => mb_strtolower($currency),
+                    'unit_amount' => $amountCents,
+                    'product_data' => [
+                        'name' => $description,
+                    ],
+                ],
+                'quantity' => 1,
+            ]],
+            'success_url' => $successUrl,
+            'cancel_url' => $cancelUrl,
+            'expires_at' => $expiresAt,
+            'metadata' => $metadata,
+            'payment_intent_data' => [
+                'metadata' => $metadata,
+            ],
+        ], [
+            'idempotency_key' => 'fachdock-payment-' . $paymentId,
+        ]);
+
+        if ($session->id === '' || !is_string($session->url) || $session->url === '') {
+            throw new RuntimeException('Stripe hat keine gültige Checkout Session zurückgegeben.');
+        }
+
+        return new StripeCheckoutSession($session->id, $session->url);
     }
 }

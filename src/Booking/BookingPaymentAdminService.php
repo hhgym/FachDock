@@ -141,7 +141,7 @@ final class BookingPaymentAdminService
         $where = [];
         $parameters = [];
         if ($schoolYearId !== null) {
-            $where[] = 'r.school_year_id = :school_year_id';
+            $where[] = 'COALESCE(b.school_year_id, r.school_year_id) = :school_year_id';
             $parameters['school_year_id'] = $schoolYearId;
         }
         if ($status !== null && $status !== '') {
@@ -166,10 +166,12 @@ final class BookingPaymentAdminService
             . '(SELECT COUNT(*) FROM stripe_webhook_events swe '
             . "WHERE swe.payment_id = p.id AND swe.status <> 'processed') AS webhook_open_count "
             . 'FROM payments p '
-            . 'INNER JOIN locker_reservations r ON r.id = p.reservation_id '
-            . 'INNER JOIN students s ON s.id = r.student_id '
-            . 'INNER JOIN school_years sy ON sy.id = r.school_year_id '
-            . 'INNER JOIN lockers l ON l.id = r.locker_id '
+            . 'LEFT JOIN locker_reservations r ON r.id = p.reservation_id '
+            . 'LEFT JOIN bookings b ON b.id = p.booking_id '
+            . 'LEFT JOIN students s ON s.id = COALESCE(b.student_id, r.student_id) '
+            . 'LEFT JOIN school_years sy ON sy.id = COALESCE(b.school_year_id, r.school_year_id) '
+            . 'LEFT JOIN locker_occupancies lo ON lo.booking_id = b.id '
+            . 'LEFT JOIN lockers l ON l.id = COALESCE(lo.locker_id, r.locker_id) '
             . 'INNER JOIN parent_contacts pc ON pc.id = p.parent_contact_id';
         if ($where !== []) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
@@ -196,10 +198,12 @@ final class BookingPaymentAdminService
             . 'l.id AS locker_id, l.short_name AS locker_short_name, '
             . 'pc.email AS parent_email, pc.first_name AS parent_first_name, pc.last_name AS parent_last_name '
             . 'FROM payments p '
-            . 'INNER JOIN locker_reservations r ON r.id = p.reservation_id '
-            . 'INNER JOIN students s ON s.id = r.student_id '
-            . 'INNER JOIN school_years sy ON sy.id = r.school_year_id '
-            . 'INNER JOIN lockers l ON l.id = r.locker_id '
+            . 'LEFT JOIN locker_reservations r ON r.id = p.reservation_id '
+            . 'LEFT JOIN bookings b ON b.id = p.booking_id '
+            . 'LEFT JOIN students s ON s.id = COALESCE(b.student_id, r.student_id) '
+            . 'LEFT JOIN school_years sy ON sy.id = COALESCE(b.school_year_id, r.school_year_id) '
+            . 'LEFT JOIN locker_occupancies lo ON lo.booking_id = b.id '
+            . 'LEFT JOIN lockers l ON l.id = COALESCE(lo.locker_id, r.locker_id) '
             . 'INNER JOIN parent_contacts pc ON pc.id = p.parent_contact_id '
             . 'WHERE p.id = :id LIMIT 1'
         );

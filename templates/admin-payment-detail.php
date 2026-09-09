@@ -23,7 +23,7 @@ $statusLabel = static fn (string $status): string => match ($status) {
 /** @var list<array<string, mixed>> $events */
 $events = is_array($payment['webhook_events'] ?? null) ? $payment['webhook_events'] : [];
 $recoverable = (string) $payment['status'] === 'manual_review'
-    && (string) ($payment['failure_code'] ?? '') === 'paid_booking_failed'
+    && in_array((string) ($payment['failure_code'] ?? ''), ['paid_booking_failed', 'paid_booking_activation_failed'], true)
     && $payment['paid_at'] !== null;
 ?>
 <!doctype html>
@@ -51,30 +51,30 @@ $recoverable = (string) $payment['status'] === 'manual_review'
 
     <?php if ($recovered): ?>
         <div class="alert alert-success" role="status">
-            <strong>Wiederherstellung abgeschlossen.</strong> Die bereits bestätigte Zahlung ist jetzt einer verbindlichen Buchung zugeordnet.
+            <strong>Wiederherstellung abgeschlossen.</strong> Die bereits bestätigte Zahlung ist jetzt einer aktiven Buchung zugeordnet.
         </div>
     <?php endif; ?>
 
     <?php if ((string) $payment['status'] === 'manual_review'): ?>
         <div class="alert alert-error">
             <strong>Manuelle Prüfung erforderlich.</strong>
-            Stripe hat die Zahlung bestätigt, die automatische Buchungsumwandlung konnte jedoch nicht abgeschlossen werden. Es darf keine zweite Zahlung angefordert werden, bevor der Vorgang geklärt ist.
+            Stripe hat die Zahlung bestätigt, die automatische Aktivierung der Buchung konnte jedoch nicht abgeschlossen werden. Es darf keine zweite Zahlung angefordert werden, bevor der Vorgang geklärt ist.
         </div>
     <?php elseif ((string) $payment['status'] === 'processing_paid'): ?>
         <div class="alert alert-neutral">
-            <strong>Zahlung wird verarbeitet.</strong> Der bestätigte Zahlungseingang wird gerade in eine Buchung überführt.
+            <strong>Zahlung wird verarbeitet.</strong> Der bestätigte Zahlungseingang wird gerade in die zugehörige Buchung übernommen.
         </div>
     <?php endif; ?>
 
     <?php if ($recoverable): ?>
         <section class="card stack">
             <h2>Bezahlte Buchung wiederherstellen</h2>
-            <p>Diese Aktion fordert <strong>keine neue Zahlung</strong> an. FachDock versucht ausschließlich, die bereits durch einen signierten Stripe-Webhook bestätigte Zahlung erneut in die zugehörige Schließfachbuchung zu überführen.</p>
-            <p class="form-hint">Die Wiederherstellung ist konkurrenzsicher. Ist Schüler oder Schließfach inzwischen anderweitig gebunden, bleibt der Vorgang in manueller Prüfung und es wird nichts überschrieben.</p>
+            <p>Diese Aktion fordert <strong>keine neue Zahlung</strong> an. FachDock versucht ausschließlich, die bereits durch einen signierten Stripe-Webhook bestätigte Zahlung erneut mit der zugehörigen Schließfachbuchung abzuschließen.</p>
+            <p class="form-hint">Bei einer reservierungsbasierten Zahlung wird die Buchungsumwandlung erneut versucht. Bei einer bereits bestehenden Buchung wird ausschließlich deren bezahlter Status aktiviert.</p>
             <form method="post" action="/admin/payments/recover">
                 <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
                 <input type="hidden" name="payment_id" value="<?= (int) $payment['id'] ?>">
-                <button class="button" type="submit">Buchungsumwandlung erneut versuchen</button>
+                <button class="button" type="submit">Bezahlte Buchung wiederherstellen</button>
             </form>
         </section>
     <?php endif; ?>
@@ -93,7 +93,17 @@ $recoverable = (string) $payment['status'] === 'manual_review'
             <div><strong>Schüler</strong><br><?= $e((string) $payment['first_name'] . ' ' . (string) $payment['last_name']) ?><br><span class="muted"><?= $e((string) $payment['class_name']) ?> · <?= $e((string) $payment['matrikelnummer']) ?></span></div>
             <div><strong>Elternkonto</strong><br><?= $e((string) $payment['parent_email']) ?></div>
             <div><strong>Schuljahr / Fach</strong><br><?= $e((string) $payment['school_year_label']) ?> · <?= $e((string) $payment['locker_short_name']) ?></div>
-            <div><strong>Reservierung</strong><br>#<?= (int) $payment['reservation_id'] ?> · <?= $e((string) $payment['reservation_status']) ?><br><span class="muted">Gültig bis <?= $e((string) $payment['reservation_expires_at']) ?></span></div>
+            <div>
+                <strong>Ausgangspunkt</strong><br>
+                <?php if ($payment['reservation_id'] !== null): ?>
+                    Reservierung #<?= (int) $payment['reservation_id'] ?> · <?= $e((string) ($payment['reservation_status'] ?? '')) ?><br>
+                    <span class="muted">Gültig bis <?= $e((string) ($payment['reservation_expires_at'] ?? '')) ?></span>
+                <?php elseif ($payment['booking_id'] !== null): ?>
+                    bestehende Buchung #<?= (int) $payment['booking_id'] ?>
+                <?php else: ?>
+                    –
+                <?php endif; ?>
+            </div>
         </div>
         <?php if ($payment['booking_id'] !== null): ?>
             <p><a href="/admin/bookings/detail?id=<?= (int) $payment['booking_id'] ?>">Buchung #<?= (int) $payment['booking_id'] ?> öffnen</a></p>

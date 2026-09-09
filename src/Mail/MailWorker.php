@@ -35,6 +35,11 @@ final class MailWorker
             }
             $result['processed']++;
 
+            if ($this->shouldSuppress($message)) {
+                $this->finishSuppressed($message['id']);
+                continue;
+            }
+
             if ($message['expired']) {
                 $this->finishExpired($message['id']);
                 $result['expired']++;
@@ -66,7 +71,8 @@ final class MailWorker
     /**
      * @return array{
      *   id: int, recipient_email: string, recipient_name: string|null, subject: string,
-     *   html_body: string, text_body: string, expired: bool
+     *   html_body: string, text_body: string, expired: bool, template_key: string,
+     *   relation_type: string|null, relation_id: int|null
      * }|null
      */
     private function claimNext(): ?array
@@ -74,10 +80,12 @@ final class MailWorker
         $this->pdo->beginTransaction();
         try {
             $statement = $this->pdo->query(
-                'SELECT id, recipient_email, recipient_name, subject, html_body, text_body, '
-                . '(not_after IS NOT NULL AND not_after <= CURRENT_TIMESTAMP) AS expired '
-                . "FROM mail_queue WHERE status = 'waiting' AND available_at <= CURRENT_TIMESTAMP "
-                . 'ORDER BY priority ASC, id ASC LIMIT 1 FOR UPDATE SKIP LOCKED'
+                'SELECT q.id, q.recipient_email, q.recipient_name, q.subject, q.html_body, q.text_body, '
+                . 'q.relation_type, q.relation_id, t.template_key, '
+                . '(q.not_after IS NOT NULL AND q.not_after <= CURRENT_TIMESTAMP) AS expired '
+                . 'FROM mail_queue q INNER JOIN mail_templates t ON t.id = q.mail_template_id '
+                . "WHERE q.status = 'waiting' AND q.available_at <= CURRENT_TIMESTAMP "
+                . 'ORDER BY q.priority ASC, q.id ASC LIMIT 1 FOR UPDATE SKIP LOCKED'
             );
             $row = $statement === false ? false : $statement->fetch();
             if (!is_array($row)) {
@@ -100,6 +108,9 @@ final class MailWorker
                 'html_body' => (string) ($row['html_body'] ?? ''),
                 'text_body' => (string) ($row['text_body'] ?? ''),
                 'expired' => (int) $row['expired'] === 1,
+                'template_key' => (string) $row['template_key'],
+                'relation_type' => $row['relation_type'] === null ? null : (string) $row['relation_type'],
+                'relation_id' => $row['relation_id'] === null ? null : (int) $row['relation_id'],
             ];
         } catch (Throwable $exception) {
             if ($this->pdo->inTransaction()) {
@@ -107,6 +118,30 @@ final class MailWorker
             }
             throw $exception;
         }
+    }
+
+    /** @param array{template_key: string, relation_type: string|null, relation_id: int|null} $message */
+    private function shouldSuppress(array $message): bool
+    {
+        if ($message['template_key'] !== 'payment_due_reminder'
+            || $message['relation_type'] !== 'booking'
+            || $message['relation_id'] === null) {
+            return false;
+        }
+
+        $statement = $this->pdo->prepare('SELECT status FROM bookings WHERE id = :id');
+        $statement->execute(['id' => $message['relation_id']]);
+
+        return $statement->fetchColumn() !== 'payment_due';
+    }
+
+    private function finishSuppressed(int $id): void
+    {
+        $this->pdo->prepare(
+            "UPDATE mail_queue SET status = 'canceled', canceled_at = CURRENT_TIMESTAMP, locked_at = NULL, "
+            . 'html_body = NULL, text_body = NULL, last_error = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = :id'
+        )->execute(['id' => $id]);
+        $this->queue->recordHistory($id, 'canceled', 'Zahlungserinnerung war nicht mehr erforderlich.');
     }
 
     private function finishSent(int $id): void
