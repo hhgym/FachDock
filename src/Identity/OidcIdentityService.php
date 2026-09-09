@@ -118,7 +118,7 @@ final class OidcIdentityService
     {
         $statement = $this->pdo->query(
             'SELECT i.id, i.issuer, i.subject, i.uuid, i.account_name, i.display_name, i.email, '
-            . 'i.identity_type, i.student_id, i.active, i.last_login_at, '
+            . 'i.identity_type, i.assignment_source, i.student_id, i.active, i.last_login_at, '
             . "CONCAT(st.first_name, ' ', st.last_name) AS student_name, st.matrikelnummer, st.class_name "
             . 'FROM oidc_identities i LEFT JOIN students st ON st.id = i.student_id '
             . 'ORDER BY i.last_login_at DESC, i.id DESC LIMIT 200'
@@ -136,7 +136,7 @@ final class OidcIdentityService
     public function approveTeacher(int $identityId): void
     {
         $statement = $this->pdo->prepare(
-            "UPDATE oidc_identities SET identity_type = 'teacher', student_id = NULL, active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = :id"
+            "UPDATE oidc_identities SET identity_type = 'teacher', assignment_source = 'manual', student_id = NULL, active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = :id"
         );
         $statement->execute(['id' => $identityId]);
         $this->assertChanged($statement->rowCount());
@@ -149,7 +149,7 @@ final class OidcIdentityService
             throw new RuntimeException('Es wurde kein eindeutiger aktiver Schüler mit dieser Matrikelnummer gefunden.');
         }
         $statement = $this->pdo->prepare(
-            "UPDATE oidc_identities SET identity_type = 'student', student_id = :student_id, active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = :id"
+            "UPDATE oidc_identities SET identity_type = 'student', assignment_source = 'manual', student_id = :student_id, active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = :id"
         );
         $statement->execute(['student_id' => $studentId, 'id' => $identityId]);
         $this->assertChanged($statement->rowCount());
@@ -160,7 +160,17 @@ final class OidcIdentityService
     public function setPending(int $identityId): void
     {
         $statement = $this->pdo->prepare(
-            "UPDATE oidc_identities SET identity_type = 'pending', student_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = :id"
+            "UPDATE oidc_identities SET identity_type = 'pending', assignment_source = 'manual', student_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = :id"
+        );
+        $statement->execute(['id' => $identityId]);
+        $this->assertChanged($statement->rowCount());
+        $this->revokeSessions($identityId);
+    }
+
+    public function useAutomaticAssignment(int $identityId): void
+    {
+        $statement = $this->pdo->prepare(
+            "UPDATE oidc_identities SET identity_type = 'pending', assignment_source = 'automatic', student_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = :id"
         );
         $statement->execute(['id' => $identityId]);
         $this->assertChanged($statement->rowCount());
@@ -192,9 +202,12 @@ final class OidcIdentityService
         $account = $this->nullableClaim($userinfo, 'preferred_username', 190);
         $display = $this->nullableClaim($userinfo, 'name', 255);
         $email = $this->nullableClaim($userinfo, 'email', 255);
+        $assignmentSource = is_array($existing)
+            ? (string) ($existing['assignment_source'] ?? 'automatic')
+            : 'automatic';
         $type = is_array($existing) ? (string) $existing['identity_type'] : 'pending';
         $studentId = is_array($existing) && $existing['student_id'] !== null ? (int) $existing['student_id'] : null;
-        if ($type === 'pending') {
+        if ($assignmentSource === 'automatic') {
             [$type, $studentId] = $this->classify($userinfo, $email, $account);
         }
 
@@ -217,8 +230,8 @@ final class OidcIdentityService
         } else {
             $statement = $this->pdo->prepare(
                 'INSERT INTO oidc_identities '
-                . '(issuer, subject, uuid, account_name, display_name, email, identity_type, student_id, active, last_login_at, created_at, updated_at) '
-                . 'VALUES (:issuer, :subject, :uuid, :account_name, :display_name, :email, :identity_type, :student_id, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+                . '(issuer, subject, uuid, account_name, display_name, email, identity_type, assignment_source, student_id, active, last_login_at, created_at, updated_at) '
+                . "VALUES (:issuer, :subject, :uuid, :account_name, :display_name, :email, :identity_type, 'automatic', :student_id, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
             );
             $statement->execute([
                 'issuer' => $issuer,
