@@ -6,6 +6,24 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+### Added
+- Administrativer Buchungslebenszyklus mit regelkonformem Schließfachwechsel, Beendigung, Stornierung und Verlängerung in spätere Schuljahre.
+- Dauerhafte Lebenszyklusereignisse mit Begründung, Akteur, altem/neuem Schließfach und Verknüpfung zwischen Ausgangs- und Verlängerungsbuchung.
+- Eigene E-Mail-Vorlagen und deduplizierte Benachrichtigungen für Fachwechsel, Beendigung, Stornierung und Verlängerung.
+- MySQL-8.4-Integrationstests für Fachwechsel, Beendigung, Stornierung, Verlängerung und die Sperre bei laufenden Zahlungen.
+
+### Changed
+- Die Buchungsdetailansicht bietet den Buchungslebenszyklus direkt an und zeigt zusätzlich die Ereignis- und Schließfachhistorie.
+- Verlängerungen verwenden das bisherige Schließfach im Zielschuljahr nur, wenn es frei und nach den dort gültigen Zuteilungsregeln zulässig ist.
+- Gebührenpflichtige Verlängerungen werden als `payment_due` angelegt; eine erneut beantragte BuT-Befreiung führt in `exemption_review`, gebührenfreie Verlängerungen werden unmittelbar aktiv.
+- Zahlungsfristen für Verlängerungen verwenden konsistent die Datenbankzeit.
+
+### Fixed
+- Lebenszyklusänderungen werden während eines laufenden Stripe-Checkouts oder einer technisch/manuell zu prüfenden Zahlung blockiert.
+- Beenden und Stornieren geben Buchungsslot und Schließfachbelegung atomar frei und schließen den aktuellen Zuweisungsverlauf.
+- Eine Stornierung verändert den vertraglichen Gültigkeitszeitraum nicht; eine Beendigung erzeugt auch bei zukünftigen Buchungen keinen ungültigen Zeitraum.
+- Wartende Zahlungserinnerungen werden beim Beenden oder Stornieren einer Buchung storniert.
+
 ## [0.6.1] - 2026-09-09
 
 ### Changed
@@ -140,7 +158,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 - Konfigurierbare Sitzungs- und Login-Sicherheitsgrenzen sowie Passwortänderung.
 - Standortmodell `Gebäude → Etage → Bereich → Schrankgruppe → Korpus → Schließfach`.
 - Korpustypen mit konfigurierbaren barrierearmen Positionen.
-- Automatische Schrankgruppen- und Fachbezeichnungen, z. B. `A-07-2` und `1OG-78-A-07-2`.
+- Automatische Fachbezeichnungen wie `A-07-2` und `1OG-78-A-07-2`.
 - Transaktionale Erzeugung und Umstrukturierung bislang ungenutzter Schrankgruppen.
 - Erste Administrationsoberfläche für Standorte und Schrankgruppen.
 - Administrator-gesteuerte Updateprüfung für ausschließlich stabile GitHub Releases.
