@@ -201,7 +201,7 @@ final class DataRetentionService
         );
         $statement->execute(['cutoff' => $cutoff, 'cutoff2' => $cutoff]);
 
-        return array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN));
+        return array_values(array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN)));
     }
 
     private function candidateStudentCount(string $cutoff): int
@@ -228,7 +228,7 @@ final class DataRetentionService
         );
         $statement->execute(['cutoff' => $cutoff]);
 
-        return array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN));
+        return array_values(array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN)));
     }
 
     private function candidateParentCount(string $cutoff): int
