@@ -77,6 +77,7 @@ final class StripeSettingsController
                 throw new RuntimeException('Die Checkout-Gültigkeit muss zwischen 30 und 1440 Minuten liegen.');
             }
 
+            $baseUrl = $this->normalizeBaseUrl($request->postString('base_url'));
             $secretKey = trim($request->postString('secret_key'));
             $webhookSecret = trim($request->postString('webhook_secret'));
             $expectedPrefix = $mode === 'live' ? 'sk_live_' : 'sk_test_';
@@ -99,11 +100,13 @@ final class StripeSettingsController
                 $checkoutMinutes,
                 $secretKey !== '' ? $secretKey : null,
                 $webhookSecret !== '' ? $webhookSecret : null,
+                $baseUrl,
             );
             $this->audit->staff($staff, 'system.stripe.settings.updated', 'system', 'stripe', [
                 'mode' => $mode,
                 'currency' => $currency,
                 'checkout_minutes' => $checkoutMinutes,
+                'base_url' => $baseUrl,
                 'secret_key_replaced' => $secretKey !== '',
                 'webhook_secret_replaced' => $webhookSecret !== '',
             ]);
@@ -149,6 +152,30 @@ final class StripeSettingsController
             'webhookUrl' => $baseUrl !== '' ? $baseUrl . '/webhooks/stripe' : '',
             'baseUrlSecure' => str_starts_with($baseUrl, 'https://'),
         ]), $status);
+    }
+
+    private function normalizeBaseUrl(string $value): string
+    {
+        $baseUrl = rtrim(trim($value), '/');
+        if ($baseUrl === '') {
+            throw new RuntimeException('Die öffentliche Basis-URL ist erforderlich.');
+        }
+        if (filter_var($baseUrl, FILTER_VALIDATE_URL) === false) {
+            throw new RuntimeException('Die öffentliche Basis-URL ist keine gültige URL.');
+        }
+
+        $parts = parse_url($baseUrl);
+        if (!is_array($parts) || strtolower((string) ($parts['scheme'] ?? '')) !== 'https') {
+            throw new RuntimeException('Die öffentliche Basis-URL muss mit https:// beginnen.');
+        }
+        if (trim((string) ($parts['host'] ?? '')) === '') {
+            throw new RuntimeException('Die öffentliche Basis-URL muss einen gültigen Hostnamen enthalten.');
+        }
+        if (isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])) {
+            throw new RuntimeException('Die öffentliche Basis-URL darf keine Zugangsdaten, Query-Parameter oder Fragmente enthalten.');
+        }
+
+        return $baseUrl;
     }
 
     private function administrator(): AuthenticatedStaff|Response

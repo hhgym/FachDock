@@ -44,6 +44,7 @@ final class LocalConfigWriterTest extends TestCase
         $secrets = require $this->root . '/config/secrets.local.php';
 
         self::assertSame('Testschule', $app['app']['school_name']);
+        self::assertArrayNotHasKey('base_url', $app['app']);
         self::assertSame(45, $app['stripe']['checkout_minutes']);
         self::assertSame('db-secret', $secrets['database']['password']);
         self::assertSame('sk_test_existing', $secrets['stripe']['secret_key']);
@@ -71,6 +72,26 @@ final class LocalConfigWriterTest extends TestCase
         self::assertSame('db-secret', $secrets['database']['password']);
         self::assertSame('sk_live_replacement', $secrets['stripe']['secret_key']);
         self::assertSame('whsec_replacement', $secrets['stripe']['webhook_secret']);
+    }
+
+    public function testStripeSettingsCanPersistPublicBaseUrlWithoutOverwritingAppSettings(): void
+    {
+        (new LocalConfigWriter($this->root))->saveStripeSettings(
+            'test',
+            'EUR',
+            30,
+            null,
+            null,
+            'https://fachdock.example.de',
+        );
+
+        /** @var array<string, mixed> $app */
+        $app = require $this->root . '/config/app.local.php';
+
+        self::assertSame('Testschule', $app['app']['school_name']);
+        self::assertTrue($app['app']['installed']);
+        self::assertSame('https://fachdock.example.de', $app['app']['base_url']);
+        self::assertSame('test', $app['stripe']['mode']);
     }
 
     /** @param array<string, mixed> $values */

@@ -32,7 +32,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
     <header class="hero">
         <span class="eyebrow">Konfiguration</span>
         <h1>Stripe und Zahlungen</h1>
-        <p>Hier werden Zahlungsmodus, Checkout-Dauer und die lokalen Stripe-Zugangsdaten verwaltet.</p>
+        <p>Hier werden die öffentliche FachDock-Adresse, Zahlungsmodus, Checkout-Dauer und die lokalen Stripe-Zugangsdaten verwaltet.</p>
     </header>
 
     <?php if ($success): ?><div class="alert alert-success">Die Stripe-Konfiguration wurde gespeichert.</div><?php endif; ?>
@@ -64,7 +64,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
         </div>
         <?php if (!$baseUrlSecure): ?>
             <div class="alert alert-neutral">
-                Für Stripe Checkout muss unter <code>app.base_url</code> eine kanonische HTTPS-Adresse konfiguriert sein. Aktuell: <code><?= $baseUrl !== '' ? $e($baseUrl) : 'nicht gesetzt' ?></code>.
+                Für Stripe Checkout ist eine kanonische HTTPS-Adresse erforderlich. Trage sie unten unter <strong>Öffentliche Basis-URL</strong> ein.
             </div>
         <?php endif; ?>
     </section>
@@ -73,6 +73,10 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
         <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
         <h2>Zahlungseinstellungen</h2>
         <div class="grid">
+            <label class="wide">Öffentliche Basis-URL
+                <input type="url" name="base_url" value="<?= $e($baseUrl) ?>" placeholder="https://fachdock.example.de" inputmode="url" autocapitalize="none" spellcheck="false" required>
+                <small>Die öffentliche HTTPS-Adresse dieser FachDock-Installation ohne abschließenden Schrägstrich. Daraus wird automatisch der Stripe-Webhook <code>/webhooks/stripe</code> gebildet.</small>
+            </label>
             <label>Stripe-Modus
                 <select name="mode" required>
                     <option value="test" <?= $mode === 'test' ? 'selected' : '' ?>>Testmodus</option>

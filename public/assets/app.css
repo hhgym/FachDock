@@ -15,6 +15,7 @@ a { color: #263f8f; }
 .hero p { margin: 0; color: #5d6678; }
 .eyebrow { font-size: .78rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; color: #3854a5; }
 .card { background: #fff; border: 1px solid #e2e6ed; border-radius: 16px; padding: 24px; box-shadow: 0 8px 28px rgba(22, 34, 58, .05); }
+.card, .alert, .grid > *, .settings-status-item { min-width: 0; }
 .card h2 { margin-top: 0; font-size: 1.15rem; }
 .stack { display: grid; gap: 18px; }
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -27,7 +28,7 @@ textarea { resize: vertical; }
 input:focus, select:focus, textarea:focus { outline: 3px solid rgba(56, 84, 165, .15); border-color: #3854a5; }
 input[type="checkbox"] { width: auto; padding: 0; }
 .check-label { display: flex; align-items: center; gap: 9px; align-self: end; min-height: 44px; }
-.button { justify-self: start; border: 0; border-radius: 10px; padding: 12px 18px; background: #263f8f; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.button { justify-self: start; max-width: 100%; border: 0; border-radius: 10px; padding: 12px 18px; background: #263f8f; color: #fff; font: inherit; font-weight: 700; cursor: pointer; white-space: normal; }
 .button-secondary { background: #eef1f7; color: #263f8f; }
 .button:disabled { opacity: .45; cursor: not-allowed; }
 .requirements { display: grid; gap: 8px; }
@@ -41,7 +42,7 @@ input[type="checkbox"] { width: auto; padding: 0; }
 .alert-success { background: #e8f7ed; border: 1px solid #b9e2c8; color: #176238; }
 .alert-neutral { margin: 0; background: #f6f7f9; border: 1px solid #e1e5eb; color: #485266; }
 .alert ul { margin-bottom: 0; }
-code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+code, .code-value { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; word-break: break-word; }
 .topbar { position: sticky; top: 0; z-index: 50; background: #fff; border-bottom: 1px solid #e2e6ed; }
 .topbar-inner { width: min(1180px, calc(100% - 32px)); min-height: 66px; margin: 0 auto; display: flex; align-items: center; gap: 20px; }
 .topbar a { text-decoration: none; }
