@@ -480,7 +480,7 @@ final class SchoolYearTransitionService
         );
         $statement->execute(['student_id' => $studentId]);
 
-        return array_map(
+        return array_values(array_map(
             static fn (array $row): array => [
                 'id' => (int) $row['id'],
                 'email' => (string) $row['email'],
@@ -488,7 +488,7 @@ final class SchoolYearTransitionService
                 'last_name' => $row['last_name'] !== null ? (string) $row['last_name'] : null,
             ],
             $statement->fetchAll(PDO::FETCH_ASSOC),
-        );
+        ));
     }
 
     private function reminderAlreadyDispatched(int $sourceId, int $targetId, int $studentId, int $parentId, string $key): bool
@@ -567,10 +567,10 @@ final class SchoolYearTransitionService
         );
         $statement->execute(['today' => $today->format('Y-m-d')]);
 
-        return array_map(
+        return array_values(array_map(
             static fn (array $row): array => ['source_id' => (int) $row['source_id'], 'target_id' => (int) $row['target_id']],
             $statement->fetchAll(PDO::FETCH_ASSOC),
-        );
+        ));
     }
 
     /** @return array{ended:int,with_target_booking:int,without_target_booking:int,notices_queued:int}|null */
