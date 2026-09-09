@@ -22,14 +22,14 @@ final class BookingPaymentAdminService
             'SELECT id, label, status FROM school_years ORDER BY starts_on DESC, id DESC'
         ));
 
-        return array_values(array_map(
+        return array_map(
             static fn (array $row): array => [
                 'id' => (int) $row['id'],
                 'label' => (string) $row['label'],
                 'status' => (string) $row['status'],
             ],
             $rows,
-        ));
+        );
     }
 
     /** @return list<array<string, mixed>> */
