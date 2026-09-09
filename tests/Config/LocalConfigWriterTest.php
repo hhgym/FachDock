@@ -22,6 +22,7 @@ final class LocalConfigWriterTest extends TestCase
         $this->writeConfig('secrets.local.php', [
             'database' => ['password' => 'db-secret'],
             'stripe' => ['secret_key' => 'sk_test_existing', 'webhook_secret' => 'whsec_existing'],
+            'smtp' => ['password' => 'smtp-existing'],
         ]);
     }
 
@@ -49,6 +50,7 @@ final class LocalConfigWriterTest extends TestCase
         self::assertSame('db-secret', $secrets['database']['password']);
         self::assertSame('sk_test_existing', $secrets['stripe']['secret_key']);
         self::assertSame('whsec_existing', $secrets['stripe']['webhook_secret']);
+        self::assertSame('smtp-existing', $secrets['smtp']['password']);
     }
 
     public function testNewStripeSecretsReplaceOnlyStripeSecrets(): void
@@ -92,6 +94,89 @@ final class LocalConfigWriterTest extends TestCase
         self::assertTrue($app['app']['installed']);
         self::assertSame('https://fachdock.example.de', $app['app']['base_url']);
         self::assertSame('test', $app['stripe']['mode']);
+    }
+
+    public function testCentralSettingsPreserveUnrelatedConfigurationAndSecrets(): void
+    {
+        $writer = new LocalConfigWriter($this->root);
+        $writer->saveGeneralSettings('Heinrich-Hertz-Gymnasium', 'https://fachdock.example.de');
+        $writer->saveAuthSettings([
+            'password_min_length' => 14,
+            'max_failed_attempts' => 4,
+            'lockout_minutes' => 20,
+            'session_max_lifetime_minutes' => 600,
+            'session_idle_timeout_minutes' => 45,
+            'parent_magic_link_minutes' => 20,
+            'parent_session_lifetime_minutes' => 1200,
+        ]);
+        $writer->saveBookingSettings([
+            'recommendation_count' => 5,
+            'reservation_minutes' => 20,
+            'payment_grace_minutes' => 40,
+            'but_rejection_payment_days' => 10,
+        ]);
+        $writer->saveMailSettings(
+            [
+                'worker_batch_size' => 75,
+                'max_per_hour' => 120,
+                'retry_minutes' => [10, 30, 120],
+                'processing_timeout_minutes' => 20,
+            ],
+            [
+                'host' => 'smtp.example.test',
+                'port' => 587,
+                'username' => 'mailer',
+                'encryption' => 'tls',
+                'from_email' => 'fachdock@example.test',
+                'from_name' => 'FachDock Test',
+            ],
+            null,
+        );
+
+        /** @var array<string, mixed> $app */
+        $app = require $this->root . '/config/app.local.php';
+        /** @var array<string, mixed> $secrets */
+        $secrets = require $this->root . '/config/secrets.local.php';
+
+        self::assertTrue($app['app']['installed']);
+        self::assertSame('Heinrich-Hertz-Gymnasium', $app['app']['school_name']);
+        self::assertSame('https://fachdock.example.de', $app['app']['base_url']);
+        self::assertSame(14, $app['auth']['password_min_length']);
+        self::assertSame(5, $app['booking']['recommendation_count']);
+        self::assertSame([10, 30, 120], $app['mail']['retry_minutes']);
+        self::assertSame('smtp.example.test', $app['smtp']['host']);
+        self::assertSame('smtp-existing', $secrets['smtp']['password']);
+        self::assertSame('db-secret', $secrets['database']['password']);
+        self::assertSame('sk_test_existing', $secrets['stripe']['secret_key']);
+    }
+
+    public function testNewSmtpPasswordReplacesOnlySmtpSecret(): void
+    {
+        (new LocalConfigWriter($this->root))->saveMailSettings(
+            [
+                'worker_batch_size' => 50,
+                'max_per_hour' => 50,
+                'retry_minutes' => [15, 60, 360],
+                'processing_timeout_minutes' => 15,
+            ],
+            [
+                'host' => 'smtp.example.test',
+                'port' => 465,
+                'username' => 'mailer',
+                'encryption' => 'smtps',
+                'from_email' => 'fachdock@example.test',
+                'from_name' => 'FachDock',
+            ],
+            'smtp-replacement',
+        );
+
+        /** @var array<string, mixed> $secrets */
+        $secrets = require $this->root . '/config/secrets.local.php';
+
+        self::assertSame('smtp-replacement', $secrets['smtp']['password']);
+        self::assertSame('db-secret', $secrets['database']['password']);
+        self::assertSame('sk_test_existing', $secrets['stripe']['secret_key']);
+        self::assertSame('whsec_existing', $secrets['stripe']['webhook_secret']);
     }
 
     /** @param array<string, mixed> $values */
