@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use FachDock\Application;
+use FachDock\Booking\BookingRulesFrontController;
 use FachDock\Identity\IdentityFrontController;
 use FachDock\Operations\OperationsFrontController;
 use FachDock\Platform\PlatformFrontController;
@@ -22,6 +23,12 @@ require $autoload;
 $identityResponse = IdentityFrontController::handle($root);
 if ($identityResponse !== null) {
     $identityResponse->send();
+    exit;
+}
+
+$bookingRulesResponse = BookingRulesFrontController::handle($root);
+if ($bookingRulesResponse !== null) {
+    $bookingRulesResponse->send();
     exit;
 }
 
