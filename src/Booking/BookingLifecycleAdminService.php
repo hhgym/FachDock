@@ -15,7 +15,21 @@ final class BookingLifecycleAdminService
     ) {
     }
 
-    /** @return list<array{id:int,label:string,starts_on:string,ends_on:string,annual_fee_cents:int}> */
+    /**
+     * @return list<array{
+     *     id:int,
+     *     label:string,
+     *     starts_on:string,
+     *     ends_on:string,
+     *     annual_fee_cents:int,
+     *     projected_grade:int,
+     *     locker_id:int,
+     *     locker_short_name:string,
+     *     reuse_current:bool,
+     *     requires_change:bool,
+     *     change_reason:string
+     * }>
+     */
     public function renewalTargets(int $bookingId): array
     {
         $statement = $this->pdo->prepare(
@@ -33,33 +47,51 @@ final class BookingLifecycleAdminService
             'SELECT sy.id, sy.label, sy.starts_on, sy.ends_on, sy.annual_fee_cents '
             . 'FROM school_years sy '
             . 'WHERE sy.starts_on > :starts_on '
-            . 'AND NOT EXISTS (SELECT 1 FROM booking_slots bs WHERE bs.school_year_id = sy.id AND bs.student_id = :student_id) '
-            . 'AND NOT EXISTS (SELECT 1 FROM locker_occupancies lo WHERE lo.school_year_id = sy.id AND lo.locker_id = :locker_id) '
-            . 'ORDER BY sy.starts_on ASC LIMIT 4'
+            . 'AND NOT EXISTS ('
+            . 'SELECT 1 FROM booking_slots bs WHERE bs.school_year_id = sy.id AND bs.student_id = :student_id'
+            . ') ORDER BY sy.starts_on ASC LIMIT 4'
         );
         $years->execute([
             'starts_on' => (string) $booking['starts_on'],
             'student_id' => (int) $booking['student_id'],
-            'locker_id' => (int) $booking['locker_id'],
         ]);
 
+        $selector = new RenewalLockerSelector($this->pdo, $this->allocationRules);
         $result = [];
         foreach ($years->fetchAll(PDO::FETCH_ASSOC) as $year) {
-            $delta = (int) substr((string) $year['starts_on'], 0, 4) - (int) substr((string) $booking['starts_on'], 0, 4);
+            if (!is_array($year)) {
+                continue;
+            }
+            $delta = (int) substr((string) $year['starts_on'], 0, 4)
+                - (int) substr((string) $booking['starts_on'], 0, 4);
             $projectedGrade = (int) $booking['projected_grade'] + $delta;
-            if ($projectedGrade > 12) {
+            if ($delta < 1 || $projectedGrade > 12) {
                 continue;
             }
-            $decision = $this->allocationRules->evaluate((int) $year['id'], $projectedGrade, (int) $booking['locker_id']);
-            if (!$decision->allowed) {
+
+            $forceChange = (int) $booking['projected_grade'] <= 6 && $projectedGrade >= 7;
+            $selection = $selector->preview(
+                (int) $year['id'],
+                $projectedGrade,
+                (int) $booking['locker_id'],
+                $forceChange,
+            );
+            if ($selection === null) {
                 continue;
             }
+
             $result[] = [
                 'id' => (int) $year['id'],
                 'label' => (string) $year['label'],
                 'starts_on' => (string) $year['starts_on'],
                 'ends_on' => (string) $year['ends_on'],
                 'annual_fee_cents' => (int) $year['annual_fee_cents'],
+                'projected_grade' => $projectedGrade,
+                'locker_id' => $selection['id'],
+                'locker_short_name' => $selection['short_name'],
+                'reuse_current' => $selection['reuse_current'],
+                'requires_change' => !$selection['reuse_current'],
+                'change_reason' => $selection['change_reason'],
             ];
         }
 

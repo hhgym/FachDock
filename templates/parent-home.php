@@ -21,6 +21,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
 <header class="topbar">
     <div><strong>FachDock</strong> · Elternportal</div>
     <div class="topbar-actions">
+        <a href="/parent/bookings">Meine Buchungen</a>
         <a href="/parent/booking">Schließfach buchen</a>
         <a href="/parent/support">Problem melden</a>
         <span><?= $e($parent->displayName()) ?></span>
@@ -34,7 +35,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
     <header class="hero">
         <span class="eyebrow">Elternportal</span>
         <h1>Ihre Kinder</h1>
-        <p>Für verknüpfte Kinder können Sie regelkonforme freie Schließfächer auswählen und Probleme mit bereits zugeordneten Fächern direkt an die Schließfachverwaltung melden.</p>
+        <p>Für verknüpfte Kinder können Sie regelkonforme freie Schließfächer auswählen, bestehende Buchungen verwalten und Probleme mit bereits zugeordneten Fächern direkt an die Schließfachverwaltung melden.</p>
     </header>
 
     <section class="card stack">
@@ -47,6 +48,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
                         <strong><?= $e((string) $child['first_name'] . ' ' . (string) $child['last_name']) ?></strong>
                         <div class="muted">Klasse <?= $e((string) $child['class_name']) ?> · Klassenstufe <?= (int) $child['grade'] ?></div>
                         <div class="compact-actions">
+                            <a class="button button-secondary" href="/parent/bookings">Buchungen verwalten</a>
                             <a class="button button-secondary" href="/parent/booking?student_id=<?= (int) $child['id'] ?>">Schließfach auswählen</a>
                             <a class="button button-secondary" href="/parent/support">Problem melden</a>
                         </div>

@@ -23,4 +23,6 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
 <label>Reservierungsdauer in Minuten<input type="number" name="reservation_minutes" min="5" max="120" value="<?= $reservationMinutes ?>" required><small>Zeitfenster, in dem ein ausgewähltes Fach für den Buchenden reserviert bleibt.</small></label>
 <label>Zahlungs-Gnadenfrist in Minuten<input type="number" name="payment_grace_minutes" min="5" max="180" value="<?= $paymentGraceMinutes ?>" required><small>Zusätzliche Sicherung während eines gestarteten Zahlungsvorgangs.</small></label>
 <label>Zahlungsfrist nach BuT-Ablehnung in Tagen<input type="number" name="but_rejection_payment_days" min="1" max="90" value="<?= $butRejectionPaymentDays ?>" required><small>Frist für die nachträgliche Zahlung einer bereits belegten Buchung.</small></label>
-</div><button class="button" type="submit">Buchungseinstellungen speichern</button></form></main></body></html>
+</div><button class="button" type="submit">Buchungseinstellungen speichern</button></form>
+<section class="card stack"><h2>Self-Service und Schließfachwechsel</h2><p>Konfigurieren Sie das jährliche Wechsel-Limit für Eltern. Administrative Wechsel bleiben davon unabhängig.</p><p><a class="button button-secondary" href="/admin/config/booking/self-service">Self-Service konfigurieren</a></p></section>
+</main></body></html>
