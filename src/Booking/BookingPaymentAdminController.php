@@ -11,6 +11,7 @@ use FachDock\Auth\StaffSessionService;
 use FachDock\Http\Request;
 use FachDock\Http\Response;
 use FachDock\Http\Router;
+use FachDock\Mail\BookingLifecycleNotificationService;
 use FachDock\Payment\PaidPaymentRecoveryService;
 use FachDock\Security\Csrf;
 use FachDock\View\ViewRenderer;
@@ -22,6 +23,9 @@ final class BookingPaymentAdminController
     public function __construct(
         private readonly BookingPaymentAdminService $service,
         private readonly PaidPaymentRecoveryService $recovery,
+        private readonly BookingLifecycleService $lifecycle,
+        private readonly BookingLifecycleAdminService $lifecycleAdmin,
+        private readonly BookingLifecycleNotificationService $lifecycleNotifications,
         private readonly StaffSessionService $sessions,
         private readonly AuditLogger $audit,
         private readonly LoggerInterface $logger,
@@ -34,6 +38,10 @@ final class BookingPaymentAdminController
     {
         $router->get('/admin/bookings', fn (Request $request): Response => $this->bookings($request));
         $router->get('/admin/bookings/detail', fn (Request $request): Response => $this->bookingDetail($request));
+        $router->post('/admin/bookings/change-locker', fn (Request $request): Response => $this->changeLocker($request));
+        $router->post('/admin/bookings/end', fn (Request $request): Response => $this->endBooking($request, false));
+        $router->post('/admin/bookings/cancel', fn (Request $request): Response => $this->endBooking($request, true));
+        $router->post('/admin/bookings/renew', fn (Request $request): Response => $this->renewBooking($request));
         $router->get('/admin/payments', fn (Request $request): Response => $this->payments($request));
         $router->get('/admin/payments/detail', fn (Request $request): Response => $this->paymentDetail($request));
         $router->post('/admin/payments/recover', fn (Request $request): Response => $this->recoverPayment($request));
@@ -70,23 +78,194 @@ final class BookingPaymentAdminController
 
         try {
             $bookingId = $this->positiveInt($this->queryString($request, 'id'), 'Buchung');
+        } catch (DomainException $exception) {
+            return $this->bookingNotFound($staff, $exception->getMessage());
+        }
+
+        $success = match (true) {
+            $this->queryString($request, 'locker_changed') === '1' => 'Das Schließfach wurde geändert.',
+            $this->queryString($request, 'ended') === '1' => 'Die Buchung wurde beendet und das Schließfach freigegeben.',
+            $this->queryString($request, 'cancelled') === '1' => 'Die Buchung wurde storniert und das Schließfach freigegeben.',
+            $this->queryString($request, 'renewed') === '1' => 'Die Verlängerungsbuchung wurde angelegt.',
+            default => null,
+        };
+
+        return $this->bookingDetailPage($staff, $bookingId, [], $success);
+    }
+
+    private function changeLocker(Request $request): Response
+    {
+        $staff = $this->staff();
+        if ($staff instanceof Response) {
+            return $staff;
+        }
+        if (!$this->csrf->verify($request->postString('_csrf'))) {
+            return Response::html('<h1>Ungültige Sitzung</h1>', 419);
+        }
+
+        $bookingId = 0;
+        try {
+            $bookingId = $this->positiveInt($request->postString('booking_id'), 'Buchung');
+            $lockerId = $this->positiveInt($request->postString('locker_id'), 'Schließfach');
+            $reason = $request->postString('reason');
+            $this->lifecycle->changeLocker($staff, $bookingId, $lockerId, $reason);
+            $this->audit->staff($staff, 'booking.locker.changed', 'booking', $bookingId, [
+                'locker_id' => $lockerId,
+                'reason' => mb_substr(trim($reason), 0, 1000),
+            ]);
+            $this->lifecycleNotifications->lockerChanged($bookingId);
+            $this->csrf->rotate();
+
+            return Response::redirect('/admin/bookings/detail?id=' . $bookingId . '&locker_changed=1');
+        } catch (DomainException $exception) {
+            return $this->bookingActionError($staff, $bookingId, $exception->getMessage(), 422);
+        } catch (Throwable $exception) {
+            return $this->bookingTechnicalError($staff, $bookingId, 'Locker change failed', $exception);
+        }
+    }
+
+    private function endBooking(Request $request, bool $cancelled): Response
+    {
+        $staff = $this->staff();
+        if ($staff instanceof Response) {
+            return $staff;
+        }
+        if (!$this->csrf->verify($request->postString('_csrf'))) {
+            return Response::html('<h1>Ungültige Sitzung</h1>', 419);
+        }
+
+        $bookingId = 0;
+        try {
+            $bookingId = $this->positiveInt($request->postString('booking_id'), 'Buchung');
+            $reason = $request->postString('reason');
+            $this->lifecycle->end($staff, $bookingId, $reason, $cancelled);
+            $this->audit->staff(
+                $staff,
+                $cancelled ? 'booking.cancelled' : 'booking.ended',
+                'booking',
+                $bookingId,
+                ['reason' => mb_substr(trim($reason), 0, 1000)],
+            );
+            $this->lifecycleNotifications->ended($bookingId, $cancelled);
+            $this->csrf->rotate();
+
+            return Response::redirect(
+                '/admin/bookings/detail?id=' . $bookingId . ($cancelled ? '&cancelled=1' : '&ended=1')
+            );
+        } catch (DomainException $exception) {
+            return $this->bookingActionError($staff, $bookingId, $exception->getMessage(), 422);
+        } catch (Throwable $exception) {
+            return $this->bookingTechnicalError($staff, $bookingId, 'Booking termination failed', $exception);
+        }
+    }
+
+    private function renewBooking(Request $request): Response
+    {
+        $staff = $this->staff();
+        if ($staff instanceof Response) {
+            return $staff;
+        }
+        if (!$this->csrf->verify($request->postString('_csrf'))) {
+            return Response::html('<h1>Ungültige Sitzung</h1>', 419);
+        }
+
+        $bookingId = 0;
+        try {
+            $bookingId = $this->positiveInt($request->postString('booking_id'), 'Buchung');
+            $targetSchoolYearId = $this->positiveInt($request->postString('school_year_id'), 'Zielschuljahr');
+            $requestBut = $request->postString('request_but') === '1';
+            $newBookingId = $this->lifecycle->renew($staff, $bookingId, $targetSchoolYearId, $requestBut);
+            $this->audit->staff($staff, 'booking.renewed', 'booking', $bookingId, [
+                'new_booking_id' => $newBookingId,
+                'school_year_id' => $targetSchoolYearId,
+                'but_requested' => $requestBut,
+            ]);
+            $this->lifecycleNotifications->renewed($newBookingId);
+            $this->csrf->rotate();
+
+            return Response::redirect('/admin/bookings/detail?id=' . $newBookingId . '&renewed=1');
+        } catch (DomainException $exception) {
+            return $this->bookingActionError($staff, $bookingId, $exception->getMessage(), 422);
+        } catch (Throwable $exception) {
+            return $this->bookingTechnicalError($staff, $bookingId, 'Booking renewal failed', $exception);
+        }
+    }
+
+    /** @param list<string> $errors */
+    private function bookingDetailPage(
+        AuthenticatedStaff $staff,
+        int $bookingId,
+        array $errors,
+        ?string $success = null,
+        int $status = 200,
+    ): Response {
+        try {
             $booking = $this->service->booking($bookingId);
         } catch (DomainException $exception) {
-            return Response::html($this->views->render('admin-record-not-found.php', [
-                'staff' => $staff,
-                'title' => 'Buchung nicht gefunden',
-                'message' => $exception->getMessage(),
-                'backUrl' => '/admin/bookings',
-                'backLabel' => 'Zur Buchungsübersicht',
-                'csrfToken' => $this->csrf->token(),
-            ]), 404);
+            return $this->bookingNotFound($staff, $exception->getMessage());
         }
 
         return Response::html($this->views->render('admin-booking-detail.php', [
             'staff' => $staff,
             'booking' => $booking,
+            'renewalTargets' => $this->lifecycleAdmin->renewalTargets($bookingId),
+            'lockerOptions' => $this->lifecycleAdmin->lockerOptions($bookingId),
+            'lifecycleEvents' => $this->lifecycleAdmin->events($bookingId),
+            'errors' => $errors,
+            'success' => $success,
             'csrfToken' => $this->csrf->token(),
-        ]));
+        ]), $status);
+    }
+
+    private function bookingActionError(
+        AuthenticatedStaff $staff,
+        int $bookingId,
+        string $message,
+        int $status,
+    ): Response {
+        if ($bookingId < 1) {
+            return $this->bookingNotFound($staff, $message);
+        }
+
+        return $this->bookingDetailPage($staff, $bookingId, [$message], null, $status);
+    }
+
+    private function bookingTechnicalError(
+        AuthenticatedStaff $staff,
+        int $bookingId,
+        string $logMessage,
+        Throwable $exception,
+    ): Response {
+        $errorId = bin2hex(random_bytes(6));
+        $this->logger->error($logMessage, [
+            'error_id' => $errorId,
+            'staff_user_id' => $staff->id,
+            'booking_id' => $bookingId > 0 ? $bookingId : null,
+            'exception' => $exception,
+        ]);
+        if ($bookingId < 1) {
+            return Response::html('<h1>Ein Fehler ist aufgetreten.</h1><p>Fehler-ID: ' . $errorId . '</p>', 500);
+        }
+
+        return $this->bookingDetailPage(
+            $staff,
+            $bookingId,
+            ['Die Änderung konnte nicht abgeschlossen werden. Fehler-ID: ' . $errorId],
+            null,
+            500,
+        );
+    }
+
+    private function bookingNotFound(AuthenticatedStaff $staff, string $message): Response
+    {
+        return Response::html($this->views->render('admin-record-not-found.php', [
+            'staff' => $staff,
+            'title' => 'Buchung nicht gefunden',
+            'message' => $message,
+            'backUrl' => '/admin/bookings',
+            'backLabel' => 'Zur Buchungsübersicht',
+            'csrfToken' => $this->csrf->token(),
+        ]), 404);
     }
 
     private function payments(Request $request): Response
