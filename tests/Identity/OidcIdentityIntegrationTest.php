@@ -20,7 +20,7 @@ final class OidcIdentityIntegrationTest extends TestCase
         $pdo = $this->database();
         (new MigrationRunner($pdo, dirname(__DIR__, 2) . '/migrations'))->migrate();
         $pdo->exec(
-            "INSERT INTO students (id, matrikelnummer, first_name, last_name, class_name, grade, email, active, created_at, updated_at) "
+            'INSERT INTO students (id, matrikelnummer, first_name, last_name, class_name, grade, email, active, created_at, updated_at) '
             . "VALUES (1, '1001', 'Ada', 'Test', '7-1', 7, 'ada@iserv.test', 1, NOW(), NOW())"
         );
 
