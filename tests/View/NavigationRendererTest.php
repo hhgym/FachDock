@@ -35,6 +35,8 @@ final class NavigationRendererTest extends TestCase
         self::assertStringContainsString('Personen', $html);
         self::assertStringContainsString('Konfiguration', $html);
         self::assertStringContainsString('System', $html);
+        self::assertStringContainsString('href="/admin/bookings"', $html);
+        self::assertStringContainsString('href="/admin/payments"', $html);
         self::assertStringContainsString('href="/admin/system/update"', $html);
         self::assertStringContainsString('Stripe &amp; Zahlung', $html);
         self::assertStringContainsString('href="/admin/config/stripe" aria-current="page"', $html);
@@ -44,7 +46,7 @@ final class NavigationRendererTest extends TestCase
         self::assertStringNotContainsString('legacy navigation', $html);
     }
 
-    public function testLockerManagerDoesNotSeeAdministratorOnlyNavigation(): void
+    public function testLockerManagerGetsOperationalBookingNavigationButNotAdminConfiguration(): void
     {
         $renderer = new NavigationRenderer();
         $staff = new AuthenticatedStaff(
@@ -59,9 +61,11 @@ final class NavigationRendererTest extends TestCase
         $html = $renderer->inject(self::CONTENT, [
             'staff' => $staff,
             'csrfToken' => 'csrf-locker',
-        ], '/admin/locations');
+        ], '/admin/payments');
 
-        self::assertStringContainsString('href="/admin/locations" aria-current="page"', $html);
+        self::assertStringContainsString('href="/admin/locations"', $html);
+        self::assertStringContainsString('href="/admin/bookings"', $html);
+        self::assertStringContainsString('href="/admin/payments" aria-current="page"', $html);
         self::assertStringContainsString('href="/admin/but"', $html);
         self::assertStringNotContainsString('href="/admin/students"', $html);
         self::assertStringNotContainsString('href="/admin/recommendations"', $html);
