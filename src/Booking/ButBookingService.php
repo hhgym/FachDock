@@ -7,6 +7,7 @@ namespace FachDock\Booking;
 use DateTimeImmutable;
 use DomainException;
 use FachDock\Auth\AuthenticatedStaff;
+use FachDock\Mail\BookingNotificationService;
 use FachDock\Parent\AuthenticatedParent;
 use PDO;
 use RuntimeException;
@@ -19,6 +20,7 @@ final class ButBookingService
         private readonly BookingService $bookings,
         private readonly FeeCalculator $fees = new FeeCalculator(),
         private readonly int $rejectionPaymentDays = 14,
+        private readonly ?BookingNotificationService $notifications = null,
     ) {
     }
 
@@ -35,7 +37,7 @@ final class ButBookingService
             ? ['months' => 12, 'charged_cents' => $context['annual_fee_cents']]
             : $this->fees->prorate($context['annual_fee_cents'], $bookingDate, $period);
 
-        return $this->bookings->convertReservation(
+        $bookingId = $this->bookings->convertReservation(
             $reservationId,
             new BookingCreationData(
                 BookingStatus::ExemptionReview,
@@ -49,6 +51,9 @@ final class ButBookingService
                 'initial_booking',
             ),
         );
+        $this->notifications?->butSubmitted($bookingId);
+
+        return $bookingId;
     }
 
     /**
@@ -113,11 +118,13 @@ final class ButBookingService
     public function approve(AuthenticatedStaff $staff, int $bookingId, string $note): void
     {
         $this->review($staff, $bookingId, true, $note);
+        $this->notifications?->butApproved($bookingId);
     }
 
     public function reject(AuthenticatedStaff $staff, int $bookingId, string $note): void
     {
         $this->review($staff, $bookingId, false, $note);
+        $this->notifications?->butRejected($bookingId);
     }
 
     /**
