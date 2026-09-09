@@ -29,6 +29,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
     <div><strong><?= $e($appName) ?></strong><?php if ($schoolName !== ''): ?> · <?= $e($schoolName) ?><?php endif; ?></div>
     <div class="topbar-actions">
         <a href="/admin/locations">Standorte</a>
+        <a href="/admin/operations">Schließfachbetrieb</a>
         <a href="/admin/but">BuT-Prüfung</a>
         <?php if ($staff->isAdministrator()): ?>
             <a href="/admin/students">Schüler</a>
@@ -38,6 +39,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
             <a href="/admin/recommendations">Empfehlungen</a>
             <a href="/admin/booking-selection">Buchungsauswahl</a>
             <a href="/admin/mail">E-Mail</a>
+            <a href="/admin/system/status">Systemstatus</a>
             <a href="/admin/system/update">Updates</a>
         <?php endif; ?>
         <a href="/account/password">Passwort</a>
@@ -98,6 +100,16 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
     </section>
 
     <section class="card stack">
+        <span class="eyebrow">Betrieb</span>
+        <h2>Schließfachservice</h2>
+        <p>Defekte, Notöffnungen, Sperren und Wartung werden in einer eigenen Vorgangshistorie geführt.</p>
+        <div class="compact-actions">
+            <a class="button" href="/admin/operations">Schließfachbetrieb öffnen</a>
+            <?php if ($staff->isAdministrator()): ?><a class="button button-secondary" href="/admin/system/status">Systemstatus prüfen</a><?php endif; ?>
+        </div>
+    </section>
+
+    <section class="card stack">
         <div class="school-year-heading">
             <div>
                 <span class="eyebrow">Online-Zahlung</span>
@@ -130,7 +142,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
 
     <section class="card">
         <h2>FachDock-Grundsystem</h2>
-        <p>Standort- und Personenverwaltung, Schuljahre und Zuteilungsregeln, Elternportal, Reservierungen, Buchungen, BuT-Prüfung, Stripe-Zahlungen, E-Mail-Infrastruktur und der GitHub-Updatekanal sind miteinander verbunden.</p>
+        <p>Standort- und Personenverwaltung, Schuljahre und Zuteilungsregeln, Eltern- und Schüler-Selbstservice, Reservierungen, Buchungen, Schließfachbetrieb, BuT-Prüfung, Stripe-Zahlungen, E-Mail-Infrastruktur und der GitHub-Updatekanal sind miteinander verbunden.</p>
     </section>
 </main>
 </body>
