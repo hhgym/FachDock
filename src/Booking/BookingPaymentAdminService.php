@@ -6,6 +6,8 @@ namespace FachDock\Booking;
 
 use DomainException;
 use PDO;
+use PDOStatement;
+use RuntimeException;
 
 final class BookingPaymentAdminService
 {
@@ -16,24 +18,21 @@ final class BookingPaymentAdminService
     /** @return list<array{id: int, label: string, status: string}> */
     public function schoolYears(): array
     {
-        $statement = $this->pdo->query(
+        $rows = $this->fetchAll($this->query(
             'SELECT id, label, status FROM school_years ORDER BY starts_on DESC, id DESC'
-        );
-        $rows = $statement->fetchAll();
+        ));
 
-        return array_map(
+        return array_values(array_map(
             static fn (array $row): array => [
                 'id' => (int) $row['id'],
                 'label' => (string) $row['label'],
                 'status' => (string) $row['status'],
             ],
-            is_array($rows) ? $rows : [],
-        );
+            $rows,
+        ));
     }
 
-    /**
-     * @return list<array<string, mixed>>
-     */
+    /** @return list<array<string, mixed>> */
     public function bookings(?int $schoolYearId, ?string $status, string $query): array
     {
         $where = [];
@@ -76,9 +75,8 @@ final class BookingPaymentAdminService
 
         $statement = $this->pdo->prepare($sql);
         $statement->execute($parameters);
-        $rows = $statement->fetchAll();
 
-        return is_array($rows) ? array_values(array_filter($rows, 'is_array')) : [];
+        return $this->fetchAll($statement);
     }
 
     /** @return array<string, mixed> */
@@ -108,7 +106,7 @@ final class BookingPaymentAdminService
             . 'WHERE b.id = :id LIMIT 1'
         );
         $statement->execute(['id' => $bookingId]);
-        $booking = $statement->fetch();
+        $booking = $statement->fetch(PDO::FETCH_ASSOC);
         if (!is_array($booking)) {
             throw new DomainException('Die Buchung wurde nicht gefunden.');
         }
@@ -122,7 +120,6 @@ final class BookingPaymentAdminService
             . 'WHERE p.booking_id = :booking_id ORDER BY p.created_at DESC, p.id DESC'
         );
         $paymentStatement->execute(['booking_id' => $bookingId]);
-        $payments = $paymentStatement->fetchAll();
 
         $assignmentStatement = $this->pdo->prepare(
             'SELECT h.id, h.locker_id, h.starts_at, h.ends_at, h.reason, h.actor_type, h.actor_id, '
@@ -131,10 +128,9 @@ final class BookingPaymentAdminService
             . 'WHERE h.booking_id = :booking_id ORDER BY h.starts_at DESC, h.id DESC'
         );
         $assignmentStatement->execute(['booking_id' => $bookingId]);
-        $assignments = $assignmentStatement->fetchAll();
 
-        $booking['payments'] = is_array($payments) ? array_values(array_filter($payments, 'is_array')) : [];
-        $booking['assignments'] = is_array($assignments) ? array_values(array_filter($assignments, 'is_array')) : [];
+        $booking['payments'] = $this->fetchAll($paymentStatement);
+        $booking['assignments'] = $this->fetchAll($assignmentStatement);
 
         return $booking;
     }
@@ -182,9 +178,8 @@ final class BookingPaymentAdminService
 
         $statement = $this->pdo->prepare($sql);
         $statement->execute($parameters);
-        $rows = $statement->fetchAll();
 
-        return is_array($rows) ? array_values(array_filter($rows, 'is_array')) : [];
+        return $this->fetchAll($statement);
     }
 
     /** @return array<string, mixed> */
@@ -209,7 +204,7 @@ final class BookingPaymentAdminService
             . 'WHERE p.id = :id LIMIT 1'
         );
         $statement->execute(['id' => $paymentId]);
-        $payment = $statement->fetch();
+        $payment = $statement->fetch(PDO::FETCH_ASSOC);
         if (!is_array($payment)) {
             throw new DomainException('Die Zahlung wurde nicht gefunden.');
         }
@@ -220,8 +215,7 @@ final class BookingPaymentAdminService
             . 'ORDER BY received_at DESC, id DESC'
         );
         $eventStatement->execute(['payment_id' => $paymentId]);
-        $events = $eventStatement->fetchAll();
-        $payment['webhook_events'] = is_array($events) ? array_values(array_filter($events, 'is_array')) : [];
+        $payment['webhook_events'] = $this->fetchAll($eventStatement);
 
         return $payment;
     }
@@ -256,8 +250,27 @@ final class BookingPaymentAdminService
 
     private function count(string $sql): int
     {
-        $value = $this->pdo->query($sql)->fetchColumn();
+        $value = $this->query($sql)->fetchColumn();
 
         return is_numeric($value) ? (int) $value : 0;
+    }
+
+    private function query(string $sql): PDOStatement
+    {
+        $statement = $this->pdo->query($sql);
+        if (!$statement instanceof PDOStatement) {
+            throw new RuntimeException('Die Verwaltungsabfrage konnte nicht ausgeführt werden.');
+        }
+
+        return $statement;
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function fetchAll(PDOStatement $statement): array
+    {
+        /** @var list<array<string, mixed>> $rows */
+        $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        return $rows;
     }
 }
