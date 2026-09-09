@@ -10,15 +10,19 @@ use RuntimeException;
 final class ParentSessionService
 {
     private const SESSION_KEY = 'parent_auth_token';
+    private const ADMIN_PREVIEW_KEY = 'parent_admin_preview';
 
     public function __construct(
         private readonly PDO $pdo,
         private readonly int $maxLifetimeMinutes = 1440,
+        private readonly int $staffIdleTimeoutMinutes = 60,
     ) {
     }
 
     public function create(int $parentContactId, string $ipAddress, string $userAgent): AuthenticatedParent
     {
+        unset($_SESSION[self::ADMIN_PREVIEW_KEY]);
+
         $token = bin2hex(random_bytes(32));
         $lifetime = max(1, min(10080, $this->maxLifetimeMinutes));
         $statement = $this->pdo->prepare(
@@ -46,6 +50,11 @@ final class ParentSessionService
 
     public function current(): ?AuthenticatedParent
     {
+        $preview = $this->currentAdminPreview();
+        if ($preview !== null) {
+            return $preview;
+        }
+
         $token = $_SESSION[self::SESSION_KEY] ?? null;
         if (!is_string($token) || $token === '') {
             return null;
@@ -86,7 +95,7 @@ final class ParentSessionService
             );
             $statement->execute(['token_hash' => hash('sha256', $token)]);
         }
-        unset($_SESSION[self::SESSION_KEY]);
+        unset($_SESSION[self::SESSION_KEY], $_SESSION[self::ADMIN_PREVIEW_KEY]);
         session_regenerate_id(true);
     }
 
@@ -97,6 +106,66 @@ final class ParentSessionService
             . 'WHERE parent_contact_id = :parent_contact_id AND revoked_at IS NULL'
         );
         $statement->execute(['parent_contact_id' => $parentContactId]);
+    }
+
+    private function currentAdminPreview(): ?AuthenticatedParent
+    {
+        $preview = $_SESSION[self::ADMIN_PREVIEW_KEY] ?? null;
+        if (!is_array($preview)) {
+            return null;
+        }
+
+        $parentContactId = $preview['parent_contact_id'] ?? null;
+        $staffUserId = $preview['staff_user_id'] ?? null;
+        $staffSessionId = $preview['staff_session_id'] ?? null;
+        $staffTokenHash = $preview['staff_token_hash'] ?? null;
+        $expiresAt = $preview['expires_at'] ?? null;
+        $staffToken = $_SESSION['staff_auth_token'] ?? null;
+
+        if (!is_int($parentContactId) || $parentContactId < 1
+            || !is_int($staffUserId) || $staffUserId < 1
+            || !is_int($staffSessionId) || $staffSessionId < 1
+            || !is_string($staffTokenHash) || $staffTokenHash === ''
+            || !is_int($expiresAt) || $expiresAt <= time()
+            || !is_string($staffToken) || $staffToken === ''
+            || !hash_equals($staffTokenHash, hash('sha256', $staffToken))) {
+            unset($_SESSION[self::ADMIN_PREVIEW_KEY]);
+            return null;
+        }
+
+        $idle = max(1, $this->staffIdleTimeoutMinutes);
+        $statement = $this->pdo->prepare(
+            'SELECT pc.id, pc.email, pc.first_name, pc.last_name '
+            . 'FROM parent_contacts pc '
+            . 'INNER JOIN staff_sessions ss ON ss.id = :staff_session_id '
+            . 'INNER JOIN staff_users su ON su.id = ss.staff_user_id '
+            . 'WHERE pc.id = :parent_contact_id AND pc.active = 1 '
+            . 'AND ss.staff_user_id = :staff_user_id AND ss.token_hash = :staff_token_hash '
+            . 'AND ss.revoked_at IS NULL AND ss.expires_at > CURRENT_TIMESTAMP '
+            . 'AND ss.last_seen_at >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL ' . $idle . ' MINUTE) '
+            . "AND su.active = 1 AND su.role = 'administrator' LIMIT 1"
+        );
+        $statement->execute([
+            'staff_session_id' => $staffSessionId,
+            'parent_contact_id' => $parentContactId,
+            'staff_user_id' => $staffUserId,
+            'staff_token_hash' => $staffTokenHash,
+        ]);
+        $row = $statement->fetch();
+        if (!is_array($row)) {
+            unset($_SESSION[self::ADMIN_PREVIEW_KEY]);
+            return null;
+        }
+
+        return new AuthenticatedParent(
+            (int) $row['id'],
+            (string) $row['email'],
+            $row['first_name'] === null ? null : (string) $row['first_name'],
+            $row['last_name'] === null ? null : (string) $row['last_name'],
+            0,
+            true,
+            $staffUserId,
+        );
     }
 
     private function nullable(string $value, int $maxLength): ?string
