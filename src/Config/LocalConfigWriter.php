@@ -51,6 +51,17 @@ final class LocalConfigWriter
         ], $secrets);
     }
 
+    /** @param array<string, bool|int|string> $settings */
+    public function saveOidcSettings(array $settings, ?string $clientSecret): void
+    {
+        $secrets = [];
+        if ($clientSecret !== null) {
+            $secrets = ['oidc' => ['client_secret' => $clientSecret]];
+        }
+
+        $this->save(['oidc' => $settings], $secrets);
+    }
+
     public function saveStripeSettings(
         string $mode,
         string $currency,
