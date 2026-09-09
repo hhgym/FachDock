@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use FachDock\Application;
+use FachDock\Operations\OperationsFrontController;
 
 $root = dirname(__DIR__);
 $autoload = $root . '/vendor/autoload.php';
@@ -15,5 +16,11 @@ if (!is_file($autoload)) {
 }
 
 require $autoload;
+
+$operationsResponse = OperationsFrontController::handle($root);
+if ($operationsResponse !== null) {
+    $operationsResponse->send();
+    exit;
+}
 
 Application::boot($root)->run();
