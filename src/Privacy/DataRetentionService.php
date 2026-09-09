@@ -95,7 +95,7 @@ final class DataRetentionService
             foreach ($studentIds as $studentId) {
                 $this->pdo->prepare('DELETE FROM parent_student_link_slots WHERE student_id = :id')->execute(['id' => $studentId]);
                 $this->pdo->prepare(
-                    "UPDATE parent_student_links SET ended_at = COALESCE(ended_at, CURRENT_TIMESTAMP), "
+                    'UPDATE parent_student_links SET ended_at = COALESCE(ended_at, CURRENT_TIMESTAMP), '
                     . "end_reason = COALESCE(end_reason, 'Datenschutz-Anonymisierung') WHERE student_id = :id AND ended_at IS NULL"
                 )->execute(['id' => $studentId]);
                 $incidentUpdate = $this->pdo->prepare(
@@ -144,7 +144,7 @@ final class DataRetentionService
             );
             $history->execute(['cutoff' => $mailCutoff]);
             $historyCount = $history->rowCount();
-            $audit = $this->pdo->prepare("UPDATE audit_log SET metadata = NULL WHERE created_at < :cutoff AND metadata IS NOT NULL");
+            $audit = $this->pdo->prepare('UPDATE audit_log SET metadata = NULL WHERE created_at < :cutoff AND metadata IS NOT NULL');
             $audit->execute(['cutoff' => $cutoff . ' 00:00:00']);
             $auditCount = $audit->rowCount();
 
