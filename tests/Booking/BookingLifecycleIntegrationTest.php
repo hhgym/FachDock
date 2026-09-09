@@ -97,6 +97,22 @@ final class BookingLifecycleIntegrationTest extends TestCase
         self::assertSame(1, $this->queuedTemplateCount('booking_ended'));
     }
 
+    public function testCancellationPreservesContractualDateRange(): void
+    {
+        $before = $this->row('SELECT valid_from, valid_until FROM bookings WHERE id = 1');
+
+        $this->service()->end($this->staff(), 1, 'Buchung wurde vorzeitig storniert.', true);
+        $this->notifications()->ended(1, true);
+
+        $after = $this->row('SELECT status, valid_from, valid_until FROM bookings WHERE id = 1');
+        self::assertSame('cancelled', $after['status']);
+        self::assertSame($before['valid_from'], $after['valid_from']);
+        self::assertSame($before['valid_until'], $after['valid_until']);
+        self::assertSame(0, (int) $this->pdo()->query('SELECT COUNT(*) FROM locker_occupancies WHERE booking_id = 1')->fetchColumn());
+        self::assertSame('cancelled', $this->pdo()->query('SELECT event_type FROM booking_lifecycle_events WHERE booking_id = 1')->fetchColumn());
+        self::assertSame(1, $this->queuedTemplateCount('booking_cancelled'));
+    }
+
     public function testRenewalCreatesLinkedPaymentDueBookingForNextYear(): void
     {
         $newBookingId = $this->service()->renew($this->staff(), 1, 2, false);
