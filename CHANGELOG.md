@@ -6,6 +6,29 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-09
+
+### Added
+- Zentraler Systemstatus mit Prüfungen für Datenbank, SMTP, Stripe, beschreibbare Verzeichnisse und den Mail-Worker.
+- Persistenter Mail-Worker-Heartbeat mit letztem Start, erfolgreichem Abschluss, Fehlerzustand und Ergebnisdaten.
+- Operative Schließfachverwaltung für Defekte, Schloss- und Türprobleme, Beschädigungen, vergessene Codes, Notöffnungen und sonstige Meldungen.
+- Technische Schließfachzustände `Betriebsbereit`, `Gesperrt`, `Defekt`, `Wartung` und `Außer Betrieb` mit getrennter Steuerung der Buchbarkeit.
+- Dauerhafte Vorgangs- und technische Schließfachhistorie einschließlich dokumentierter Notöffnungen und Statusänderungen.
+- Eltern-Selbstservice zur Meldung von Schließfachproblemen mit Statusanzeige sowie Eingangs- und Abschlussbenachrichtigungen.
+- Schüler-Selbstservice als Fallback über Matrikelnummer und bestehenden FachDock-Zugangscode.
+- Zentrale Konfigurationsverwaltung für allgemeine Einstellungen, Authentifizierung, Buchung, Stripe und E-Mail.
+- MySQL-8.4-Integrationstests für Schließfachsupport und Worker-Monitoring.
+
+### Changed
+- Defekt-, Schloss-, Tür- und Beschädigungsmeldungen sperren ein Schließfach automatisch für neue Buchungen, ohne eine laufende Buchung zu beenden.
+- Schließfachverwalter können operative Vorgänge, Notöffnungen und technische Fachzustände direkt bearbeiten.
+- Die Hauptnavigation enthält eigene Zugänge für Schließfachbetrieb, Systemstatus und den Eltern-Selbstservice.
+- Der Mail-Worker aktualisiert seinen Betriebsstatus bei Start, Erfolg und Fehlern automatisch.
+
+### Fixed
+- Abschlussbenachrichtigungen für Schließfachmeldungen verwenden nur die für das jeweilige Template erlaubten Platzhalter.
+- Die operative Schließfachliste berücksichtigt nur aktuelle Belegungen und erzeugt keine Mehrfachanzeige durch historische Zuordnungen.
+
 ## [0.7.0] - 2026-09-09
 
 ### Added
