@@ -6,6 +6,8 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-09
+
 ### Added
 - Administrativer Buchungslebenszyklus mit regelkonformem Schließfachwechsel, Beendigung, Stornierung und Verlängerung in spätere Schuljahre.
 - Dauerhafte Lebenszyklusereignisse mit Begründung, Akteur, altem/neuem Schließfach und Verknüpfung zwischen Ausgangs- und Verlängerungsbuchung.
