@@ -179,7 +179,10 @@ final class OidcIdentityService
         }
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * @param array<string, mixed> $userinfo
+     * @return array<string, mixed>
+     */
     private function upsertIdentity(array $userinfo): array
     {
         $issuer = $this->configuration->issuer();
@@ -233,7 +236,10 @@ final class OidcIdentityService
         return $this->identity($id);
     }
 
-    /** @return array{0:string,1:?int} */
+    /**
+     * @param array<string, mixed> $userinfo
+     * @return array{0:string,1:?int}
+     */
     private function classify(array $userinfo, ?string $email, ?string $account): array
     {
         $studentId = null;
@@ -252,6 +258,7 @@ final class OidcIdentityService
         return ['pending', null];
     }
 
+    /** @param array<string, mixed> $userinfo */
     private function hasTeacherRole(array $userinfo): bool
     {
         $accepted = $this->configuration->teacherRoleNames();
@@ -343,6 +350,7 @@ final class OidcIdentityService
         return (int) $rows[0];
     }
 
+    /** @param array<string, mixed> $claims */
     private function nullableClaim(array $claims, string $key, int $maxLength): ?string
     {
         $value = $claims[$key] ?? null;
