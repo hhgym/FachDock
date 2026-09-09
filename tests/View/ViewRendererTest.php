@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FachDock\Tests\View;
 
+use FachDock\Parent\AuthenticatedParent;
 use FachDock\View\ViewRenderer;
 use PHPUnit\Framework\TestCase;
 
@@ -20,7 +21,8 @@ final class ViewRendererTest extends TestCase
         self::assertNotFalse(file_put_contents($this->root . '/public/assets/navigation.css', '.topbar { display: flex; }'));
         self::assertNotFalse(file_put_contents(
             $this->root . '/templates/test.php',
-            '<!doctype html><html><head><link rel="stylesheet" href="/assets/app.css"></head><body>Test</body></html>',
+            '<!doctype html><html><head><link rel="stylesheet" href="/assets/app.css"></head>'
+            . '<body><header class="topbar">Legacy</header><main>Test</main></body></html>',
         ));
     }
 
@@ -46,5 +48,30 @@ final class ViewRendererTest extends TestCase
 
         self::assertStringContainsString('/assets/app.css?v=' . substr($appHash, 0, 12), $html);
         self::assertStringContainsString('/assets/navigation.css?v=' . substr($navigationHash, 0, 12), $html);
+    }
+
+    public function testAdministrativeParentPreviewIsClearlyMarkedAndCanBeEnded(): void
+    {
+        $parent = new AuthenticatedParent(
+            4,
+            'parent@example.test',
+            'Erika',
+            'Muster',
+            0,
+            true,
+            9,
+        );
+
+        $html = (new ViewRenderer($this->root . '/templates'))->render('test.php', [
+            'parent' => $parent,
+            'csrfToken' => 'preview-csrf',
+        ]);
+
+        self::assertStringContainsString('Administrator-Testansicht', $html);
+        self::assertStringContainsString('Erika Muster', $html);
+        self::assertStringContainsString('keine E-Mail-Anmeldung', $html);
+        self::assertStringContainsString('action="/admin/parents/preview/stop"', $html);
+        self::assertStringContainsString('name="_csrf" value="preview-csrf"', $html);
+        self::assertStringContainsString('Testansicht beenden', $html);
     }
 }
