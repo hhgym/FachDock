@@ -70,7 +70,7 @@ final class BookingAdminRenewalRulesIntegrationTest extends TestCase
     public function testAdminPreviewAndRenewalForceDifferentLockerForGradeSeven(): void
     {
         $this->pdo()->exec(
-            "INSERT INTO allocation_rules (name, version, rule_kind, min_grade, max_grade, building_id, floor_id, area_id, cabinet_group_id, weight, priority, valid_from_school_year_id, valid_until_school_year_id, notes, active, created_at, updated_at) "
+            'INSERT INTO allocation_rules (name, version, rule_kind, min_grade, max_grade, building_id, floor_id, area_id, cabinet_group_id, weight, priority, valid_from_school_year_id, valid_until_school_year_id, notes, active, created_at, updated_at) '
             . "VALUES ('Jahrgang 7 Bereich B', 1, 'hard_allow', 7, 7, NULL, NULL, NULL, 2, 0, 10, NULL, NULL, NULL, 1, NOW(), NOW())"
         );
         $evaluator = new AllocationRuleEvaluator($this->pdo());
