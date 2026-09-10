@@ -20,23 +20,24 @@ final class ReleaseCandidateDocumentationTest extends TestCase
         self::assertStringContainsString('| NACH 1.0 |', $audit);
     }
 
-    public function testFirstReleaseCandidateIsExplicitlyVersionedAndDocumented(): void
+    public function testSecondReleaseCandidateIsExplicitlyVersionedAndDocumented(): void
     {
         $root = dirname(__DIR__, 2);
         $checklist = file_get_contents($root . '/docs/RELEASE_CANDIDATE.md');
         self::assertIsString($checklist);
         self::assertStringContainsString('Release-Candidate-Abnahme', $checklist);
-        self::assertStringContainsString('1.0.0-rc.1', $checklist);
+        self::assertStringContainsString('1.0.0-rc.2', $checklist);
         self::assertStringContainsString('v0.9.0', $checklist);
         self::assertStringContainsString('Prerelease', $checklist);
 
-        $releaseNotes = file_get_contents($root . '/docs/RELEASE_NOTES_1.0.0-rc.1.md');
+        $releaseNotes = file_get_contents($root . '/docs/RELEASE_NOTES_1.0.0-rc.2.md');
         self::assertIsString($releaseNotes);
-        self::assertStringContainsString('FachDock 1.0.0-rc.1', $releaseNotes);
+        self::assertStringContainsString('FachDock 1.0.0-rc.2', $releaseNotes);
         self::assertStringContainsString('Prerelease', $releaseNotes);
+        self::assertStringContainsString('1.0.0-rc.1', $releaseNotes);
 
         $version = (string) Config::load($root)->get('app.version', '');
-        self::assertSame('1.0.0-rc.1', $version);
-        self::assertNotSame('1.0.0', $version, 'The first release candidate must not masquerade as the stable 1.0.0 release.');
+        self::assertSame('1.0.0-rc.2', $version);
+        self::assertNotSame('1.0.0', $version, 'The second release candidate must not masquerade as the stable 1.0.0 release.');
     }
 }
