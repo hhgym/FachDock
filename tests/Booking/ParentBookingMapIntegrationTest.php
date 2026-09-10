@@ -113,12 +113,12 @@ final class ParentBookingMapIntegrationTest extends TestCase
         $this->pdo->exec("INSERT INTO buildings (id, code, name, active, created_at, updated_at) VALUES (1, 'H', 'Hauptgebäude', 1, NOW(), NOW())");
         $this->pdo->exec("INSERT INTO floors (id, building_id, code, name, sort_order, active, created_at, updated_at) VALUES (1, 1, 'EG', 'Erdgeschoss', 0, 1, NOW(), NOW())");
         $this->pdo->exec(
-            "INSERT INTO areas (id, floor_id, code, name, active, created_at, updated_at) VALUES "
+            'INSERT INTO areas (id, floor_id, code, name, active, created_at, updated_at) VALUES '
             . "(1, 1, 'A', 'Bereich A', 1, NOW(), NOW()), (2, 1, 'B', 'Bereich B', 1, NOW(), NOW())"
         );
         $this->pdo->exec("INSERT INTO corpus_types (id, code, name, compartment_count, active, created_at, updated_at) VALUES (1, 'STD2', 'Standard 2', 2, 1, NOW(), NOW())");
         $this->pdo->exec(
-            "INSERT INTO cabinet_groups (id, area_id, code, name, active, structure_locked_at, created_at, updated_at) VALUES "
+            'INSERT INTO cabinet_groups (id, area_id, code, name, active, structure_locked_at, created_at, updated_at) VALUES '
             . "(1, 1, 'A', 'Gruppe A', 1, NOW(), NOW(), NOW()), (2, 2, 'B', 'Gruppe B', 1, NOW(), NOW(), NOW())"
         );
         $this->pdo->exec(
@@ -133,20 +133,20 @@ final class ParentBookingMapIntegrationTest extends TestCase
             . "(4, 2, 2, 'A-02-2', 0, 0, 1, 'defective', NOW(), NOW())"
         );
         $this->pdo->exec(
-            "INSERT INTO students (id, matrikelnummer, first_name, last_name, class_name, grade, active, created_at, updated_at) VALUES "
+            'INSERT INTO students (id, matrikelnummer, first_name, last_name, class_name, grade, active, created_at, updated_at) VALUES '
             . "(1, '1001', 'Ada', 'Test', '7-1', 7, 1, NOW(), NOW()), "
             . "(2, '1002', 'Max', 'Belegt', '7-2', 7, 1, NOW(), NOW())"
         );
         $this->pdo->exec(
-            "INSERT INTO school_years (id, label, starts_on, ends_on, status, annual_fee_cents, new_booking_opens_on, created_at, updated_at) "
+            'INSERT INTO school_years (id, label, starts_on, ends_on, status, annual_fee_cents, new_booking_opens_on, created_at, updated_at) '
             . "VALUES (1, '26/27', '2026-08-01', '2027-07-31', 'current', 1200, '2026-06-01', NOW(), NOW())"
         );
         $this->pdo->exec(
-            "INSERT INTO parent_contacts (id, email, first_name, last_name, status, verified_at, active, created_at, updated_at) "
+            'INSERT INTO parent_contacts (id, email, first_name, last_name, status, verified_at, active, created_at, updated_at) '
             . "VALUES (1, 'parent@example.test', 'Paula', 'Parent', 'verified', NOW(), 1, NOW(), NOW())"
         );
         $this->pdo->exec(
-            "INSERT INTO parent_student_links (id, parent_contact_id, student_id, link_origin, started_at, created_by_staff_user_id, created_at) "
+            'INSERT INTO parent_student_links (id, parent_contact_id, student_id, link_origin, started_at, created_by_staff_user_id, created_at) '
             . "VALUES (1, 1, 1, 'staff', NOW(), 1, NOW())"
         );
         $this->pdo->exec(
