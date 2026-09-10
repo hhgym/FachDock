@@ -20,16 +20,23 @@ final class ReleaseCandidateDocumentationTest extends TestCase
         self::assertStringContainsString('| NACH 1.0 |', $audit);
     }
 
-    public function testReleaseCandidateChecklistExistsAndStableVersionIsNotPrematurelyBumped(): void
+    public function testFirstReleaseCandidateIsExplicitlyVersionedAndDocumented(): void
     {
         $root = dirname(__DIR__, 2);
         $checklist = file_get_contents($root . '/docs/RELEASE_CANDIDATE.md');
         self::assertIsString($checklist);
         self::assertStringContainsString('Release-Candidate-Abnahme', $checklist);
-        self::assertStringContainsString('Upgrade', $checklist);
+        self::assertStringContainsString('1.0.0-rc.1', $checklist);
         self::assertStringContainsString('v0.9.0', $checklist);
+        self::assertStringContainsString('Prerelease', $checklist);
+
+        $releaseNotes = file_get_contents($root . '/docs/RELEASE_NOTES_1.0.0-rc.1.md');
+        self::assertIsString($releaseNotes);
+        self::assertStringContainsString('FachDock 1.0.0-rc.1', $releaseNotes);
+        self::assertStringContainsString('Prerelease', $releaseNotes);
 
         $version = (string) Config::load($root)->get('app.version', '');
-        self::assertSame('0.9.0', $version, 'Phase D must not publish the stable 1.0.0 version before RC acceptance.');
+        self::assertSame('1.0.0-rc.1', $version);
+        self::assertNotSame('1.0.0', $version, 'The first release candidate must not masquerade as the stable 1.0.0 release.');
     }
 }
