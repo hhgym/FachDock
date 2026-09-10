@@ -68,9 +68,9 @@ final class DataRetentionService
      * @return array{students:int,parents:int,mails:int,mail_history:int,audit_entries:int,incidents:int}
      * @throws JsonException
      */
-    public function anonymize(int $staffUserId, ?DateTimeImmutable $today = null): array
+    public function anonymize(?int $staffUserId, ?DateTimeImmutable $today = null): array
     {
-        if ($staffUserId < 1) {
+        if ($staffUserId !== null && $staffUserId < 1) {
             throw new DomainException('Administrator ist ungültig.');
         }
         $today ??= new DateTimeImmutable('today');
@@ -84,7 +84,13 @@ final class DataRetentionService
                 'INSERT INTO privacy_anonymization_runs '
                 . "(cutoff_date, status, summary_json, staff_user_id, started_at) VALUES (:cutoff, 'running', '{}', :staff, CURRENT_TIMESTAMP)"
             );
-            $run->execute(['cutoff' => $cutoff, 'staff' => $staffUserId]);
+            $run->bindValue(':cutoff', $cutoff);
+            if ($staffUserId === null) {
+                $run->bindValue(':staff', null, PDO::PARAM_NULL);
+            } else {
+                $run->bindValue(':staff', $staffUserId, PDO::PARAM_INT);
+            }
+            $run->execute();
             $runId = (int) $this->pdo->lastInsertId();
             if ($runId < 1) {
                 throw new RuntimeException('Der Datenschutzlauf konnte nicht protokolliert werden.');
@@ -179,7 +185,7 @@ final class DataRetentionService
         $limit = max(1, min(100, $limit));
         $statement = $this->pdo->query(
             'SELECT r.*, su.display_name AS staff_name FROM privacy_anonymization_runs r '
-            . 'INNER JOIN staff_users su ON su.id = r.staff_user_id ORDER BY r.id DESC LIMIT ' . $limit
+            . 'LEFT JOIN staff_users su ON su.id = r.staff_user_id ORDER BY r.id DESC LIMIT ' . $limit
         );
         if ($statement === false) {
             throw new RuntimeException('Die Datenschutzläufe konnten nicht geladen werden.');

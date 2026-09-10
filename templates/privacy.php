@@ -42,7 +42,7 @@ $e = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_Q
     <section class="platform-grid">
         <article class="card platform-section">
             <h2>Aufbewahrungsfristen</h2>
-            <p>Die Fristen steuern nur den explizit ausgelösten Datenschutzlauf. FachDock löscht personenbezogene Stammdaten nicht unbemerkt bei einem normalen Seitenaufruf.</p>
+            <p>Die Fristen steuern manuelle und automatisierte Datenschutzläufe. Für den automatisierten Betrieb kann <code>privacy:tick</code> regelmäßig über Cron oder systemd gestartet werden.</p>
             <form method="post" action="/admin/privacy/settings" class="stack">
                 <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
                 <label>Schüler-/Eltern-Stammdaten nach Abschluss
@@ -95,8 +95,8 @@ $e = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_Q
     <section class="card platform-section">
         <h2>Letzte Datenschutzläufe</h2>
         <?php if ($runs === []): ?><p class="muted">Noch kein Anonymisierungslauf durchgeführt.</p><?php else: ?>
-            <div class="table-scroll"><table class="data-table"><thead><tr><th>Zeit</th><th>Stichtag</th><th>Status</th><th>Administrator</th><th>Ergebnis</th></tr></thead><tbody>
-                <?php foreach ($runs as $run): ?><tr><td><?= $e($run['started_at']) ?></td><td><?= $e($run['cutoff_date']) ?></td><td><?= $e($run['status']) ?></td><td><?= $e($run['staff_name']) ?></td><td><code><?= $e($run['summary_json']) ?></code></td></tr><?php endforeach; ?>
+            <div class="table-scroll"><table class="data-table"><thead><tr><th>Zeit</th><th>Stichtag</th><th>Status</th><th>Auslöser</th><th>Ergebnis</th></tr></thead><tbody>
+                <?php foreach ($runs as $run): ?><tr><td><?= $e($run['started_at']) ?></td><td><?= $e($run['cutoff_date']) ?></td><td><?= $e($run['status']) ?></td><td><?= $run['staff_name'] === null ? 'Automatischer Job' : $e($run['staff_name']) ?></td><td><code><?= $e($run['summary_json']) ?></code></td></tr><?php endforeach; ?>
             </tbody></table></div>
         <?php endif; ?>
     </section>

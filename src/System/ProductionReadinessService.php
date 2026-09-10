@@ -57,19 +57,43 @@ final class ProductionReadinessService
             $smtpOk ? $smtpHost . ' · ' . $smtpFrom : 'Magic Links und Benachrichtigungen benötigen einen funktionierenden SMTP-Versand.',
         );
 
-        $worker = $this->mailWorkerAgeMinutes();
+        $worker = $this->workerAge('mail', 'MINUTE');
         $checks[] = $this->check(
             'mail_worker',
             'Mail-Worker aktuell',
             $worker !== null && $worker <= 60 ? 'ok' : 'fail',
             $worker === null ? 'Noch kein erfolgreicher Mail-Worker-Lauf protokolliert.' : 'Letzter Erfolg vor ' . $worker . ' Minute(n).',
         );
-        $yearWorker = $this->schoolYearWorkerAgeHours();
+        $yearWorker = $this->workerAge('school_year', 'HOUR');
         $checks[] = $this->check(
             'school_year_worker',
             'Schuljahresjob aktuell',
             $yearWorker !== null && $yearWorker <= 36 ? 'ok' : 'warning',
             $yearWorker === null ? 'Noch kein erfolgreicher school-year:tick-Lauf protokolliert.' : 'Letzter Erfolg vor ' . $yearWorker . ' Stunde(n).',
+        );
+        $privacyWorker = $this->workerAge('privacy', 'HOUR');
+        $checks[] = $this->check(
+            'privacy_worker',
+            'Datenschutzjob aktuell',
+            $privacyWorker !== null && $privacyWorker <= 8 * 24 ? 'ok' : 'warning',
+            $privacyWorker === null
+                ? 'Noch kein erfolgreicher privacy:tick-Lauf protokolliert.'
+                : 'Letzter Erfolg vor ' . $privacyWorker . ' Stunde(n).',
+        );
+
+        $backup = $this->latestBackup();
+        $backupOk = $backup['hours'] !== null && $backup['hours'] <= 36 && $backup['checksum'];
+        $backupDetail = 'Noch kein Vollbackup unter storage/backups gefunden.';
+        if ($backup['file'] !== null) {
+            $backupDetail = $backup['file'] . ' · '
+                . ($backup['hours'] === null ? 'Alter unbekannt' : 'vor ' . $backup['hours'] . ' Stunde(n)')
+                . ' · Prüfsumme ' . ($backup['checksum'] ? 'vorhanden' : 'fehlt');
+        }
+        $checks[] = $this->check(
+            'backup',
+            'Aktuelles Vollbackup',
+            $backupOk ? 'ok' : 'warning',
+            $backupDetail,
         );
 
         $storageOk = is_dir($this->root . '/storage') && is_writable($this->root . '/storage');
@@ -121,25 +145,37 @@ final class ProductionReadinessService
         return $value === false ? 0 : (int) $value;
     }
 
-    private function mailWorkerAgeMinutes(): ?int
+    private function workerAge(string $key, string $unit): ?int
     {
+        if (!in_array($unit, ['MINUTE', 'HOUR'], true)) {
+            return null;
+        }
         $statement = $this->pdo->prepare(
-            'SELECT TIMESTAMPDIFF(MINUTE, last_success_at, CURRENT_TIMESTAMP) FROM system_worker_status WHERE worker_key = :key'
+            'SELECT TIMESTAMPDIFF(' . $unit . ', last_success_at, CURRENT_TIMESTAMP) '
+            . 'FROM system_worker_status WHERE worker_key = :key'
         );
-        $statement->execute(['key' => 'mail']);
+        $statement->execute(['key' => $key]);
         $value = $statement->fetchColumn();
 
         return $value === false || $value === null ? null : (int) $value;
     }
 
-    private function schoolYearWorkerAgeHours(): ?int
+    /** @return array{file:?string,hours:?int,checksum:bool} */
+    private function latestBackup(): array
     {
-        $statement = $this->pdo->prepare(
-            'SELECT TIMESTAMPDIFF(HOUR, last_success_at, CURRENT_TIMESTAMP) FROM system_worker_status WHERE worker_key = :key'
-        );
-        $statement->execute(['key' => 'school_year']);
-        $value = $statement->fetchColumn();
+        $files = glob($this->root . '/storage/backups/fachdock-backup-*.zip');
+        if (!is_array($files) || $files === []) {
+            return ['file' => null, 'hours' => null, 'checksum' => false];
+        }
+        usort($files, static fn (string $a, string $b): int => ((int) filemtime($b)) <=> ((int) filemtime($a)));
+        $latest = $files[0];
+        $modified = filemtime($latest);
+        $hours = $modified === false ? null : max(0, (int) floor((time() - $modified) / 3600));
 
-        return $value === false || $value === null ? null : (int) $value;
+        return [
+            'file' => basename($latest),
+            'hours' => $hours,
+            'checksum' => is_file($latest . '.sha256'),
+        ];
     }
 }

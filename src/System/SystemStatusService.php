@@ -21,9 +21,14 @@ final class SystemStatusService
     /** @return array<string, mixed> */
     public function snapshot(): array
     {
+        $mailWarningMinutes = max(15, (int) $this->config->get('mail.processing_timeout_minutes', 15));
+
         return [
             'database' => $this->database(),
-            'mail_worker' => $this->mailWorker(),
+            'mail_worker' => $this->workerStatus('mail', $mailWarningMinutes),
+            'school_year_worker' => $this->workerStatus('school_year', 36 * 60),
+            'privacy_worker' => $this->workerStatus('privacy', 8 * 24 * 60),
+            'backup' => $this->backupStatus(),
             'mail_queue' => $this->mailQueue(),
             'smtp' => $this->smtp(),
             'stripe' => $this->stripe(),
@@ -48,16 +53,15 @@ final class SystemStatusService
     }
 
     /** @return array<string, mixed> */
-    private function mailWorker(): array
+    private function workerStatus(string $workerKey, int $warningMinutes): array
     {
         $statement = $this->pdo->prepare(
             'SELECT worker_key, last_started_at, last_finished_at, last_success_at, last_failure_at, '
             . 'last_result_json, last_error, TIMESTAMPDIFF(MINUTE, last_success_at, CURRENT_TIMESTAMP) AS minutes_since_success '
             . 'FROM system_worker_status WHERE worker_key = :worker_key'
         );
-        $statement->execute(['worker_key' => 'mail']);
+        $statement->execute(['worker_key' => $workerKey]);
         $row = $statement->fetch(PDO::FETCH_ASSOC);
-        $warningMinutes = max(15, (int) $this->config->get('mail.processing_timeout_minutes', 15));
 
         if (!is_array($row)) {
             return [
@@ -100,6 +104,51 @@ final class SystemStatusService
             'minutes_since_success' => $minutes,
             'last_result' => $lastResult,
             'last_error' => $row['last_error'] === null ? null : (string) $row['last_error'],
+        ];
+    }
+
+    /** @return array{known:bool,healthy:bool,stale:bool,latest_file:?string,latest_at:?string,hours_since:?int,checksum_present:bool} */
+    private function backupStatus(): array
+    {
+        $files = glob($this->root . '/storage/backups/fachdock-backup-*.zip');
+        if (!is_array($files) || $files === []) {
+            return [
+                'known' => false,
+                'healthy' => false,
+                'stale' => true,
+                'latest_file' => null,
+                'latest_at' => null,
+                'hours_since' => null,
+                'checksum_present' => false,
+            ];
+        }
+
+        usort($files, static fn (string $a, string $b): int => ((int) filemtime($b)) <=> ((int) filemtime($a)));
+        $latest = $files[0];
+        $modified = filemtime($latest);
+        if ($modified === false) {
+            return [
+                'known' => true,
+                'healthy' => false,
+                'stale' => true,
+                'latest_file' => basename($latest),
+                'latest_at' => null,
+                'hours_since' => null,
+                'checksum_present' => is_file($latest . '.sha256'),
+            ];
+        }
+        $hours = max(0, (int) floor((time() - $modified) / 3600));
+        $checksumPresent = is_file($latest . '.sha256');
+        $stale = $hours > 36;
+
+        return [
+            'known' => true,
+            'healthy' => !$stale && $checksumPresent,
+            'stale' => $stale,
+            'latest_file' => basename($latest),
+            'latest_at' => date(DATE_ATOM, $modified),
+            'hours_since' => $hours,
+            'checksum_present' => $checksumPresent,
         ];
     }
 
