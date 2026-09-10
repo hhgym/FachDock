@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use FachDock\Application;
 use FachDock\Booking\BookingRulesFrontController;
+use FachDock\Booking\ParentBookingMapFrontController;
 use FachDock\Identity\IdentityFrontController;
 use FachDock\Operations\OperationsFrontController;
 use FachDock\Platform\PlatformFrontController;
@@ -29,6 +30,12 @@ if ($identityResponse !== null) {
 $bookingRulesResponse = BookingRulesFrontController::handle($root);
 if ($bookingRulesResponse !== null) {
     $bookingRulesResponse->send();
+    exit;
+}
+
+$bookingMapResponse = ParentBookingMapFrontController::handle($root);
+if ($bookingMapResponse !== null) {
+    $bookingMapResponse->send();
     exit;
 }
 

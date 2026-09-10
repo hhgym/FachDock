@@ -35,7 +35,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
     <header class="hero">
         <span class="eyebrow">Elternportal</span>
         <h1>Ihre Kinder</h1>
-        <p>Für verknüpfte Kinder können Sie regelkonforme freie Schließfächer auswählen, bestehende Buchungen verwalten und Probleme mit bereits zugeordneten Fächern direkt an die Schließfachverwaltung melden.</p>
+        <p>Für verknüpfte Kinder können Sie regelkonforme freie Schließfächer über den Lageplan oder die Listenansicht auswählen, bestehende Buchungen verwalten und Probleme direkt an die Schließfachverwaltung melden.</p>
     </header>
 
     <section class="card stack">
@@ -49,7 +49,8 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
                         <div class="muted">Klasse <?= $e((string) $child['class_name']) ?> · Klassenstufe <?= (int) $child['grade'] ?></div>
                         <div class="compact-actions">
                             <a class="button button-secondary" href="/parent/bookings">Buchungen verwalten</a>
-                            <a class="button button-secondary" href="/parent/booking?student_id=<?= (int) $child['id'] ?>">Schließfach auswählen</a>
+                            <a class="button" href="/parent/booking/map?student_id=<?= (int) $child['id'] ?>">Auf Lageplan buchen</a>
+                            <a class="button button-secondary" href="/parent/booking?student_id=<?= (int) $child['id'] ?>">Listenansicht</a>
                             <a class="button button-secondary" href="/parent/support">Problem melden</a>
                         </div>
                     </div>
