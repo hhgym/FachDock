@@ -6,6 +6,7 @@ namespace FachDock\Parent;
 
 use DomainException;
 use FachDock\Mail\MailQueueService;
+use FachDock\Mail\MailWorker;
 use PDO;
 use RuntimeException;
 
@@ -20,6 +21,7 @@ final class ParentPortalAccessService
         private readonly int $magicLinkMinutes = 15,
         private readonly int $maxRequestsPerWindow = 5,
         private readonly int $requestWindowMinutes = 15,
+        private readonly ?MailWorker $immediateMailWorker = null,
     ) {
     }
 
@@ -117,7 +119,7 @@ final class ParentPortalAccessService
         $suffix = $name === '' ? '' : ' ' . $name;
         $reference = $purpose->value . ':' . $parent['id'] . ':' . bin2hex(random_bytes(12));
 
-        return $this->mailQueue->enqueue(
+        $queueId = $this->mailQueue->enqueue(
             $templateKey,
             $parent['email'],
             $name === '' ? null : $name,
@@ -131,9 +133,13 @@ final class ParentPortalAccessService
             $parent['id'],
             $reference,
             $reference,
-            10,
+            MailWorker::IMMEDIATE_PRIORITY_MAX,
             $issued->expiresAt,
         );
+
+        $this->immediateMailWorker?->runImmediate($queueId);
+
+        return $queueId;
     }
 
     /** @return array{id: int, email: string, first_name: string|null, last_name: string|null, active: bool, verified: bool}|null */
