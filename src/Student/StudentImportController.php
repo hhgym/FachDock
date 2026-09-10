@@ -130,6 +130,14 @@ final class StudentImportController
                 $fullImport,
                 $profileId,
             );
+            if ($profileId === null) {
+                $pending['delimiter'] = $this->parser->detectDelimiter(
+                    $pending['path'],
+                    $pending['delimiter'],
+                    $pending['enclosure'],
+                    $pending['encoding'],
+                );
+            }
             $_SESSION[self::SESSION_PENDING] = $pending;
 
             $rows = $this->parser->parse(
@@ -145,7 +153,7 @@ final class StudentImportController
         } catch (Throwable $exception) {
             $this->clearPending();
 
-            return $this->page($staff, null, [$exception->getMessage()], false, 422);
+            return $this->page($staff, null, [$exception->getMessage()], false);
         }
     }
 
