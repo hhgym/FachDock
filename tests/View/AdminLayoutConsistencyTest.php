@@ -47,6 +47,14 @@ final class AdminLayoutConsistencyTest extends TestCase
         self::assertStringContainsString('.school-year-heading > .compact-actions .button { width: 100%; text-align: center; }', $css);
     }
 
+    public function testOperationsBookableCheckboxesUseInlineCheckLabelLayout(): void
+    {
+        $template = (string) file_get_contents(dirname(__DIR__, 2) . '/templates/operations-admin.php');
+
+        self::assertSame(2, substr_count($template, 'class="check-label"><input type="checkbox" name="bookable"'));
+        self::assertSame(2, substr_count($template, '<span>Für neue Buchungen freigeben</span>'));
+    }
+
     public function testFloorplanEditorContainsZoomAndResizeInsideTheCard(): void
     {
         $css = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/floorplans.css');
