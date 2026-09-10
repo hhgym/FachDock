@@ -216,6 +216,7 @@
                     handle.removeEventListener('pointermove', move);
                     handle.removeEventListener('pointerup', finish);
                     handle.removeEventListener('pointercancel', finish);
+                    marker.dataset.dragged = '0';
                 };
 
                 handle.addEventListener('pointermove', move);
@@ -230,7 +231,7 @@
             const groupSelect = addForm.querySelector('select[name="cabinet_group_id"]');
             const help = document.createElement('p');
             help.className = 'floorplan-draw-help';
-            help.textContent = 'Wähle eine noch nicht positionierte Schrankgruppe und ziehe ihre Fläche direkt im Lageplan auf.';
+            help.textContent = 'Wähle eine noch nicht positionierte Schrankgruppe und ziehe ihre Fläche direkt im Lageplan auf. Neue Schrankgruppen mit Korpussen und Fächern werden unter Standorte angelegt.';
 
             const drawButton = document.createElement('button');
             drawButton.type = 'button';
@@ -253,7 +254,7 @@
                 drawButton.textContent = active ? 'Zeichnen abbrechen' : 'Rechteck im Plan einzeichnen';
                 help.textContent = active
                     ? 'Zeichnen aktiv: Ziehe auf dem Lageplan das Rechteck für die ausgewählte Schrankgruppe auf.'
-                    : 'Wähle eine noch nicht positionierte Schrankgruppe und ziehe ihre Fläche direkt im Lageplan auf.';
+                    : 'Wähle eine noch nicht positionierte Schrankgruppe und ziehe ihre Fläche direkt im Lageplan auf. Neue Schrankgruppen mit Korpussen und Fächern werden unter Standorte angelegt.';
             };
 
             drawButton.addEventListener('click', () => setDrawing(!drawing));
