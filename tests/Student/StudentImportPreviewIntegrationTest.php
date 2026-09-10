@@ -20,7 +20,7 @@ use PHPUnit\Framework\TestCase;
 final class StudentImportPreviewIntegrationTest extends TestCase
 {
     private PDO $pdo;
-    private string $root;
+    private string $root = '';
     private Csrf $csrf;
     private Router $router;
 
@@ -90,6 +90,7 @@ final class StudentImportPreviewIntegrationTest extends TestCase
 
         self::assertSame(200, $response->status());
         self::assertStringContainsString('Importvorschau', $response->body());
+        self::assertStringContainsString('Trennzeichen Komma', $response->body());
         self::assertStringContainsString('Anna Muster', $response->body());
         self::assertStringContainsString('7-1', $response->body());
     }
