@@ -157,6 +157,11 @@ try {
 
         return is_numeric($value) ? max(1, (int) $value) : $default;
     };
+    $nonNegativeIntConfig = static function (Config $config, string $key, int $default): int {
+        $value = $config->get($key, $default);
+
+        return is_numeric($value) ? max(0, (int) $value) : $default;
+    };
     $retryValues = $config->get('mail.retry_minutes', [15, 60, 360]);
     $retryMinutes = [];
     if (is_array($retryValues)) {
@@ -187,6 +192,7 @@ try {
         new MailRetrySchedule($retryMinutes),
         $intConfig($config, 'mail.max_per_hour', 50),
         $intConfig($config, 'mail.processing_timeout_minutes', 15),
+        $nonNegativeIntConfig($config, 'mail.immediate_reserve_per_hour', 10),
     );
     $heartbeat = new WorkerHeartbeatService($pdo, 'mail');
     $heartbeat->started();
