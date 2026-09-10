@@ -1,11 +1,11 @@
-.floorplan-page { width: min(1500px, calc(100% - 32px)); margin: 32px auto 64px; }
+.floorplan-page { width: min(960px, calc(100% - 32px)); margin: 48px auto 64px; }
 .page-heading { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
 .page-heading h1 { margin: 2px 0 6px; }
 .floorplan-filters, .floorplan-upload { margin-bottom: 18px; }
 .floorplan-filter-form { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
 .floorplan-upload summary { cursor: pointer; }
 .floorplan-upload[open] summary { margin-bottom: 18px; }
-.floorplan-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(290px, 360px); gap: 18px; align-items: start; }
+.floorplan-layout { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
 .floorplan-stage-card { min-width: 0; }
 .floorplan-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 12px; }
 .floorplan-toolbar > div:first-child { display: grid; }
@@ -61,13 +61,8 @@
 .floorplan-locker-status-free { background: #e3f6ea; color: #176238; }
 .floorplan-locker-status-occupied { background: #fde8e6; color: #8b2d27; }
 .floorplan-locker-status-unavailable { background: #fff3d8; color: #805b0d; }
-@media (max-width: 1100px) {
-    .floorplan-layout { grid-template-columns: 1fr; }
-    .floorplan-sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .floorplan-sidebar .danger-zone { grid-column: 1 / -1; }
-}
 @media (max-width: 760px) {
-    .floorplan-page { width: min(100% - 20px, 1500px); margin-top: 18px; }
+    .floorplan-page { width: min(960px, calc(100% - 32px)); margin-top: 28px; }
     .floorplan-filter-form { grid-template-columns: 1fr; }
     .floorplan-toolbar { align-items: flex-start; flex-direction: column; }
     .floorplan-sidebar { grid-template-columns: 1fr; }
