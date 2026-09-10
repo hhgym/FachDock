@@ -9,12 +9,14 @@ use FachDock\Auth\AuthenticatedStaff;
 use FachDock\Auth\StaffSessionService;
 use FachDock\Config\Config;
 use FachDock\Config\LocalConfigWriter;
+use FachDock\Database\ConnectionFactory;
 use FachDock\Http\Request;
 use FachDock\Http\Response;
 use FachDock\Http\Router;
 use FachDock\Mail\MailMessage;
 use FachDock\Mail\PhpMailerSmtpSender;
 use FachDock\Security\Csrf;
+use FachDock\System\WorkerHeartbeatService;
 use FachDock\View\ViewRenderer;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -223,9 +225,17 @@ final class StripeSettingsController
         }
 
         try {
+            $maxPerHour = $this->integer($request, 'max_per_hour', 1, 10000, '60-Minuten-Versandlimit');
             $mail = [
                 'worker_batch_size' => $this->integer($request, 'worker_batch_size', 1, 500, 'Worker-Batch-Größe'),
-                'max_per_hour' => $this->integer($request, 'max_per_hour', 1, 10000, 'Stündliches Versandlimit'),
+                'max_per_hour' => $maxPerHour,
+                'immediate_reserve_per_hour' => $this->integer(
+                    $request,
+                    'immediate_reserve_per_hour',
+                    0,
+                    $maxPerHour,
+                    'Reserve für Sofortmails',
+                ),
                 'retry_minutes' => $this->retryMinutes($request->postString('retry_minutes')),
                 'processing_timeout_minutes' => $this->integer($request, 'processing_timeout_minutes', 1, 120, 'Processing-Timeout'),
             ];
@@ -236,6 +246,7 @@ final class StripeSettingsController
             $this->audit->staff($staff, 'system.mail.settings.updated', 'system', 'mail', [
                 'worker_batch_size' => $mail['worker_batch_size'],
                 'max_per_hour' => $mail['max_per_hour'],
+                'immediate_reserve_per_hour' => $mail['immediate_reserve_per_hour'],
                 'retry_minutes' => $mail['retry_minutes'],
                 'processing_timeout_minutes' => $mail['processing_timeout_minutes'],
                 'smtp_host' => $smtp['host'],
@@ -431,6 +442,10 @@ final class StripeSettingsController
         $retryMinutes = is_array($retryMinutes) ? array_map('intval', $retryMinutes) : [15, 60, 360];
         $smtpHost = trim((string) $this->config->get('smtp.host', ''));
         $smtpFrom = trim((string) $this->config->get('smtp.from_email', ''));
+        $mailWorkerStatus = (new WorkerHeartbeatService(
+            ConnectionFactory::fromConfig($this->config),
+            'mail',
+        ))->status();
 
         return Response::html($this->views->render('config-mail.php', [
             'staff' => $staff,
@@ -440,6 +455,7 @@ final class StripeSettingsController
             'testSuccess' => $testSuccess,
             'workerBatchSize' => (int) $this->config->get('mail.worker_batch_size', 50),
             'maxPerHour' => (int) $this->config->get('mail.max_per_hour', 50),
+            'immediateReservePerHour' => max(0, (int) $this->config->get('mail.immediate_reserve_per_hour', 10)),
             'retryMinutes' => implode(', ', $retryMinutes),
             'processingTimeoutMinutes' => (int) $this->config->get('mail.processing_timeout_minutes', 15),
             'smtpHost' => $smtpHost,
@@ -450,6 +466,7 @@ final class StripeSettingsController
             'smtpFromName' => (string) $this->config->get('smtp.from_name', 'FachDock'),
             'smtpPasswordConfigured' => trim((string) $this->config->get('smtp.password', '')) !== '',
             'smtpConfigured' => $smtpHost !== '' && filter_var($smtpFrom, FILTER_VALIDATE_EMAIL) !== false,
+            'mailWorkerStatus' => $mailWorkerStatus,
         ]), $status);
     }
 

@@ -14,6 +14,12 @@ use FachDock\Student\StudentImportPreview;
 /** @var bool $success */
 /** @var array{total:int,active:int,inactive:int} $stats */
 $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+$delimiterLabel = static fn (string $value): string => match ($value) {
+    ';' => 'Semikolon',
+    ',' => 'Komma',
+    "\t" => 'Tabulator',
+    default => $value,
+};
 $labels = [
     'new' => 'Neu',
     'changed' => 'Geändert',
@@ -107,12 +113,13 @@ $labels = [
                     <?php endforeach; ?>
                 </select>
             </label>
-            <label>Trennzeichen ohne Profil
+            <label>Bevorzugtes Trennzeichen ohne Profil
                 <select name="delimiter">
                     <option value=";">Semikolon ;</option>
                     <option value=",">Komma ,</option>
                     <option value="tab">Tabulator</option>
                 </select>
+                <span class="form-hint">FachDock prüft Semikolon, Komma und Tabulator automatisch anhand der Kopfzeile.</span>
             </label>
             <label>Zeichenkodierung ohne Profil
                 <select name="encoding">
@@ -121,7 +128,7 @@ $labels = [
                     <option value="ISO-8859-1">ISO-8859-1</option>
                 </select>
             </label>
-            <label class="wide"><input type="checkbox" name="full_import" value="1"> Vollständiger Import: aktive Schüler, die in der Datei fehlen, nach Bestätigung deaktivieren.</label>
+            <label class="wide check-label"><input type="checkbox" name="full_import" value="1"><span>Vollständiger Import: aktive Schüler, die in der Datei fehlen, nach Bestätigung deaktivieren.</span></label>
             <button class="button" type="submit">Import prüfen</button>
         </form>
     </section>
@@ -130,7 +137,7 @@ $labels = [
         <?php $counts = $preview->counts(); ?>
         <section class="card stack">
             <h2>Importvorschau</h2>
-            <p><strong><?= $e($pending['filename']) ?></strong><?php if ($pending['profile_id'] !== null): ?> · Profil-ID <?= $pending['profile_id'] ?><?php endif; ?><?php if ($pending['full_import']): ?> · vollständiger Import<?php else: ?> · Teilimport<?php endif; ?></p>
+            <p><strong><?= $e($pending['filename']) ?></strong> · Trennzeichen <?= $e($delimiterLabel($pending['delimiter'])) ?><?php if ($pending['profile_id'] !== null): ?> · Profil-ID <?= $pending['profile_id'] ?><?php endif; ?><?php if ($pending['full_import']): ?> · vollständiger Import<?php else: ?> · Teilimport<?php endif; ?></p>
             <p>
                 Neu: <?= $counts['new'] ?? 0 ?> · Geändert: <?= $counts['changed'] ?? 0 ?> · Reaktiviert: <?= $counts['reactivated'] ?? 0 ?> · Deaktiviert: <?= $counts['deactivated'] ?? 0 ?> · Unverändert: <?= $counts['unchanged'] ?? 0 ?> · Ungültig: <?= $counts['invalid'] ?? 0 ?>
             </p>
@@ -180,7 +187,7 @@ $labels = [
                 <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
                 <input type="hidden" name="token" value="<?= $e($pending['token']) ?>">
                 <?php if ($preview->hasInvalidRows() && !$pending['full_import']): ?>
-                    <label><input type="checkbox" name="skip_invalid" value="1"> Ungültige Zeilen überspringen und nur gültige Zeilen importieren.</label>
+                    <label class="check-label"><input type="checkbox" name="skip_invalid" value="1"><span>Ungültige Zeilen überspringen und nur gültige Zeilen importieren.</span></label>
                 <?php endif; ?>
                 <?php if ($pending['full_import']): ?>
                     <div class="alert alert-error">Beim vollständigen Import werden die oben aufgeführten fehlenden aktiven Schüler deaktiviert. Der Import ist nur möglich, wenn die Vorschau keine ungültigen Zeilen enthält.</div>

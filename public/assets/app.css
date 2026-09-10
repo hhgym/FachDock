@@ -95,6 +95,7 @@ code, .code-value { font-family: ui-monospace, SFMono-Regular, Consolas, monospa
 .mini-button { margin-left: 8px; border: 0; background: transparent; color: #9f2f29; cursor: pointer; text-decoration: underline; font: inherit; font-size: .86rem; }
 .school-year-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
 .school-year-heading h2 { margin: 3px 0 4px; font-size: 1.5rem; }
+.school-year-heading > .compact-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .school-year-actions { padding-top: 16px; border-top: 1px solid #edf0f4; }
 .badge { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 999px; background: #eef1f7; color: #44506a; font-size: .82rem; font-weight: 750; white-space: nowrap; }
 .rule-test-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
@@ -122,5 +123,7 @@ code, .code-value { font-family: ui-monospace, SFMono-Regular, Consolas, monospa
     .wide { grid-column: auto; }
     .card { padding: 18px; }
     .session-row, .school-year-heading { align-items: flex-start; flex-direction: column; }
+    .school-year-heading > .compact-actions { width: 100%; flex-direction: column; align-items: stretch; }
+    .school-year-heading > .compact-actions .button { width: 100%; text-align: center; }
     .app-brand-text small { display: none; }
 }

@@ -6,9 +6,9 @@ FachDock ist eine webbasierte Verwaltungs- und Buchungslösung für schulische S
 
 ## Projektstatus
 
-Aktuelle veröffentlichte Version: **1.0.0-rc.1**
+Aktuelle veröffentlichte Version: **1.0.0-rc.2**
 
-> `1.0.0-rc.1` ist der erste Release Candidate für FachDock 1.0. Er ist für eine produktionsnahe Abnahme von Neuinstallation, Upgrade, Rollen, Buchung, Zahlung, Lageplänen, IServ/OIDC, Mailversand sowie Backup/Restore vorgesehen. Der Release Candidate ist noch nicht die finale Freigabe für den produktiven Schulbetrieb.
+> `1.0.0-rc.2` ist der zweite Release Candidate für FachDock 1.0. Er enthält die Korrekturen aus der manuellen Abnahme von `1.0.0-rc.1` und ist für die nächste produktionsnahe Testphase vorgesehen. Der Release Candidate ist noch nicht die finale Freigabe für den produktiven Schulbetrieb.
 
 Release Candidates werden auf GitHub ausdrücklich als **Prerelease** veröffentlicht. Der integrierte FachDock-Updater bleibt auf stabile Releases beschränkt und bietet einen RC daher nicht automatisch als normales Produktivupdate an.
 
@@ -22,7 +22,7 @@ Release Candidates werden auf GitHub ausdrücklich als **Prerelease** veröffent
 - zentrale Konfiguration für Anwendung, Authentifizierung, OIDC, Buchung, Stripe und E-Mail
 - Gebäude, Etagen, Bereiche, Schrankgruppen, Korpustypen und automatisch erzeugte Schließfächer
 - automatische Fachbezeichnungen wie `A-07-2`
-- mehrere Bild-Lagepläne je Etage mit Zoom und Positionierung von Schrankgruppen
+- mehrere Bild-Lagepläne je Etage mit Zoom, Verschieben, Größenanpassung und direkter Rechteckplatzierung vorhandener Schrankgruppen
 - interaktive Schließfachauswahl im Elternportal mit Live-Verfügbarkeit
 - Zuteilungsregeln für Klassenstufen, feste Bereiche und Empfehlungen
 - Schuljahresverwaltung mit Laufzeit 01.08.–31.07.
@@ -35,8 +35,8 @@ Release Candidates werden auf GitHub ausdrücklich als **Prerelease** veröffent
 - zentrale Buchungs- und Zahlungsverwaltung mit Suche, Filtern und serverseitiger Pagination
 - Defektmeldungen, Notöffnungen und technische Schließfachzustände mit Historie
 - Schüler- und Eltern-Self-Service für Schließfachprobleme
-- CSV-Schülerimport sowie administrative CSV-Exporte
-- E-Mail-Queue mit SMTP, Retry-Logik und versionierten Vorlagen
+- CSV-Schülerimport mit robuster Vorschau und automatischer Erkennung üblicher Trennzeichen sowie administrative CSV-Exporte
+- E-Mail-Queue mit SMTP, Retry-Logik, Sofortversand zeitkritischer Magic-/Bestätigungslinks und geschützter Versandreserve
 - zentrale Audit-Protokollierung
 - Datenschutz-Aufbewahrung und automatisierte Anonymisierung
 - Security-Header einschließlich CSP, Frame-Schutz und HSTS bei HTTPS
@@ -48,18 +48,18 @@ Release Candidates werden auf GitHub ausdrücklich als **Prerelease** veröffent
 
 ## Release-Candidate-Abnahme
 
-Für `1.0.0-rc.1` sollen insbesondere folgende reale Abläufe geprüft werden:
+Für `1.0.0-rc.2` sollen insbesondere die in `rc.1` aufgefallenen realen Abläufe erneut geprüft werden:
 
 1. Neuinstallation aus dem Release-ZIP auf einer leeren Datenbank.
-2. Upgrade einer bestehenden 0.9.0-Testinstallation mit gesichertem Datenbestand.
+2. Upgrade einer bestehenden Testinstallation mit gesichertem Datenbestand.
 3. Anmeldung und Rechte als Administrator, Schließfachverwalter, Lehrkraft, Schüler und Elternkontakt.
 4. Elternbuchung per Liste und Lageplan einschließlich Reservierung, Zahlung und BuT.
-5. Fachwechsel und Verlängerung, insbesondere der Übergang von Klasse 6 nach 7.
-6. SMTP-Mailversand sowie Stripe im Testmodus.
-7. IServ/OIDC in der vorgesehenen Zielumgebung.
-8. Defektmeldung und Notöffnung.
-9. Vollbackup, Restore und Produktionsbereitschaftsprüfung.
-10. Bedienung auf Desktop und Mobilgerät sowie grundlegende Tastaturbedienung.
+5. Lageplan-Zoom, Verschieben, Größenänderung und Rechteckplatzierung von Schrankgruppen.
+6. CSV-Schülerimport einschließlich Vorschau und Fehleranzeige.
+7. SMTP-Mailversand, Magic Links, Mail-Warteschlange und Stundenlimit/Reserve.
+8. IServ/OIDC in der vorgesehenen Zielumgebung.
+9. Defektmeldung und Notöffnung einschließlich mobiler Bedienung.
+10. Vollbackup, Restore, Produktionsbereitschaftsprüfung und grundlegende Tastaturbedienung.
 
 Die ausführliche Checkliste befindet sich in `docs/RELEASE_CANDIDATE.md`, der Anforderungsabgleich in `docs/REQUIREMENTS_AUDIT_1.0.md`.
 
@@ -91,7 +91,7 @@ FachDock verwendet Git Flow:
 - `release/*` – Release-Stabilisierung
 - `hotfix/*` – dringende Korrekturen veröffentlichter Versionen
 
-Stabile Releases verwenden Tags wie `v0.9.0` bzw. künftig `v1.0.0`. Release Candidates verwenden Tags wie `v1.0.0-rc.1` und werden als GitHub-Prerelease markiert.
+Stabile Releases verwenden Tags wie `v0.9.0` bzw. künftig `v1.0.0`. Release Candidates verwenden Tags wie `v1.0.0-rc.1` oder `v1.0.0-rc.2` und werden als GitHub-Prerelease markiert.
 
 ## Installation
 

@@ -1,10 +1,10 @@
 # FachDock 1.0 – Release-Candidate-Abnahme
 
-`1.0.0-rc.1` ist der erste installierbare Release Candidate für FachDock 1.0. Die technische Phase-D-Abnahme ist abgeschlossen; mit diesem RC folgt die reale Abnahme in einer produktionsnahen Testumgebung. Erst danach wird `1.0.0` stabil freigegeben oder bei notwendigen Änderungen ein weiterer Release Candidate erstellt.
+`1.0.0-rc.2` ist der zweite installierbare Release Candidate für FachDock 1.0. Er enthält die Korrekturen aus der manuellen Abnahme von `1.0.0-rc.1` und dient der erneuten produktionsnahen Prüfung vor der stabilen Freigabe von `1.0.0`.
 
 ## Automatisch geprüfte Kriterien
 
-Die CI muss für `1.0.0-rc.1` vollständig grün sein:
+Die CI muss für `1.0.0-rc.2` vollständig grün sein:
 
 - Composer-Konfiguration ist gültig.
 - PHP-Syntax ist fehlerfrei.
@@ -20,15 +20,16 @@ Die CI muss für `1.0.0-rc.1` vollständig grün sein:
 - automatisierte Datenschutzläufe funktionieren ohne fingierten Staff-Akteur.
 - Buchungs- und Zahlungslisten funktionieren auch oberhalb früherer fester Ergebnisgrenzen serverseitig paginiert.
 - das erzeugte Release-ZIP besteht Integritäts- und Strukturprüfungen und enthält keine lokalen Secrets oder Testdateien.
+- die RC-Regressionstests für responsive Admin-Ansichten, CSV-Importvorschau, Mail-Sofortversand/-Reserve und Lageplanbearbeitung laufen erfolgreich.
 
 ## Release-Artefakte
 
 Der GitHub-Prerelease muss enthalten:
 
-- `FachDock-1.0.0-rc.1.zip`
-- `FachDock-1.0.0-rc.1.zip.sha256`
+- `FachDock-1.0.0-rc.2.zip`
+- `FachDock-1.0.0-rc.2.zip.sha256`
 
-Das ZIP muss als Anwendungswurzel genau einen Ordner `FachDock-1.0.0-rc.1/` enthalten. Darin müssen insbesondere `public/`, `src/`, `config/`, `migrations/`, `templates/`, `bin/`, `vendor/`, `docs/` und `LICENSE` vorhanden sein. Lokale Dateien wie `config/app.local.php` und `config/secrets.local.php` dürfen nicht enthalten sein.
+Das ZIP muss als Anwendungswurzel genau einen Ordner `FachDock-1.0.0-rc.2/` enthalten. Darin müssen insbesondere `public/`, `src/`, `config/`, `migrations/`, `templates/`, `bin/`, `vendor/`, `docs/` und `LICENSE` vorhanden sein. Lokale Dateien wie `config/app.local.php` und `config/secrets.local.php` dürfen nicht enthalten sein.
 
 ## Bedienabnahme
 
@@ -46,6 +47,22 @@ Vor dem finalen 1.0.0-Release sind die folgenden Ansichten auf Desktop und Mobil
 - [ ] Systemstatus, Datenschutz/Produktionscheck und Update-Seite
 
 Bei der Tastaturprüfung muss der Hauptinhalt per Sprunglink erreichbar sein, der Fokus sichtbar bleiben und die Schrankgruppenmarker des Lageplans müssen mit Tab sowie Pfeiltasten/Home/End erreichbar sein. Beenden und Stornieren einer Buchung müssen vor dem Absenden eine zusätzliche Bestätigung verlangen.
+
+## Besondere Nachprüfung aus rc.1
+
+- [ ] Desktop-Header-Dropdowns schließen nach Verlassen mit der Maus zuverlässig.
+- [ ] Elternlogin-Aktionen überlappen auch auf schmalen Displays nicht.
+- [ ] Gespeicherte Stripe-/SMTP-/andere lokale Einstellungen werden unmittelbar aktuell angezeigt.
+- [ ] CSV-Schülerimport zeigt die Vorschau zuverlässig; CSV- oder Mappingfehler erscheinen als verständliche Meldung auf der Importseite.
+- [ ] Ohne Importprofil werden Semikolon, Komma und Tabulator als Trennzeichen robust erkannt.
+- [ ] Dashboard- und Vorgangsbuttons überlappen auf Mobilgeräten nicht.
+- [ ] Checkboxen beim Schülerimport und unter `/admin/operations` stehen sauber neben ihrem Text.
+- [ ] Lageplan-Zoom bleibt innerhalb der Karte/des Scrollbereichs.
+- [ ] Bestehende Schrankgruppen können verschoben sowie in Breite und Höhe angepasst werden.
+- [ ] Noch nicht platzierte Schrankgruppen können per aufgezogenem Rechteck positioniert werden.
+- [ ] Mail-Konfigurationsseite erläutert Queue/Worker verständlich und zeigt den letzten erfolgreichen Worker-Lauf.
+- [ ] Magic- und E-Mail-Bestätigungslinks werden sofort versucht zu versenden.
+- [ ] Sofortmails zählen gegen das gemeinsame 60-Minuten-Limit; normale Queue-Mails respektieren die konfigurierte Sofortmail-Reserve.
 
 ## Funktionsabnahme
 
@@ -93,14 +110,14 @@ Für die Zielumgebung sind vor der stabilen Freigabe zu kontrollieren:
 
 ## Updatekanal
 
-`1.0.0-rc.1` wird als GitHub-**Prerelease** veröffentlicht. Der normale integrierte FachDock-Updater berücksichtigt weiterhin ausschließlich stabile Releases. Der RC wird bestehenden Installationen daher nicht automatisch als produktives Update angeboten.
+`1.0.0-rc.2` wird als GitHub-**Prerelease** veröffentlicht. Der normale integrierte FachDock-Updater berücksichtigt weiterhin ausschließlich stabile Releases. Der RC wird bestehenden Installationen daher nicht automatisch als produktives Update angeboten.
 
 Der Upgradepfad von `v0.9.0` auf den aktuellen RC-Datenbankstand wird automatisiert in der CI geprüft. Für reale RC-Tests mit vorhandenen Daten ist vor jeder manuellen Aktualisierung ein Vollbackup zu erstellen.
 
 ## Entscheidung nach der Abnahme
 
 - **Keine Blocker:** Release-Branch für `1.0.0`, finaler Versionsbump, stabile CI und Veröffentlichung von `v1.0.0`.
-- **Blocker gefunden:** Fehler auf `develop` beheben und anschließend `1.0.0-rc.2` veröffentlichen.
+- **Weitere Blocker gefunden:** Fehler auf `develop` beheben und bei Bedarf einen weiteren Release Candidate veröffentlichen.
 - **Nur kleinere nicht blockierende Punkte:** für 1.0 bewusst bewerten und gegebenenfalls in die Nach-1.0-Planung übernehmen.
 
 Der verbindliche Funktionsumfang ist zusätzlich in `docs/REQUIREMENTS_AUDIT_1.0.md` dokumentiert.

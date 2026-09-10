@@ -141,7 +141,7 @@ $operatingLabel = static function (string $value): string {
                             <?php endforeach; ?>
                         </select>
                     </label>
-                    <label><input type="checkbox" name="bookable" value="1" <?= (int) $detail['bookable'] === 1 ? 'checked' : '' ?>> Für neue Buchungen freigeben</label>
+                    <label class="check-label"><input type="checkbox" name="bookable" value="1" <?= (int) $detail['bookable'] === 1 ? 'checked' : '' ?>><span>Für neue Buchungen freigeben</span></label>
                     <label class="wide">Begründung
                         <textarea name="note" rows="2" maxlength="4000" required></textarea>
                     </label>
@@ -221,7 +221,7 @@ $operatingLabel = static function (string $value): string {
                         <?php foreach ($operatingStatuses as $operatingStatus): ?><option value="<?= $e($operatingStatus->value) ?>"><?= $e($operatingStatus->label()) ?></option><?php endforeach; ?>
                     </select>
                 </label>
-                <label><input type="checkbox" name="bookable" value="1"> Für neue Buchungen freigeben</label>
+                <label class="check-label"><input type="checkbox" name="bookable" value="1"><span>Für neue Buchungen freigeben</span></label>
                 <label class="wide">Begründung
                     <textarea name="note" rows="2" maxlength="4000" required></textarea>
                 </label>

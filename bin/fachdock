@@ -9,10 +9,8 @@ use FachDock\Config\Config;
 use FachDock\Database\ConnectionFactory;
 use FachDock\Installation\InstallationState;
 use FachDock\Mail\MailQueueService;
-use FachDock\Mail\MailRetrySchedule;
 use FachDock\Mail\MailTemplateRenderer;
-use FachDock\Mail\MailWorker;
-use FachDock\Mail\PhpMailerSmtpSender;
+use FachDock\Mail\MailWorkerFactory;
 use FachDock\Migration\MigrationRunner;
 use FachDock\Privacy\DataRetentionService;
 use FachDock\SchoolYear\SchoolYearTransitionService;
@@ -157,37 +155,9 @@ try {
 
         return is_numeric($value) ? max(1, (int) $value) : $default;
     };
-    $retryValues = $config->get('mail.retry_minutes', [15, 60, 360]);
-    $retryMinutes = [];
-    if (is_array($retryValues)) {
-        foreach ($retryValues as $value) {
-            if (is_numeric($value)) {
-                $retryMinutes[] = (int) $value;
-            }
-        }
-    }
-    if ($retryMinutes === []) {
-        $retryMinutes = [15, 60, 360];
-    }
 
-    $sender = new PhpMailerSmtpSender(
-        (string) $config->get('smtp.host', ''),
-        $intConfig($config, 'smtp.port', 587),
-        (string) $config->get('smtp.username', ''),
-        (string) $config->get('smtp.password', ''),
-        (string) $config->get('smtp.encryption', 'tls'),
-        (string) $config->get('smtp.from_email', ''),
-        (string) $config->get('smtp.from_name', 'FachDock'),
-    );
     $queue = new MailQueueService($pdo, new MailTemplateRenderer());
-    $worker = new MailWorker(
-        $pdo,
-        $sender,
-        $queue,
-        new MailRetrySchedule($retryMinutes),
-        $intConfig($config, 'mail.max_per_hour', 50),
-        $intConfig($config, 'mail.processing_timeout_minutes', 15),
-    );
+    $worker = (new MailWorkerFactory($config))->create($pdo, $queue);
     $heartbeat = new WorkerHeartbeatService($pdo, 'mail');
     $heartbeat->started();
     try {
