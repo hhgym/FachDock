@@ -7,6 +7,7 @@ use FachDock\Auth\AuthenticatedStaff;
 /** @var AuthenticatedStaff $staff */
 /** @var list<array{id: int, label: string, status: string}> $schoolYears */
 /** @var list<array<string, mixed>> $bookings */
+/** @var array{total:int,page:int,pages:int,page_size:int} $pagination */
 /** @var int|null $selectedSchoolYearId */
 /** @var string|null $selectedStatus */
 /** @var string $query */
@@ -31,6 +32,24 @@ $paymentLabel = static fn (?string $status): string => match ($status) {
     'expired' => 'Abgelaufen',
     'manual_review' => 'Manuelle Prüfung',
     default => $status,
+};
+$page = max(1, (int) ($pagination['page'] ?? 1));
+$pages = max(1, (int) ($pagination['pages'] ?? 1));
+$total = max(0, (int) ($pagination['total'] ?? count($bookings)));
+$pageSize = max(1, (int) ($pagination['page_size'] ?? 50));
+$pageUrl = static function (int $targetPage) use ($selectedSchoolYearId, $selectedStatus, $query): string {
+    $parameters = ['page' => max(1, $targetPage)];
+    if ($selectedSchoolYearId !== null) {
+        $parameters['school_year_id'] = $selectedSchoolYearId;
+    }
+    if ($selectedStatus !== null && $selectedStatus !== '') {
+        $parameters['status'] = $selectedStatus;
+    }
+    if ($query !== '') {
+        $parameters['q'] = $query;
+    }
+
+    return '/admin/bookings?' . http_build_query($parameters);
 };
 ?>
 <!doctype html>
@@ -85,9 +104,9 @@ $paymentLabel = static fn (?string $status): string => match ($status) {
         <div class="school-year-heading">
             <div>
                 <h2>Buchungen</h2>
-                <p class="form-hint">Maximal 250 Treffer, neueste zuerst.</p>
+                <p class="form-hint">Seite <?= $page ?> von <?= $pages ?> · bis zu <?= $pageSize ?> Einträge pro Seite.</p>
             </div>
-            <span class="badge"><?= count($bookings) ?> Treffer</span>
+            <span class="badge"><?= $total ?> Treffer</span>
         </div>
 
         <?php if ($bookings === []): ?>
@@ -116,6 +135,20 @@ $paymentLabel = static fn (?string $status): string => match ($status) {
                     </tbody>
                 </table>
             </div>
+        <?php endif; ?>
+
+        <?php if ($pages > 1): ?>
+            <nav class="pagination" aria-label="Seiten der Buchungsliste">
+                <?php if ($page > 1): ?>
+                    <a class="button button-secondary" href="<?= $e($pageUrl(1)) ?>">Erste</a>
+                    <a class="button button-secondary" rel="prev" href="<?= $e($pageUrl($page - 1)) ?>">Zurück</a>
+                <?php endif; ?>
+                <span class="pagination-status">Seite <?= $page ?> / <?= $pages ?></span>
+                <?php if ($page < $pages): ?>
+                    <a class="button button-secondary" rel="next" href="<?= $e($pageUrl($page + 1)) ?>">Weiter</a>
+                    <a class="button button-secondary" href="<?= $e($pageUrl($pages)) ?>">Letzte</a>
+                <?php endif; ?>
+            </nav>
         <?php endif; ?>
     </section>
 </main>
