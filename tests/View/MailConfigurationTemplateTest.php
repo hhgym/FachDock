@@ -33,4 +33,12 @@ final class MailConfigurationTemplateTest extends TestCase
         self::assertStringContainsString("'parent_login'", $service);
         self::assertStringContainsString("'parent_verify_email'", $service);
     }
+
+    public function testDefaultConfigurationReservesImmediateCapacity(): void
+    {
+        $config = require dirname(__DIR__, 2) . '/config/app.php';
+
+        self::assertSame(50, $config['mail']['max_per_hour']);
+        self::assertSame(10, $config['mail']['immediate_reserve_per_hour']);
+    }
 }
