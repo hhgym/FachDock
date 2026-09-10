@@ -61,6 +61,57 @@ final class CsvStudentParser
     }
 
     /**
+     * Detects the most plausible delimiter from the header row. The selected delimiter remains the tie-breaker.
+     */
+    public function detectDelimiter(
+        string $path,
+        string $preferred = ';',
+        string $enclosure = '"',
+        string $encoding = 'UTF-8',
+    ): string {
+        $candidates = array_values(array_unique([$preferred, ';', ',', "\t"]));
+        $bestDelimiter = $preferred;
+        $bestScore = -1;
+
+        foreach ($candidates as $candidate) {
+            $handle = fopen($path, 'rb');
+            if ($handle === false) {
+                throw new RuntimeException('Die CSV-Datei konnte nicht geöffnet werden.');
+            }
+
+            try {
+                $header = fgetcsv($handle, 0, $candidate, $enclosure, '');
+            } finally {
+                fclose($handle);
+            }
+            if (!is_array($header) || count($header) < 2) {
+                continue;
+            }
+
+            $normalized = array_map(
+                fn (mixed $value): string => $this->normalizeHeader($this->convert((string) $value, $encoding)),
+                $header,
+            );
+            $known = [
+                'matrikelnummer', 'matrikel', 'student_id', 'schueler_id',
+                'vorname', 'first_name', 'firstname',
+                'nachname', 'last_name', 'lastname',
+                'klasse', 'class', 'class_name',
+                'stufe', 'jahrgang', 'grade',
+                'email', 'e_mail', 'mail',
+                'aktiv', 'active', 'status',
+            ];
+            $score = count(array_intersect($normalized, $known));
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestDelimiter = $candidate;
+            }
+        }
+
+        return $bestDelimiter;
+    }
+
+    /**
      * @param list<string> $header
      * @param array<string, string> $mapping
      * @return array<string, int>
