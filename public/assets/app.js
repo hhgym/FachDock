@@ -29,6 +29,45 @@
         }
     });
 
+    const desktopMenus = document.querySelectorAll('details.nav-menu, details.account-menu');
+    desktopMenus.forEach((menu) => {
+        if (!(menu instanceof HTMLDetailsElement)) {
+            return;
+        }
+
+        let closeTimer = null;
+        const cancelClose = () => {
+            if (closeTimer !== null) {
+                window.clearTimeout(closeTimer);
+                closeTimer = null;
+            }
+        };
+
+        menu.addEventListener('pointerenter', (event) => {
+            if (event.pointerType === 'mouse') {
+                cancelClose();
+            }
+        });
+
+        menu.addEventListener('pointerleave', (event) => {
+            if (event.pointerType !== 'mouse' || !menu.open) {
+                return;
+            }
+
+            cancelClose();
+            closeTimer = window.setTimeout(() => {
+                menu.open = false;
+                closeTimer = null;
+            }, 120);
+        });
+
+        menu.addEventListener('toggle', () => {
+            if (!menu.open) {
+                cancelClose();
+            }
+        });
+    });
+
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             const openMenu = document.querySelector(
