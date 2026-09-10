@@ -35,7 +35,7 @@ final class LocalConfigWriter
     }
 
     /**
-     * @param array{worker_batch_size:int,max_per_hour:int,retry_minutes:list<int>,processing_timeout_minutes:int} $mail
+     * @param array{worker_batch_size:int,max_per_hour:int,immediate_reserve_per_hour:int,retry_minutes:list<int>,processing_timeout_minutes:int} $mail
      * @param array{host:string,port:int,username:string,encryption:string,from_email:string,from_name:string} $smtp
      */
     public function saveMailSettings(array $mail, array $smtp, ?string $password): void
