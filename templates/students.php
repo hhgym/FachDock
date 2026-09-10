@@ -121,7 +121,7 @@ $labels = [
                     <option value="ISO-8859-1">ISO-8859-1</option>
                 </select>
             </label>
-            <label class="wide"><input type="checkbox" name="full_import" value="1"> Vollständiger Import: aktive Schüler, die in der Datei fehlen, nach Bestätigung deaktivieren.</label>
+            <label class="wide check-label"><input type="checkbox" name="full_import" value="1"><span>Vollständiger Import: aktive Schüler, die in der Datei fehlen, nach Bestätigung deaktivieren.</span></label>
             <button class="button" type="submit">Import prüfen</button>
         </form>
     </section>
@@ -180,7 +180,7 @@ $labels = [
                 <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
                 <input type="hidden" name="token" value="<?= $e($pending['token']) ?>">
                 <?php if ($preview->hasInvalidRows() && !$pending['full_import']): ?>
-                    <label><input type="checkbox" name="skip_invalid" value="1"> Ungültige Zeilen überspringen und nur gültige Zeilen importieren.</label>
+                    <label class="check-label"><input type="checkbox" name="skip_invalid" value="1"><span>Ungültige Zeilen überspringen und nur gültige Zeilen importieren.</span></label>
                 <?php endif; ?>
                 <?php if ($pending['full_import']): ?>
                     <div class="alert alert-error">Beim vollständigen Import werden die oben aufgeführten fehlenden aktiven Schüler deaktiviert. Der Import ist nur möglich, wenn die Vorschau keine ungültigen Zeilen enthält.</div>
