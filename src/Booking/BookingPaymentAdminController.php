@@ -24,6 +24,8 @@ use Throwable;
 
 final class BookingPaymentAdminController
 {
+    private const PAGE_SIZE = 50;
+
     private readonly BookingLifecycleService $lifecycle;
     private readonly BookingLifecycleAdminService $lifecycleAdmin;
     private readonly BookingLifecycleNotificationService $lifecycleNotifications;
@@ -90,11 +92,14 @@ final class BookingPaymentAdminController
         $schoolYearId = $this->optionalPositiveInt($this->queryString($request, 'school_year_id'));
         $status = $this->bookingStatus($this->queryString($request, 'status'));
         $query = mb_substr($this->queryString($request, 'q'), 0, 120);
+        $page = $this->optionalPositiveInt($this->queryString($request, 'page')) ?? 1;
+        $pagination = $this->service->bookingPage($schoolYearId, $status, $query, $page, self::PAGE_SIZE);
 
         return Response::html($this->views->render('admin-bookings.php', [
             'staff' => $staff,
             'schoolYears' => $this->service->schoolYears(),
-            'bookings' => $this->service->bookings($schoolYearId, $status, $query),
+            'bookings' => $pagination['items'],
+            'pagination' => $pagination,
             'selectedSchoolYearId' => $schoolYearId,
             'selectedStatus' => $status,
             'query' => $query,
@@ -311,11 +316,14 @@ final class BookingPaymentAdminController
         $schoolYearId = $this->optionalPositiveInt($this->queryString($request, 'school_year_id'));
         $status = $this->paymentStatus($this->queryString($request, 'status'));
         $query = mb_substr($this->queryString($request, 'q'), 0, 120);
+        $page = $this->optionalPositiveInt($this->queryString($request, 'page')) ?? 1;
+        $pagination = $this->service->paymentPage($schoolYearId, $status, $query, $page, self::PAGE_SIZE);
 
         return Response::html($this->views->render('admin-payments.php', [
             'staff' => $staff,
             'schoolYears' => $this->service->schoolYears(),
-            'payments' => $this->service->payments($schoolYearId, $status, $query),
+            'payments' => $pagination['items'],
+            'pagination' => $pagination,
             'selectedSchoolYearId' => $schoolYearId,
             'selectedStatus' => $status,
             'query' => $query,

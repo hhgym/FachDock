@@ -33,6 +33,7 @@ $statusLabel = match ((string) $booking['status']) {
     <div><strong>FachDock</strong> · Elternportal</div>
     <div class="topbar-actions">
         <a href="/parent">Übersicht</a>
+        <a href="/parent/bookings">Meine Buchungen</a>
         <a href="/parent/booking">Schließfach buchen</a>
         <span><?= $e($parent->displayName()) ?></span>
         <form method="post" action="/parent/logout">
@@ -78,6 +79,7 @@ $statusLabel = match ((string) $booking['status']) {
         <?php else: ?>
             <p>Aktueller Status: <?= $e($statusLabel) ?></p>
         <?php endif; ?>
+        <p><a class="button button-secondary" href="/parent/bookings">Buchung verwalten</a></p>
     </section>
 </main>
 </body>

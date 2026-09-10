@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FachDock\Update;
 
+use FachDock\Backup\BackupService;
 use FachDock\Migration\MigrationRunner;
 use PDO;
 use RecursiveDirectoryIterator;
@@ -52,9 +53,15 @@ final class SelfUpdateService
             throw new RuntimeException('Das Release-Paket besitzt nicht die erwartete FachDock-Struktur.');
         }
 
+        $fullBackup = (new BackupService($this->root, $this->pdo))->create();
+
         file_put_contents(
             $maintenanceFile,
-            json_encode(['target_version' => $update->version, 'started_at' => date(DATE_ATOM)], JSON_THROW_ON_ERROR),
+            json_encode([
+                'target_version' => $update->version,
+                'started_at' => date(DATE_ATOM),
+                'backup' => $fullBackup['file'],
+            ], JSON_THROW_ON_ERROR),
             LOCK_EX,
         );
 
@@ -68,14 +75,15 @@ final class SelfUpdateService
             );
 
             (new MigrationRunner($this->pdo, $this->root . '/migrations'))->migrate();
-            $this->writeAuditEntry($staffUserId, $currentVersion, $update->version);
+            $this->writeAuditEntry($staffUserId, $currentVersion, $update->version, $fullBackup['file']);
             file_put_contents(
                 $storage . '/last-update.json',
                 json_encode([
                     'from' => $currentVersion,
                     'to' => $update->version,
                     'completed_at' => date(DATE_ATOM),
-                    'backup' => basename($backup),
+                    'file_backup' => basename($backup),
+                    'full_backup' => $fullBackup['file'],
                 ], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR),
                 LOCK_EX,
             );
@@ -87,6 +95,17 @@ final class SelfUpdateService
             $this->removeDirectory($work);
         } catch (Throwable $exception) {
             $this->restoreFiles($backup, $manifest);
+            try {
+                (new BackupService($this->root, $this->pdo))->restore($fullBackup['path']);
+            } catch (Throwable $restoreException) {
+                @unlink($maintenanceFile);
+                throw new RuntimeException(
+                    'Das Update ist fehlgeschlagen und das automatische Voll-Rollback konnte nicht abgeschlossen werden: '
+                    . $restoreException->getMessage(),
+                    0,
+                    $exception,
+                );
+            }
             @unlink($maintenanceFile);
             throw $exception;
         }
@@ -198,7 +217,7 @@ final class SelfUpdateService
             || str_starts_with($relative, 'storage/');
     }
 
-    private function writeAuditEntry(int $staffUserId, string $from, string $to): void
+    private function writeAuditEntry(int $staffUserId, string $from, string $to, string $backupFile): void
     {
         $statement = $this->pdo->prepare(
             'INSERT INTO audit_log (actor_type, staff_user_id, action, entity_type, entity_id, metadata, created_at) '
@@ -210,7 +229,7 @@ final class SelfUpdateService
             'action' => 'system.update.completed',
             'entity_type' => 'system',
             'entity_id' => 'fachdock',
-            'metadata' => json_encode(['from' => $from, 'to' => $to], JSON_THROW_ON_ERROR),
+            'metadata' => json_encode(['from' => $from, 'to' => $to, 'backup' => $backupFile], JSON_THROW_ON_ERROR),
         ]);
     }
 

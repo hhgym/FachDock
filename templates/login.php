@@ -44,6 +44,12 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
         <p class="form-hint">Lokale Anmeldung für Administration und Schließfachverwaltung.</p>
     </form>
 
+    <section class="card stack">
+        <strong>Lehrkräfte</strong>
+        <p>Lehrkräfte können sich über IServ anmelden und erhalten ausschließlich lesenden Zugriff auf die Schließfachübersicht.</p>
+        <a class="button button-secondary" href="/sso/login?area=teacher">Mit IServ anmelden</a>
+    </section>
+
     <section class="card">
         <strong>Elternzugang</strong>
         <p>Eltern melden sich ohne Passwort über einen einmaligen Link per E-Mail an.</p>

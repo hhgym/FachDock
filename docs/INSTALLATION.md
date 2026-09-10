@@ -1,6 +1,6 @@
 # Installation
 
-> Version 0.1.x ist ein früher Teststand vor 1.0.0 und noch nicht für den produktiven Schulbetrieb vorgesehen.
+> Version `1.0.0-rc.1` ist ein Release Candidate für die produktionsnahe Abnahme vor FachDock 1.0.0. Sie ist noch nicht die finale Freigabe für den produktiven Schulbetrieb.
 
 ## Voraussetzungen
 
@@ -24,13 +24,19 @@ Der Document Root des Webservers muss auf `public/` zeigen. Anwendungsquellcode,
 
 `config/secrets.local.php` darf niemals in Git eingecheckt werden.
 
+## Release Candidate 1.0.0-rc.1
+
+Für eine Neuinstallation ist ausschließlich das Release-Artefakt `FachDock-1.0.0-rc.1.zip` zu verwenden. Die daneben veröffentlichte Datei `FachDock-1.0.0-rc.1.zip.sha256` ermöglicht die unabhängige Prüfung des Downloads.
+
+Der GitHub-Release wird als **Prerelease** markiert. Der integrierte FachDock-Updater bleibt auf stabile Releases beschränkt und bietet den RC daher nicht automatisch als Produktivupdate an. Das verhindert eine unbeabsichtigte Verteilung eines noch nicht final freigegebenen Standes.
+
+Der Datenbank-Upgradepfad von `v0.9.0` auf den RC wird in der CI mit den Originalmigrationen des veröffentlichten Tags `v0.9.0` geprüft. Für die reale RC-Abnahme sollte eine bestehende Testinstallation vor manuellen Änderungen vollständig gesichert werden.
+
 ## Integrierte Updates
 
-Für den Update-Test muss zusätzlich das FachDock-Installationsverzeichnis für den Webserver-Prozess beschreibbar sein, weil Anwendungsdateien ersetzt werden. Lokale Konfiguration und `storage/` werden durch das Update nicht überschrieben.
+Für den Updatebetrieb muss zusätzlich das FachDock-Installationsverzeichnis für den Webserver-Prozess beschreibbar sein, weil Anwendungsdateien ersetzt werden. Lokale Konfiguration und `storage/` werden durch das Update nicht überschrieben.
 
-Administratoren finden die Updateprüfung unter **Updates**. FachDock berücksichtigt ausschließlich stabile GitHub Releases. Vor der Installation wird das Release-ZIP anhand der veröffentlichten SHA-256-Prüfsumme geprüft. Während des Dateiaustauschs und der Migrationen wird der Wartungsmodus aktiviert.
-
-Für produktive Installationen soll die spätere Betriebsdokumentation restriktivere Dateirechte und ein kontrolliertes Updateverfahren beschreiben; die derzeitige Schreibberechtigung des Installationsverzeichnisses dient ausdrücklich dem frühen Update-Test.
+Administratoren finden die Updateprüfung unter **Updates**. FachDock berücksichtigt dort ausschließlich stabile GitHub Releases. Vor der Installation wird das Release-ZIP anhand der veröffentlichten SHA-256-Prüfsumme geprüft. Vor dem Dateiaustausch wird ein Vollbackup erzeugt; während Dateiaustausch und Migrationen wird der Wartungsmodus aktiviert. Schlägt das Update fehl, versucht FachDock Dateien, Datenbank und persistente Daten aus dem Sicherheitsbackup wiederherzustellen.
 
 ## Apache
 

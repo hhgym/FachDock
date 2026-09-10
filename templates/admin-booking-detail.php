@@ -6,7 +6,7 @@ use FachDock\Auth\AuthenticatedStaff;
 
 /** @var AuthenticatedStaff $staff */
 /** @var array<string, mixed> $booking */
-/** @var list<array{id:int,label:string,starts_on:string,ends_on:string,annual_fee_cents:int}> $renewalTargets */
+/** @var list<array<string, mixed>> $renewalTargets */
 /** @var list<array{id:int,short_name:string,building_name:string,floor_name:string,area_name:string,score:int}> $lockerOptions */
 /** @var list<array<string, mixed>> $lifecycleEvents */
 /** @var list<string> $errors */
@@ -119,7 +119,7 @@ $activeLifecycle = in_array((string) $booking['status'], ['active', 'exemption_r
                 <div>
                     <span class="eyebrow">Folgeschuljahr</span>
                     <h2>Buchung verlängern</h2>
-                    <p class="form-hint">Das aktuelle Schließfach wird für das gewählte Schuljahr erneut zugeordnet. Die neue Buchung wird mit dieser Buchung historisch verknüpft.</p>
+                    <p class="form-hint">FachDock übernimmt das bisherige Schließfach, solange es im Zielschuljahr frei und regelkonform bleibt. Beim Übergang von Klasse 6 zu 7 sowie bei Belegung oder Regelkonflikten wird ein regelkonformes Ersatzfach verwendet.</p>
                 </div>
                 <form class="stack" method="post" action="/admin/bookings/renew">
                     <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
@@ -128,10 +128,11 @@ $activeLifecycle = in_array((string) $booking['status'], ['active', 'exemption_r
                         <select name="school_year_id" required>
                             <option value="">Bitte auswählen</option>
                             <?php foreach ($renewalTargets as $year): ?>
-                                <option value="<?= (int) $year['id'] ?>"><?= $e($year['label']) ?> · <?= $e($money($year['annual_fee_cents'])) ?></option>
+                                <option value="<?= (int) $year['id'] ?>"><?= $e((string) $year['label']) ?> · <?= $e($money((int) $year['annual_fee_cents'])) ?> · <?= !empty($year['reuse_current']) ? 'Fach ' . $e((string) $year['locker_short_name']) . ' bleibt' : 'Wechsel auf ' . $e((string) $year['locker_short_name']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </label>
+                    <div class="alert alert-neutral">Die angezeigte Fachzuordnung ist eine Vorschau. Beim Speichern wird die Verfügbarkeit erneut geprüft; bei einer zwischenzeitlichen Belegung kann ein anderes regelkonformes Fach gewählt werden.</div>
                     <label class="check-label"><input type="checkbox" name="request_but" value="1"> BuT-Befreiung für das neue Schuljahr erneut zur Prüfung vormerken</label>
                     <div class="alert alert-neutral">Ohne BuT-Vormerkung wird bei einer gebührenpflichtigen Verlängerung eine neue Buchung mit Status „Zahlung offen“ angelegt. Bei 0 € Jahresgebühr wird sie unmittelbar aktiv.</div>
                     <button class="button" type="submit">Verlängerung anlegen</button>

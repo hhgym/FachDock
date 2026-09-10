@@ -7,7 +7,7 @@ $root = dirname(__DIR__);
 return [
     'app' => [
         'name' => 'FachDock',
-        'version' => '0.9.0',
+        'version' => '1.0.0-rc.1',
         'environment' => 'production',
         'debug' => false,
         'installed' => false,
@@ -23,11 +23,21 @@ return [
         'parent_magic_link_minutes' => 15,
         'parent_session_lifetime_minutes' => 1440,
     ],
+    'oidc' => [
+        'enabled' => false,
+        'issuer' => '',
+        'client_id' => '',
+        'scopes' => 'openid profile email iserv:uuid iserv:groups iserv:roles',
+        'student_auto_match' => 'email',
+        'teacher_role_names' => 'Lehrer, Lehrkräfte',
+        'session_lifetime_minutes' => 480,
+    ],
     'booking' => [
         'recommendation_count' => 3,
         'reservation_minutes' => 15,
         'payment_grace_minutes' => 30,
         'but_rejection_payment_days' => 14,
+        'self_service_change_limit' => 2,
     ],
     'stripe' => [
         'mode' => 'test',

@@ -25,6 +25,7 @@ jobs:
       TEST_DB_USERNAME: root
       TEST_DB_PASSWORD: root
       TEST_DB_NAME_PREFIX: fachdock_test
+      FACHDOCK_V090_MIGRATIONS: /tmp/fachdock-v090/migrations
 
     services:
       mysql:
@@ -42,12 +43,25 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify v0.9.0 upgrade baseline
+        shell: bash
+        run: |
+          git rev-parse --verify 'refs/tags/v0.9.0^{commit}' >/dev/null
+          rm -rf /tmp/fachdock-v090
+          mkdir -p /tmp/fachdock-v090
+          git archive v0.9.0 migrations | tar -x -C /tmp/fachdock-v090
+          test -d "$FACHDOCK_V090_MIGRATIONS"
+          test -f "$FACHDOCK_V090_MIGRATIONS/202609090006_production_hardening.php"
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           coverage: none
+          extensions: curl, zip
           tools: composer:v2
 
       - name: Validate composer.json
@@ -59,7 +73,7 @@ jobs:
       - name: PHP syntax check
         run: find src config public migrations templates tests -type f -name '*.php' -print0 | xargs -0 -r -n1 php -l
 
-      - name: PHPUnit
+      - name: PHPUnit including fresh-install and v0.9.0 upgrade gates
         run: composer test
 
       - name: PHPStan

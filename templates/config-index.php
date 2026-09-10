@@ -53,6 +53,14 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
 
         <section class="card stack">
             <div>
+                <h2>IServ / OpenID Connect</h2>
+                <p>Single Sign-on für Schüler und Lehrkräfte, automatische Schülerzuordnung, Lehrkräfterollen und OIDC-Verbindungstest.</p>
+            </div>
+            <a class="button" href="/admin/config/oidc">IServ konfigurieren</a>
+        </section>
+
+        <section class="card stack">
+            <div>
                 <h2>Buchungen</h2>
                 <p>Empfehlungsanzahl, Reservierungsdauer, Zahlungs-Gnadenfrist und Zahlungsfrist nach BuT-Ablehnung.</p>
             </div>
