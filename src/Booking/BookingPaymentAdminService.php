@@ -11,6 +11,9 @@ use RuntimeException;
 
 final class BookingPaymentAdminService
 {
+    private const DEFAULT_PAGE_SIZE = 50;
+    private const MAX_PAGE_SIZE = 100;
+
     public function __construct(private readonly PDO $pdo)
     {
     }
@@ -35,48 +38,32 @@ final class BookingPaymentAdminService
     /** @return list<array<string, mixed>> */
     public function bookings(?int $schoolYearId, ?string $status, string $query): array
     {
-        $where = [];
-        $parameters = [];
-        if ($schoolYearId !== null) {
-            $where[] = 'b.school_year_id = :school_year_id';
-            $parameters['school_year_id'] = $schoolYearId;
-        }
-        if ($status !== null && $status !== '') {
-            $where[] = 'b.status = :status';
-            $parameters['status'] = $status;
-        }
-        if ($query !== '') {
-            $where[] = '(CAST(b.id AS CHAR) = :query_exact OR s.first_name LIKE :query_like '
-                . 'OR s.last_name LIKE :query_like OR s.class_name LIKE :query_like '
-                . 'OR s.matrikelnummer LIKE :query_like OR l.short_name LIKE :query_like)';
-            $parameters['query_exact'] = $query;
-            $parameters['query_like'] = '%' . $query . '%';
-        }
+        [$where, $parameters] = $this->bookingFilters($schoolYearId, $status, $query);
 
-        $sql = 'SELECT b.id, b.status, b.projected_grade, b.valid_from, b.valid_until, '
-            . 'b.annual_fee_cents, b.charged_fee_cents, b.proration_months, b.fee_exemption_type, '
-            . 'b.payment_due_at, b.created_at, s.id AS student_id, s.first_name, s.last_name, '
-            . 's.class_name, s.matrikelnummer, sy.id AS school_year_id, sy.label AS school_year_label, '
-            . 'l.id AS locker_id, l.short_name AS locker_short_name, '
-            . 'p.id AS payment_id, p.status AS payment_status, p.provider AS payment_provider, '
-            . 'p.amount_cents AS payment_amount_cents, p.currency AS payment_currency '
-            . 'FROM bookings b '
-            . 'INNER JOIN students s ON s.id = b.student_id '
-            . 'INNER JOIN school_years sy ON sy.id = b.school_year_id '
-            . 'LEFT JOIN locker_occupancies lo ON lo.booking_id = b.id '
-            . 'LEFT JOIN lockers l ON l.id = lo.locker_id '
-            . 'LEFT JOIN payments p ON p.id = ('
-            . 'SELECT p2.id FROM payments p2 WHERE p2.booking_id = b.id '
-            . 'ORDER BY p2.created_at DESC, p2.id DESC LIMIT 1)';
-        if ($where !== []) {
-            $sql .= ' WHERE ' . implode(' AND ', $where);
-        }
-        $sql .= ' ORDER BY b.created_at DESC, b.id DESC LIMIT 250';
+        return $this->bookingRows($where, $parameters, 250, 0);
+    }
 
-        $statement = $this->pdo->prepare($sql);
-        $statement->execute($parameters);
+    /**
+     * @return array{items:list<array<string,mixed>>,total:int,page:int,pages:int,page_size:int}
+     */
+    public function bookingPage(
+        ?int $schoolYearId,
+        ?string $status,
+        string $query,
+        int $page = 1,
+        int $pageSize = self::DEFAULT_PAGE_SIZE,
+    ): array {
+        [$where, $parameters] = $this->bookingFilters($schoolYearId, $status, $query);
+        $total = $this->bookingCount($where, $parameters);
+        [$page, $pages, $pageSize, $offset] = $this->pagination($page, $pageSize, $total);
 
-        return $this->fetchAll($statement);
+        return [
+            'items' => $this->bookingRows($where, $parameters, $pageSize, $offset),
+            'total' => $total,
+            'page' => $page,
+            'pages' => $pages,
+            'page_size' => $pageSize,
+        ];
     }
 
     /** @return array<string, mixed> */
@@ -138,50 +125,32 @@ final class BookingPaymentAdminService
     /** @return list<array<string, mixed>> */
     public function payments(?int $schoolYearId, ?string $status, string $query): array
     {
-        $where = [];
-        $parameters = [];
-        if ($schoolYearId !== null) {
-            $where[] = 'COALESCE(b.school_year_id, r.school_year_id) = :school_year_id';
-            $parameters['school_year_id'] = $schoolYearId;
-        }
-        if ($status !== null && $status !== '') {
-            $where[] = 'p.status = :status';
-            $parameters['status'] = $status;
-        }
-        if ($query !== '') {
-            $where[] = '(CAST(p.id AS CHAR) = :query_exact OR s.first_name LIKE :query_like '
-                . 'OR s.last_name LIKE :query_like OR s.class_name LIKE :query_like '
-                . 'OR pc.email LIKE :query_like OR l.short_name LIKE :query_like '
-                . 'OR p.stripe_checkout_session_id LIKE :query_like OR p.stripe_payment_intent_id LIKE :query_like)';
-            $parameters['query_exact'] = $query;
-            $parameters['query_like'] = '%' . $query . '%';
-        }
+        [$where, $parameters] = $this->paymentFilters($schoolYearId, $status, $query);
 
-        $sql = 'SELECT p.id, p.status, p.provider, p.amount_cents, p.currency, p.booking_id, '
-            . 'p.failure_code, p.failure_message, p.created_at, p.updated_at, p.paid_at, p.failed_at, '
-            . 'r.id AS reservation_id, s.id AS student_id, s.first_name, s.last_name, s.class_name, '
-            . 'sy.id AS school_year_id, sy.label AS school_year_label, l.short_name AS locker_short_name, '
-            . 'pc.id AS parent_contact_id, pc.email AS parent_email, pc.first_name AS parent_first_name, '
-            . 'pc.last_name AS parent_last_name, '
-            . '(SELECT COUNT(*) FROM stripe_webhook_events swe '
-            . "WHERE swe.payment_id = p.id AND swe.status <> 'processed') AS webhook_open_count "
-            . 'FROM payments p '
-            . 'LEFT JOIN locker_reservations r ON r.id = p.reservation_id '
-            . 'LEFT JOIN bookings b ON b.id = p.booking_id '
-            . 'LEFT JOIN students s ON s.id = COALESCE(b.student_id, r.student_id) '
-            . 'LEFT JOIN school_years sy ON sy.id = COALESCE(b.school_year_id, r.school_year_id) '
-            . 'LEFT JOIN locker_occupancies lo ON lo.booking_id = b.id '
-            . 'LEFT JOIN lockers l ON l.id = COALESCE(lo.locker_id, r.locker_id) '
-            . 'INNER JOIN parent_contacts pc ON pc.id = p.parent_contact_id';
-        if ($where !== []) {
-            $sql .= ' WHERE ' . implode(' AND ', $where);
-        }
-        $sql .= ' ORDER BY p.created_at DESC, p.id DESC LIMIT 250';
+        return $this->paymentRows($where, $parameters, 250, 0);
+    }
 
-        $statement = $this->pdo->prepare($sql);
-        $statement->execute($parameters);
+    /**
+     * @return array{items:list<array<string,mixed>>,total:int,page:int,pages:int,page_size:int}
+     */
+    public function paymentPage(
+        ?int $schoolYearId,
+        ?string $status,
+        string $query,
+        int $page = 1,
+        int $pageSize = self::DEFAULT_PAGE_SIZE,
+    ): array {
+        [$where, $parameters] = $this->paymentFilters($schoolYearId, $status, $query);
+        $total = $this->paymentCount($where, $parameters);
+        [$page, $pages, $pageSize, $offset] = $this->pagination($page, $pageSize, $total);
 
-        return $this->fetchAll($statement);
+        return [
+            'items' => $this->paymentRows($where, $parameters, $pageSize, $offset),
+            'total' => $total,
+            'page' => $page,
+            'pages' => $pages,
+            'page_size' => $pageSize,
+        ];
     }
 
     /** @return array<string, mixed> */
@@ -250,6 +219,175 @@ final class BookingPaymentAdminService
                 "SELECT COUNT(*) FROM stripe_webhook_events WHERE status <> 'processed'"
             ),
         ];
+    }
+
+    /** @return array{0:list<string>,1:array<string,int|string>} */
+    private function bookingFilters(?int $schoolYearId, ?string $status, string $query): array
+    {
+        $where = [];
+        $parameters = [];
+        if ($schoolYearId !== null) {
+            $where[] = 'b.school_year_id = :school_year_id';
+            $parameters['school_year_id'] = $schoolYearId;
+        }
+        if ($status !== null && $status !== '') {
+            $where[] = 'b.status = :status';
+            $parameters['status'] = $status;
+        }
+        if ($query !== '') {
+            $where[] = '(CAST(b.id AS CHAR) = :query_exact OR s.first_name LIKE :query_like '
+                . 'OR s.last_name LIKE :query_like OR s.class_name LIKE :query_like '
+                . 'OR s.matrikelnummer LIKE :query_like OR l.short_name LIKE :query_like)';
+            $parameters['query_exact'] = $query;
+            $parameters['query_like'] = '%' . $query . '%';
+        }
+
+        return [$where, $parameters];
+    }
+
+    /**
+     * @param list<string> $where
+     * @param array<string,int|string> $parameters
+     * @return list<array<string,mixed>>
+     */
+    private function bookingRows(array $where, array $parameters, int $limit, int $offset): array
+    {
+        $sql = 'SELECT b.id, b.status, b.projected_grade, b.valid_from, b.valid_until, '
+            . 'b.annual_fee_cents, b.charged_fee_cents, b.proration_months, b.fee_exemption_type, '
+            . 'b.payment_due_at, b.created_at, s.id AS student_id, s.first_name, s.last_name, '
+            . 's.class_name, s.matrikelnummer, sy.id AS school_year_id, sy.label AS school_year_label, '
+            . 'l.id AS locker_id, l.short_name AS locker_short_name, '
+            . 'p.id AS payment_id, p.status AS payment_status, p.provider AS payment_provider, '
+            . 'p.amount_cents AS payment_amount_cents, p.currency AS payment_currency '
+            . 'FROM bookings b '
+            . 'INNER JOIN students s ON s.id = b.student_id '
+            . 'INNER JOIN school_years sy ON sy.id = b.school_year_id '
+            . 'LEFT JOIN locker_occupancies lo ON lo.booking_id = b.id '
+            . 'LEFT JOIN lockers l ON l.id = lo.locker_id '
+            . 'LEFT JOIN payments p ON p.id = ('
+            . 'SELECT p2.id FROM payments p2 WHERE p2.booking_id = b.id '
+            . 'ORDER BY p2.created_at DESC, p2.id DESC LIMIT 1)';
+        if ($where !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+        $sql .= ' ORDER BY b.created_at DESC, b.id DESC LIMIT ' . max(1, $limit) . ' OFFSET ' . max(0, $offset);
+
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute($parameters);
+
+        return $this->fetchAll($statement);
+    }
+
+    /**
+     * @param list<string> $where
+     * @param array<string,int|string> $parameters
+     */
+    private function bookingCount(array $where, array $parameters): int
+    {
+        $sql = 'SELECT COUNT(*) FROM bookings b '
+            . 'INNER JOIN students s ON s.id = b.student_id '
+            . 'LEFT JOIN locker_occupancies lo ON lo.booking_id = b.id '
+            . 'LEFT JOIN lockers l ON l.id = lo.locker_id';
+        if ($where !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute($parameters);
+        $value = $statement->fetchColumn();
+
+        return is_numeric($value) ? (int) $value : 0;
+    }
+
+    /** @return array{0:list<string>,1:array<string,int|string>} */
+    private function paymentFilters(?int $schoolYearId, ?string $status, string $query): array
+    {
+        $where = [];
+        $parameters = [];
+        if ($schoolYearId !== null) {
+            $where[] = 'COALESCE(b.school_year_id, r.school_year_id) = :school_year_id';
+            $parameters['school_year_id'] = $schoolYearId;
+        }
+        if ($status !== null && $status !== '') {
+            $where[] = 'p.status = :status';
+            $parameters['status'] = $status;
+        }
+        if ($query !== '') {
+            $where[] = '(CAST(p.id AS CHAR) = :query_exact OR s.first_name LIKE :query_like '
+                . 'OR s.last_name LIKE :query_like OR s.class_name LIKE :query_like '
+                . 'OR pc.email LIKE :query_like OR l.short_name LIKE :query_like '
+                . 'OR p.stripe_checkout_session_id LIKE :query_like OR p.stripe_payment_intent_id LIKE :query_like)';
+            $parameters['query_exact'] = $query;
+            $parameters['query_like'] = '%' . $query . '%';
+        }
+
+        return [$where, $parameters];
+    }
+
+    /**
+     * @param list<string> $where
+     * @param array<string,int|string> $parameters
+     * @return list<array<string,mixed>>
+     */
+    private function paymentRows(array $where, array $parameters, int $limit, int $offset): array
+    {
+        $sql = 'SELECT p.id, p.status, p.provider, p.amount_cents, p.currency, p.booking_id, '
+            . 'p.failure_code, p.failure_message, p.created_at, p.updated_at, p.paid_at, p.failed_at, '
+            . 'r.id AS reservation_id, s.id AS student_id, s.first_name, s.last_name, s.class_name, '
+            . 'sy.id AS school_year_id, sy.label AS school_year_label, l.short_name AS locker_short_name, '
+            . 'pc.id AS parent_contact_id, pc.email AS parent_email, pc.first_name AS parent_first_name, '
+            . 'pc.last_name AS parent_last_name, '
+            . '(SELECT COUNT(*) FROM stripe_webhook_events swe '
+            . "WHERE swe.payment_id = p.id AND swe.status <> 'processed') AS webhook_open_count "
+            . 'FROM payments p '
+            . 'LEFT JOIN locker_reservations r ON r.id = p.reservation_id '
+            . 'LEFT JOIN bookings b ON b.id = p.booking_id '
+            . 'LEFT JOIN students s ON s.id = COALESCE(b.student_id, r.student_id) '
+            . 'LEFT JOIN school_years sy ON sy.id = COALESCE(b.school_year_id, r.school_year_id) '
+            . 'LEFT JOIN locker_occupancies lo ON lo.booking_id = b.id '
+            . 'LEFT JOIN lockers l ON l.id = COALESCE(lo.locker_id, r.locker_id) '
+            . 'INNER JOIN parent_contacts pc ON pc.id = p.parent_contact_id';
+        if ($where !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+        $sql .= ' ORDER BY p.created_at DESC, p.id DESC LIMIT ' . max(1, $limit) . ' OFFSET ' . max(0, $offset);
+
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute($parameters);
+
+        return $this->fetchAll($statement);
+    }
+
+    /**
+     * @param list<string> $where
+     * @param array<string,int|string> $parameters
+     */
+    private function paymentCount(array $where, array $parameters): int
+    {
+        $sql = 'SELECT COUNT(*) FROM payments p '
+            . 'LEFT JOIN locker_reservations r ON r.id = p.reservation_id '
+            . 'LEFT JOIN bookings b ON b.id = p.booking_id '
+            . 'LEFT JOIN students s ON s.id = COALESCE(b.student_id, r.student_id) '
+            . 'LEFT JOIN locker_occupancies lo ON lo.booking_id = b.id '
+            . 'LEFT JOIN lockers l ON l.id = COALESCE(lo.locker_id, r.locker_id) '
+            . 'INNER JOIN parent_contacts pc ON pc.id = p.parent_contact_id';
+        if ($where !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute($parameters);
+        $value = $statement->fetchColumn();
+
+        return is_numeric($value) ? (int) $value : 0;
+    }
+
+    /** @return array{0:int,1:int,2:int,3:int} */
+    private function pagination(int $page, int $pageSize, int $total): array
+    {
+        $pageSize = max(10, min(self::MAX_PAGE_SIZE, $pageSize));
+        $pages = max(1, (int) ceil($total / $pageSize));
+        $page = max(1, min($pages, $page));
+
+        return [$page, $pages, $pageSize, ($page - 1) * $pageSize];
     }
 
     private function count(string $sql): int
