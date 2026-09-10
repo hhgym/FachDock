@@ -317,7 +317,7 @@ final class MailWorker
     private function immediateSentLastHour(): int
     {
         $statement = $this->pdo->query(
-            "SELECT COUNT(*) FROM mail_delivery_history h INNER JOIN mail_queue q ON q.id = h.mail_queue_id "
+            'SELECT COUNT(*) FROM mail_delivery_history h INNER JOIN mail_queue q ON q.id = h.mail_queue_id '
             . "WHERE h.status = 'sent' AND h.recorded_at >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 HOUR) "
             . 'AND q.priority <= ' . self::IMMEDIATE_PRIORITY_MAX
         );
