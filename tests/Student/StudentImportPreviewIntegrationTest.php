@@ -38,8 +38,8 @@ final class StudentImportPreviewIntegrationTest extends TestCase
         $this->pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
 
         $this->pdo->exec(
-            "INSERT INTO staff_users "
-            . "(username, display_name, email, password_hash, role, active, created_at, updated_at) VALUES "
+            'INSERT INTO staff_users '
+            . '(username, display_name, email, password_hash, role, active, created_at, updated_at) VALUES '
             . "('admin', 'Administrator', 'admin@example.test', 'unused', 'administrator', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         );
         $staffUserId = (int) $this->pdo->lastInsertId();
