@@ -24,4 +24,19 @@ final class UpdateInfoTest extends TestCase
         self::assertFalse($update->isNewerThan('0.1.1'));
         self::assertFalse($update->isNewerThan('0.2.0'));
     }
+
+    public function testStableOnePointZeroIsNewerThanItsReleaseCandidate(): void
+    {
+        $stable = new UpdateInfo(
+            '1.0.0',
+            'v1.0.0',
+            'https://github.com/hhgym/FachDock/releases/download/v1.0.0/FachDock-1.0.0.zip',
+            'https://github.com/hhgym/FachDock/releases/download/v1.0.0/FachDock-1.0.0.zip.sha256',
+            'https://github.com/hhgym/FachDock/releases/tag/v1.0.0',
+            null,
+        );
+
+        self::assertTrue($stable->isNewerThan('1.0.0-rc.1'));
+        self::assertFalse($stable->isNewerThan('1.0.0'));
+    }
 }

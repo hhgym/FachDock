@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-    tags:
-      - 'v*.*.*'
 
 permissions:
   contents: write
@@ -20,27 +18,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Resolve stable release version
+      - name: Resolve release version
         id: release
         shell: bash
         run: |
           CONFIG_VERSION="$(php -r '$config = require "config/app.php"; echo $config["app"]["version"] ?? "";')"
-          if [[ ! "$CONFIG_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "config/app.php must contain a stable SemVer version such as 0.1.0."
+          if [[ ! "$CONFIG_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-rc\.[1-9][0-9]*)?$ ]]; then
+            echo "config/app.php must contain a supported SemVer version such as 1.0.0 or 1.0.0-rc.1."
             exit 1
           fi
 
           TAG="v${CONFIG_VERSION}"
-          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" != "$TAG" ]]; then
-            echo "Tag ${GITHUB_REF_NAME} does not match application version ${CONFIG_VERSION}."
-            exit 1
+          PRERELEASE=false
+          if [[ "$CONFIG_VERSION" == *-rc.* ]]; then
+            PRERELEASE=true
           fi
 
           echo "version=${CONFIG_VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "prerelease=${PRERELEASE}" >> "$GITHUB_OUTPUT"
 
-      - name: Create stable tag for main release
-        if: github.ref == 'refs/heads/main'
+      - name: Create release tag
         env:
           TAG: ${{ steps.release.outputs.tag }}
         shell: bash
@@ -62,7 +60,7 @@ jobs:
         run: |
           git fetch origin main
           git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
-            echo "Stable releases must point to commits contained in main."
+            echo "Releases must point to commits contained in main."
             exit 1
           }
 
@@ -107,11 +105,38 @@ jobs:
           zip -qr "${PACKAGE}.zip" "${PACKAGE}"
           sha256sum "${PACKAGE}.zip" > "${PACKAGE}.zip.sha256"
 
+      - name: Verify release package
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          PACKAGE="FachDock-${VERSION}"
+          cd dist
+          sha256sum -c "${PACKAGE}.zip.sha256"
+          unzip -t "${PACKAGE}.zip"
+          rm -rf smoke
+          mkdir smoke
+          unzip -q "${PACKAGE}.zip" -d smoke
+
+          ROOT="smoke/${PACKAGE}"
+          test -f "${ROOT}/public/index.php"
+          test -f "${ROOT}/vendor/autoload.php"
+          test -d "${ROOT}/migrations"
+          test -f "${ROOT}/LICENSE"
+          test ! -e "${ROOT}/tests"
+          test ! -e "${ROOT}/.github"
+          test ! -e "${ROOT}/config/app.local.php"
+          test ! -e "${ROOT}/config/secrets.local.php"
+
+          PACKAGE_VERSION="$(php -r '$config = require $argv[1]; echo $config["app"]["version"] ?? "";' "${ROOT}/config/app.php")"
+          test "$PACKAGE_VERSION" = "$VERSION"
+
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.release.outputs.tag }}
           VERSION: ${{ steps.release.outputs.version }}
+          PRERELEASE: ${{ steps.release.outputs.prerelease }}
         shell: bash
         run: |
           PACKAGE="FachDock-${VERSION}"
@@ -119,8 +144,20 @@ jobs:
             echo "Release ${TAG} already exists; refusing to overwrite it."
             exit 1
           fi
+
+          RELEASE_FLAGS=(--title "FachDock ${VERSION}" --verify-tag)
+          if [[ "$PRERELEASE" == "true" ]]; then
+            RELEASE_FLAGS+=(--prerelease --latest=false)
+          fi
+
+          NOTES_FILE="docs/RELEASE_NOTES_${VERSION}.md"
+          if [[ -f "$NOTES_FILE" ]]; then
+            RELEASE_FLAGS+=(--notes-file "$NOTES_FILE")
+          else
+            RELEASE_FLAGS+=(--generate-notes)
+          fi
+
           gh release create "$TAG" \
             "dist/${PACKAGE}.zip" \
             "dist/${PACKAGE}.zip.sha256" \
-            --title "FachDock ${VERSION}" \
-            --generate-notes
+            "${RELEASE_FLAGS[@]}"
