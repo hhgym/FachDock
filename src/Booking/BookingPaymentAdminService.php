@@ -245,8 +245,10 @@ final class BookingPaymentAdminService
         return [$where, $parameters];
     }
 
-    /** @param list<string> $where @param array<string,int|string> $parameters
-     *  @return list<array<string,mixed>>
+    /**
+     * @param list<string> $where
+     * @param array<string,int|string> $parameters
+     * @return list<array<string,mixed>>
      */
     private function bookingRows(array $where, array $parameters, int $limit, int $offset): array
     {
@@ -276,7 +278,10 @@ final class BookingPaymentAdminService
         return $this->fetchAll($statement);
     }
 
-    /** @param list<string> $where @param array<string,int|string> $parameters */
+    /**
+     * @param list<string> $where
+     * @param array<string,int|string> $parameters
+     */
     private function bookingCount(array $where, array $parameters): int
     {
         $sql = 'SELECT COUNT(*) FROM bookings b '
@@ -318,8 +323,10 @@ final class BookingPaymentAdminService
         return [$where, $parameters];
     }
 
-    /** @param list<string> $where @param array<string,int|string> $parameters
-     *  @return list<array<string,mixed>>
+    /**
+     * @param list<string> $where
+     * @param array<string,int|string> $parameters
+     * @return list<array<string,mixed>>
      */
     private function paymentRows(array $where, array $parameters, int $limit, int $offset): array
     {
@@ -350,7 +357,10 @@ final class BookingPaymentAdminService
         return $this->fetchAll($statement);
     }
 
-    /** @param list<string> $where @param array<string,int|string> $parameters */
+    /**
+     * @param list<string> $where
+     * @param array<string,int|string> $parameters
+     */
     private function paymentCount(array $where, array $parameters): int
     {
         $sql = 'SELECT COUNT(*) FROM payments p '
