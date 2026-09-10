@@ -19,6 +19,8 @@ final class ViewRendererTest extends TestCase
         self::assertTrue(mkdir($this->root . '/public/assets', 0777, true));
         self::assertNotFalse(file_put_contents($this->root . '/public/assets/app.css', 'body { margin: 0; }'));
         self::assertNotFalse(file_put_contents($this->root . '/public/assets/navigation.css', '.topbar { display: flex; }'));
+        self::assertNotFalse(file_put_contents($this->root . '/public/assets/accessibility.css', '.skip-link { display: block; }'));
+        self::assertNotFalse(file_put_contents($this->root . '/public/assets/app.js', 'document.documentElement.dataset.js = "1";'));
         self::assertNotFalse(file_put_contents(
             $this->root . '/templates/test.php',
             '<!doctype html><html><head><link rel="stylesheet" href="/assets/app.css"></head>'
@@ -31,23 +33,33 @@ final class ViewRendererTest extends TestCase
         @unlink($this->root . '/templates/test.php');
         @unlink($this->root . '/public/assets/app.css');
         @unlink($this->root . '/public/assets/navigation.css');
+        @unlink($this->root . '/public/assets/accessibility.css');
+        @unlink($this->root . '/public/assets/app.js');
         @rmdir($this->root . '/templates');
         @rmdir($this->root . '/public/assets');
         @rmdir($this->root . '/public');
         @rmdir($this->root);
     }
 
-    public function testStylesheetsReceiveContentBasedVersions(): void
+    public function testGlobalAssetsReceiveContentBasedVersionsAndAccessibilityShell(): void
     {
         $appHash = hash_file('sha256', $this->root . '/public/assets/app.css');
         $navigationHash = hash_file('sha256', $this->root . '/public/assets/navigation.css');
+        $accessibilityHash = hash_file('sha256', $this->root . '/public/assets/accessibility.css');
+        $scriptHash = hash_file('sha256', $this->root . '/public/assets/app.js');
         self::assertIsString($appHash);
         self::assertIsString($navigationHash);
+        self::assertIsString($accessibilityHash);
+        self::assertIsString($scriptHash);
 
         $html = (new ViewRenderer($this->root . '/templates'))->render('test.php');
 
         self::assertStringContainsString('/assets/app.css?v=' . substr($appHash, 0, 12), $html);
         self::assertStringContainsString('/assets/navigation.css?v=' . substr($navigationHash, 0, 12), $html);
+        self::assertStringContainsString('/assets/accessibility.css?v=' . substr($accessibilityHash, 0, 12), $html);
+        self::assertStringContainsString('/assets/app.js?v=' . substr($scriptHash, 0, 12), $html);
+        self::assertStringContainsString('<a class="skip-link" href="#main-content">Zum Hauptinhalt</a>', $html);
+        self::assertStringContainsString('<main id="main-content">', $html);
     }
 
     public function testAdministrativeParentPreviewIsClearlyMarkedAndCanBeEnded(): void
