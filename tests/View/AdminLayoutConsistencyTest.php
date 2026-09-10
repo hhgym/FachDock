@@ -36,6 +36,17 @@ final class AdminLayoutConsistencyTest extends TestCase
         self::assertStringContainsString('width: 100%;', $css);
     }
 
+    public function testOperationsFiltersStackWithoutOverlapOnNarrowScreens(): void
+    {
+        $css = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/app.css');
+        $template = (string) file_get_contents(dirname(__DIR__, 2) . '/templates/operations-admin.php');
+
+        self::assertStringContainsString('<div class="compact-actions">', $template);
+        self::assertStringContainsString('.school-year-heading > .compact-actions { display: flex; flex-wrap: wrap;', $css);
+        self::assertStringContainsString('.school-year-heading > .compact-actions { width: 100%; flex-direction: column; align-items: stretch; }', $css);
+        self::assertStringContainsString('.school-year-heading > .compact-actions .button { width: 100%; text-align: center; }', $css);
+    }
+
     public function testFloorplanEditorContainsZoomAndResizeInsideTheCard(): void
     {
         $css = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/floorplans.css');
