@@ -31,12 +31,14 @@ final class ViewRenderer
         }
 
         $content = $this->versionStylesheets($content);
+        $content = $this->versionScripts($content);
         $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
         if (!is_string($currentPath) || $currentPath === '') {
             $currentPath = '/';
         }
 
         $content = (new NavigationRenderer())->inject($content, $data, $currentPath);
+        $content = $this->injectAccessibilityShell($content);
         $parent = $data['parent'] ?? null;
         if ($parent instanceof AuthenticatedParent && $parent->adminPreview) {
             $csrfToken = isset($data['csrfToken']) && is_string($data['csrfToken']) ? $data['csrfToken'] : '';
@@ -91,6 +93,11 @@ final class ViewRenderer
             $content = $this->injectStylesheet($content, 'navigation.css', $navigationVersion);
         }
 
+        $accessibilityVersion = $this->assetVersion($root . '/public/assets/accessibility.css');
+        if ($accessibilityVersion !== null && !str_contains($content, '/assets/accessibility.css')) {
+            $content = $this->injectStylesheet($content, 'accessibility.css', $accessibilityVersion);
+        }
+
         if (str_contains($content, 'floorplan-page')) {
             $version = $this->assetVersion($root . '/public/assets/floorplans.css');
             if ($version !== null && !str_contains($content, '/assets/floorplans.css')) {
@@ -101,6 +108,47 @@ final class ViewRenderer
             $version = $this->assetVersion($root . '/public/assets/platform.css');
             if ($version !== null && !str_contains($content, '/assets/platform.css')) {
                 $content = $this->injectStylesheet($content, 'platform.css', $version);
+            }
+        }
+
+        return $content;
+    }
+
+    private function versionScripts(string $content): string
+    {
+        $root = dirname($this->templateDirectory);
+        $version = $this->assetVersion($root . '/public/assets/app.js');
+        if ($version === null || str_contains($content, '/assets/app.js')) {
+            return $content;
+        }
+
+        $script = '    <script src="/assets/app.js?v=' . $version . '" defer></script>' . "\n";
+
+        return str_replace('</body>', $script . '</body>', $content);
+    }
+
+    private function injectAccessibilityShell(string $content): string
+    {
+        if (!str_contains($content, '<main')) {
+            return $content;
+        }
+
+        if (!preg_match('~<main\b[^>]*\bid=~', $content)) {
+            $updated = preg_replace('~<main\b([^>]*)>~', '<main id="main-content"$1>', $content, 1);
+            if (is_string($updated)) {
+                $content = $updated;
+            }
+        }
+
+        if (!str_contains($content, 'class="skip-link"')) {
+            $updated = preg_replace(
+                '~<body([^>]*)>~',
+                '<body$1><a class="skip-link" href="#main-content">Zum Hauptinhalt</a>',
+                $content,
+                1,
+            );
+            if (is_string($updated)) {
+                $content = $updated;
             }
         }
 
