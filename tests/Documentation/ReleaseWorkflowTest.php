@@ -27,6 +27,6 @@ final class ReleaseWorkflowTest extends TestCase
         self::assertIsString($client);
         self::assertStringContainsString('/releases/latest', $client);
         self::assertStringContainsString("preg_match('/^v([0-9]+\\.[0-9]+\\.[0-9]+)$/',", $client);
-        self::assertStringContainsString('(\u0024data[\'prerelease\'] ?? false) === true', $client);
+        self::assertStringContainsString("(\$data['prerelease'] ?? false) === true", $client);
     }
 }
