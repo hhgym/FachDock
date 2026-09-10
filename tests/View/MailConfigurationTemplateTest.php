@@ -29,6 +29,7 @@ final class MailConfigurationTemplateTest extends TestCase
 
         self::assertStringContainsString('MailWorker::IMMEDIATE_PRIORITY_MAX', $service);
         self::assertStringContainsString('->runImmediate($queueId)', $service);
+        self::assertStringContainsString('new MailWorkerFactory($config)', $service);
         self::assertStringContainsString("'parent_login'", $service);
         self::assertStringContainsString("'parent_verify_email'", $service);
     }
