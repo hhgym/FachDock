@@ -24,4 +24,26 @@ final class AdminLayoutConsistencyTest extends TestCase
         self::assertStringContainsString('.floorplan-layout { display: grid; grid-template-columns: 1fr;', $css);
         self::assertStringNotContainsString('min(1500px, calc(100% - 32px))', $css);
     }
+
+    public function testDashboardActionsStackOnNarrowScreens(): void
+    {
+        $css = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/dashboard.css');
+
+        self::assertStringContainsString('.compact-actions {', $css);
+        self::assertStringContainsString('flex-wrap: wrap;', $css);
+        self::assertStringContainsString('@media (max-width: 600px)', $css);
+        self::assertStringContainsString('grid-template-columns: 1fr;', $css);
+        self::assertStringContainsString('width: 100%;', $css);
+    }
+
+    public function testFloorplanEditorContainsZoomAndResizeInsideTheCard(): void
+    {
+        $css = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/floorplans.css');
+
+        self::assertStringContainsString('.floorplan-scroll { width: 100% !important; max-width: 100%;', $css);
+        self::assertStringContainsString('overflow: auto;', $css);
+        self::assertStringContainsString('.floorplan-resize-handle {', $css);
+        self::assertStringContainsString('.floorplan-canvas.floorplan-drawing { cursor: crosshair; }', $css);
+        self::assertStringContainsString('.floorplan-draft-rectangle {', $css);
+    }
 }
