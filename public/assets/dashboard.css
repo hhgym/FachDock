@@ -60,6 +60,17 @@
     box-shadow: 0 8px 28px rgba(22, 34, 58, .05);
 }
 
+.compact-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.compact-actions .button {
+    margin: 0;
+}
+
 @media (max-width: 900px) {
     .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -67,4 +78,14 @@
 @media (max-width: 600px) {
     .dashboard-grid { grid-template-columns: 1fr; }
     .metric-card { min-height: 132px; }
+    .compact-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+    .compact-actions .button {
+        width: 100%;
+        justify-self: stretch;
+        text-align: center;
+    }
 }

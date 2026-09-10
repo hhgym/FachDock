@@ -18,7 +18,10 @@ final class Response
 
     public static function html(string $body, int $status = 200): self
     {
-        return new self($body, $status, ['Content-Type' => 'text/html; charset=utf-8']);
+        return new self($body, $status, [
+            'Content-Type' => 'text/html; charset=utf-8',
+            'Cache-Control' => 'no-store, private',
+        ]);
     }
 
     public static function text(string $body, string $contentType = 'text/plain; charset=utf-8', int $status = 200): self
@@ -40,7 +43,10 @@ final class Response
 
     public static function redirect(string $location, int $status = 302): self
     {
-        return new self('', $status, ['Location' => $location]);
+        return new self('', $status, [
+            'Location' => $location,
+            'Cache-Control' => 'no-store, private',
+        ]);
     }
 
     public function send(): void
@@ -64,5 +70,11 @@ final class Response
     public function status(): int
     {
         return $this->status;
+    }
+
+    /** @return array<string, string> */
+    public function headers(): array
+    {
+        return $this->headers;
     }
 }

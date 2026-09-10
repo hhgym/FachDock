@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace FachDock\Parent;
 
 use DomainException;
+use FachDock\Config\Config;
 use FachDock\Mail\MailQueueService;
+use FachDock\Mail\MailWorker;
+use FachDock\Mail\MailWorkerFactory;
 use PDO;
 use RuntimeException;
 
@@ -20,6 +23,7 @@ final class ParentPortalAccessService
         private readonly int $magicLinkMinutes = 15,
         private readonly int $maxRequestsPerWindow = 5,
         private readonly int $requestWindowMinutes = 15,
+        private readonly ?MailWorker $immediateMailWorker = null,
     ) {
     }
 
@@ -117,7 +121,7 @@ final class ParentPortalAccessService
         $suffix = $name === '' ? '' : ' ' . $name;
         $reference = $purpose->value . ':' . $parent['id'] . ':' . bin2hex(random_bytes(12));
 
-        return $this->mailQueue->enqueue(
+        $queueId = $this->mailQueue->enqueue(
             $templateKey,
             $parent['email'],
             $name === '' ? null : $name,
@@ -131,9 +135,28 @@ final class ParentPortalAccessService
             $parent['id'],
             $reference,
             $reference,
-            10,
+            MailWorker::IMMEDIATE_PRIORITY_MAX,
             $issued->expiresAt,
         );
+
+        $this->immediateWorker()?->runImmediate($queueId);
+
+        return $queueId;
+    }
+
+    private function immediateWorker(): ?MailWorker
+    {
+        if ($this->immediateMailWorker !== null) {
+            return $this->immediateMailWorker;
+        }
+
+        $root = dirname(__DIR__, 2);
+        $config = Config::load($root);
+        if ($config->get('app.installed', false) !== true) {
+            return null;
+        }
+
+        return (new MailWorkerFactory($config))->create($this->pdo, $this->mailQueue);
     }
 
     /** @return array{id: int, email: string, first_name: string|null, last_name: string|null, active: bool, verified: bool}|null */

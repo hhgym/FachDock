@@ -61,4 +61,48 @@ final class WorkerHeartbeatService
             'error_update' => $error,
         ]);
     }
+
+    /**
+     * @return array{
+     *   known: bool,
+     *   last_started_at: string|null,
+     *   last_finished_at: string|null,
+     *   last_success_at: string|null,
+     *   last_failure_at: string|null,
+     *   minutes_since_success: int|null,
+     *   last_error: string|null
+     * }
+     */
+    public function status(): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT last_started_at, last_finished_at, last_success_at, last_failure_at, last_error, '
+            . 'TIMESTAMPDIFF(MINUTE, last_success_at, CURRENT_TIMESTAMP) AS minutes_since_success '
+            . 'FROM system_worker_status WHERE worker_key = :worker_key'
+        );
+        $statement->execute(['worker_key' => $this->workerKey]);
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+
+        if (!is_array($row)) {
+            return [
+                'known' => false,
+                'last_started_at' => null,
+                'last_finished_at' => null,
+                'last_success_at' => null,
+                'last_failure_at' => null,
+                'minutes_since_success' => null,
+                'last_error' => null,
+            ];
+        }
+
+        return [
+            'known' => true,
+            'last_started_at' => $row['last_started_at'] === null ? null : (string) $row['last_started_at'],
+            'last_finished_at' => $row['last_finished_at'] === null ? null : (string) $row['last_finished_at'],
+            'last_success_at' => $row['last_success_at'] === null ? null : (string) $row['last_success_at'],
+            'last_failure_at' => $row['last_failure_at'] === null ? null : (string) $row['last_failure_at'],
+            'minutes_since_success' => $row['minutes_since_success'] === null ? null : (int) $row['minutes_since_success'],
+            'last_error' => $row['last_error'] === null ? null : (string) $row['last_error'],
+        ];
+    }
 }

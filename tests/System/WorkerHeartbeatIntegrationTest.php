@@ -33,6 +33,12 @@ final class WorkerHeartbeatIntegrationTest extends TestCase
             'expired' => 0,
         ]);
 
+        $readableStatus = $heartbeat->status();
+        self::assertTrue($readableStatus['known']);
+        self::assertNotNull($readableStatus['last_success_at']);
+        self::assertNotNull($readableStatus['minutes_since_success']);
+        self::assertNull($readableStatus['last_error']);
+
         $status = (new SystemStatusService(
             $pdo,
             Config::load(dirname(__DIR__, 2)),
@@ -43,6 +49,19 @@ final class WorkerHeartbeatIntegrationTest extends TestCase
         self::assertTrue($status['mail_worker']['healthy']);
         self::assertFalse($status['mail_worker']['stale']);
         self::assertSame(3, $status['mail_worker']['last_result']['processed']);
+    }
+
+    public function testUnknownWorkerHasEmptyReadableStatus(): void
+    {
+        $pdo = $this->database();
+        (new MigrationRunner($pdo, dirname(__DIR__, 2) . '/migrations'))->migrate();
+        $pdo->exec('TRUNCATE TABLE system_worker_status');
+
+        $status = (new WorkerHeartbeatService($pdo, 'mail'))->status();
+
+        self::assertFalse($status['known']);
+        self::assertNull($status['last_success_at']);
+        self::assertNull($status['last_error']);
     }
 
     private function database(): PDO

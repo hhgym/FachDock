@@ -47,6 +47,7 @@ return [
     'mail' => [
         'worker_batch_size' => 50,
         'max_per_hour' => 50,
+        'immediate_reserve_per_hour' => 10,
         'retry_minutes' => [15, 60, 360],
         'processing_timeout_minutes' => 15,
     ],

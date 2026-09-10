@@ -1,11 +1,11 @@
-.floorplan-page { width: min(1500px, calc(100% - 32px)); margin: 32px auto 64px; }
+.floorplan-page { width: min(960px, calc(100% - 32px)); margin: 48px auto 64px; }
 .page-heading { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
 .page-heading h1 { margin: 2px 0 6px; }
 .floorplan-filters, .floorplan-upload { margin-bottom: 18px; }
 .floorplan-filter-form { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
 .floorplan-upload summary { cursor: pointer; }
 .floorplan-upload[open] summary { margin-bottom: 18px; }
-.floorplan-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(290px, 360px); gap: 18px; align-items: start; }
+.floorplan-layout { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
 .floorplan-stage-card { min-width: 0; }
 .floorplan-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 12px; }
 .floorplan-toolbar > div:first-child { display: grid; }
@@ -19,7 +19,7 @@
 .floorplan-dot-free { background: #1f9d55; }
 .floorplan-dot-full { background: #c2413b; }
 .floorplan-dot-warning { background: #d99318; }
-.floorplan-scroll { max-height: 74vh; overflow: auto; border: 1px solid #dfe4ec; border-radius: 12px; background: #eef1f5; }
+.floorplan-scroll { width: 100% !important; max-width: 100%; min-height: 0 !important; max-height: 74vh; overflow: auto; border: 1px solid #dfe4ec; border-radius: 12px; background: #eef1f5; }
 .floorplan-canvas { position: relative; width: 100%; min-width: 640px; transform-origin: left top; user-select: none; }
 .floorplan-canvas img { display: block; width: 100%; height: auto; pointer-events: none; }
 .floorplan-marker { position: absolute; z-index: 2; display: grid; place-items: center; align-content: center; min-width: 42px; min-height: 34px; padding: 3px; border: 2px solid rgba(255,255,255,.9); border-radius: 9px; box-shadow: 0 3px 12px rgba(0,0,0,.22); color: #fff; cursor: pointer; font: inherit; font-weight: 800; line-height: 1.05; touch-action: none; overflow: hidden; }
@@ -29,6 +29,12 @@
 .floorplan-marker-warning { background: rgba(217,147,24,.94); }
 .floorplan-canvas[data-editable="1"] .floorplan-marker { cursor: grab; }
 .floorplan-canvas[data-editable="1"] .floorplan-marker:active { cursor: grabbing; }
+.floorplan-resize-handle { position: absolute; right: 0; bottom: 0; z-index: 4; width: 20px; height: 20px; cursor: nwse-resize; touch-action: none; }
+.floorplan-resize-handle::after { content: ""; position: absolute; right: 3px; bottom: 3px; width: 8px; height: 8px; border-right: 2px solid rgba(255,255,255,.95); border-bottom: 2px solid rgba(255,255,255,.95); }
+.floorplan-canvas.floorplan-drawing { cursor: crosshair; }
+.floorplan-draft-rectangle { position: absolute; z-index: 5; border: 2px dashed #263f8f; border-radius: 7px; background: rgba(38,63,143,.12); pointer-events: none; }
+.floorplan-draw-help { margin: 8px 0 0; color: #667085; font-size: .86rem; }
+.floorplan-add-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
 .floorplan-sidebar { display: grid; gap: 18px; min-width: 0; }
 .floorplan-sidebar .card { padding: 18px; }
 .floorplan-group-summary { display: grid; gap: 5px; }
@@ -61,17 +67,14 @@
 .floorplan-locker-status-free { background: #e3f6ea; color: #176238; }
 .floorplan-locker-status-occupied { background: #fde8e6; color: #8b2d27; }
 .floorplan-locker-status-unavailable { background: #fff3d8; color: #805b0d; }
-@media (max-width: 1100px) {
-    .floorplan-layout { grid-template-columns: 1fr; }
-    .floorplan-sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .floorplan-sidebar .danger-zone { grid-column: 1 / -1; }
-}
 @media (max-width: 760px) {
-    .floorplan-page { width: min(100% - 20px, 1500px); margin-top: 18px; }
+    .floorplan-page { width: min(960px, calc(100% - 32px)); margin-top: 28px; }
     .floorplan-filter-form { grid-template-columns: 1fr; }
     .floorplan-toolbar { align-items: flex-start; flex-direction: column; }
     .floorplan-sidebar { grid-template-columns: 1fr; }
     .floorplan-sidebar .danger-zone { grid-column: auto; }
     .floorplan-placement-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .floorplan-placement-form > div, .floorplan-placement-form .button { grid-column: 1 / -1; }
+    .floorplan-add-actions { display: grid; grid-template-columns: 1fr; }
+    .floorplan-add-actions .button { width: 100%; justify-self: stretch; }
 }

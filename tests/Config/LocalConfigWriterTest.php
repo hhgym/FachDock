@@ -119,6 +119,7 @@ final class LocalConfigWriterTest extends TestCase
             [
                 'worker_batch_size' => 75,
                 'max_per_hour' => 120,
+                'immediate_reserve_per_hour' => 15,
                 'retry_minutes' => [10, 30, 120],
                 'processing_timeout_minutes' => 20,
             ],
@@ -143,6 +144,7 @@ final class LocalConfigWriterTest extends TestCase
         self::assertSame('https://fachdock.example.de', $app['app']['base_url']);
         self::assertSame(14, $app['auth']['password_min_length']);
         self::assertSame(5, $app['booking']['recommendation_count']);
+        self::assertSame(15, $app['mail']['immediate_reserve_per_hour']);
         self::assertSame([10, 30, 120], $app['mail']['retry_minutes']);
         self::assertSame('smtp.example.test', $app['smtp']['host']);
         self::assertSame('smtp-existing', $secrets['smtp']['password']);
@@ -156,6 +158,7 @@ final class LocalConfigWriterTest extends TestCase
             [
                 'worker_batch_size' => 50,
                 'max_per_hour' => 50,
+                'immediate_reserve_per_hour' => 10,
                 'retry_minutes' => [15, 60, 360],
                 'processing_timeout_minutes' => 15,
             ],
