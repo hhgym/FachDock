@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace FachDock\Mail;
 
+use DomainException;
 use PDO;
 use Throwable;
 
 final class MailWorker
 {
+    public const IMMEDIATE_PRIORITY_MAX = 0;
+
     public function __construct(
         private readonly PDO $pdo,
         private readonly MailSender $sender,
@@ -16,6 +19,7 @@ final class MailWorker
         private readonly MailRetrySchedule $retrySchedule = new MailRetrySchedule(),
         private readonly int $maxPerHour = 50,
         private readonly int $processingTimeoutMinutes = 15,
+        private readonly int $immediateReservePerHour = 10,
     ) {
     }
 
@@ -24,45 +28,78 @@ final class MailWorker
     {
         $batchSize = max(1, min(500, $batchSize));
         $this->recoverStaleProcessing();
-        $capacity = max(0, max(1, $this->maxPerHour) - $this->sentLastHour());
-        $limit = min($batchSize, $capacity);
+
+        $maxPerHour = max(1, $this->maxPerHour);
+        $sentLastHour = $this->sentLastHour();
+        $immediateSentLastHour = $this->immediateSentLastHour();
         $result = ['processed' => 0, 'sent' => 0, 'deferred' => 0, 'failed' => 0, 'expired' => 0];
 
-        for ($index = 0; $index < $limit; $index++) {
-            $message = $this->claimNext();
+        while ($result['processed'] < $batchSize && $sentLastHour < $maxPerHour) {
+            $message = $this->claimNext(true);
+            if ($message === null) {
+                $reserve = max(0, min($maxPerHour, $this->immediateReservePerHour));
+                $reserveRemaining = max(0, $reserve - $immediateSentLastHour);
+                $standardCapacity = max(0, $maxPerHour - $sentLastHour - $reserveRemaining);
+                if ($standardCapacity < 1) {
+                    break;
+                }
+                $message = $this->claimNext(false);
+            }
             if ($message === null) {
                 break;
             }
+
             $result['processed']++;
-
-            if ($this->shouldSuppress($message)) {
-                $this->finishSuppressed($message['id']);
-                continue;
+            $outcome = $this->process($message);
+            if (array_key_exists($outcome, $result)) {
+                $result[$outcome]++;
             }
-
-            if ($message['expired']) {
-                $this->finishExpired($message['id']);
-                $result['expired']++;
-                continue;
-            }
-
-            try {
-                $this->sender->send(new MailMessage(
-                    $message['recipient_email'],
-                    $message['recipient_name'],
-                    $message['subject'],
-                    $message['html_body'],
-                    $message['text_body'],
-                ));
-                $this->finishSent($message['id']);
-                $result['sent']++;
-            } catch (Throwable $exception) {
-                if ($this->finishFailure($message['id'], $exception->getMessage())) {
-                    $result['deferred']++;
-                } else {
-                    $result['failed']++;
+            if ($outcome === 'sent') {
+                $sentLastHour++;
+                if ($message['priority'] <= self::IMMEDIATE_PRIORITY_MAX) {
+                    $immediateSentLastHour++;
                 }
             }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Tries to deliver one explicitly immediate queue entry in the current request.
+     * The message still counts against the same rolling hourly limit as worker mail.
+     *
+     * @return array{processed: int, sent: int, deferred: int, failed: int, expired: int, rate_limited: int}
+     */
+    public function runImmediate(int $queueId): array
+    {
+        if ($queueId < 1) {
+            throw new DomainException('Die E-Mail-ID ist ungültig.');
+        }
+
+        $this->recoverStaleProcessing();
+        $result = [
+            'processed' => 0,
+            'sent' => 0,
+            'deferred' => 0,
+            'failed' => 0,
+            'expired' => 0,
+            'rate_limited' => 0,
+        ];
+        if ($this->sentLastHour() >= max(1, $this->maxPerHour)) {
+            $result['rate_limited'] = 1;
+            return $result;
+        }
+
+        $message = $this->claimImmediateById($queueId);
+        if ($message === null) {
+            return $result;
+        }
+
+        $result['processed'] = 1;
+        $outcome = $this->process($message);
+        if (array_key_exists($outcome, $result)) {
+            $result[$outcome]++;
         }
 
         return $result;
@@ -72,22 +109,55 @@ final class MailWorker
      * @return array{
      *   id: int, recipient_email: string, recipient_name: string|null, subject: string,
      *   html_body: string, text_body: string, expired: bool, template_key: string,
-     *   relation_type: string|null, relation_id: int|null
+     *   relation_type: string|null, relation_id: int|null, priority: int
      * }|null
      */
-    private function claimNext(): ?array
+    private function claimNext(bool $immediate): ?array
+    {
+        $priorityCondition = $immediate
+            ? 'q.priority <= ' . self::IMMEDIATE_PRIORITY_MAX
+            : 'q.priority > ' . self::IMMEDIATE_PRIORITY_MAX;
+
+        return $this->claim($priorityCondition, []);
+    }
+
+    /**
+     * @return array{
+     *   id: int, recipient_email: string, recipient_name: string|null, subject: string,
+     *   html_body: string, text_body: string, expired: bool, template_key: string,
+     *   relation_type: string|null, relation_id: int|null, priority: int
+     * }|null
+     */
+    private function claimImmediateById(int $queueId): ?array
+    {
+        return $this->claim(
+            'q.id = :id AND q.priority <= ' . self::IMMEDIATE_PRIORITY_MAX,
+            ['id' => $queueId],
+        );
+    }
+
+    /**
+     * @param array<string, int|string> $parameters
+     * @return array{
+     *   id: int, recipient_email: string, recipient_name: string|null, subject: string,
+     *   html_body: string, text_body: string, expired: bool, template_key: string,
+     *   relation_type: string|null, relation_id: int|null, priority: int
+     * }|null
+     */
+    private function claim(string $condition, array $parameters): ?array
     {
         $this->pdo->beginTransaction();
         try {
-            $statement = $this->pdo->query(
+            $statement = $this->pdo->prepare(
                 'SELECT q.id, q.recipient_email, q.recipient_name, q.subject, q.html_body, q.text_body, '
-                . 'q.relation_type, q.relation_id, t.template_key, '
+                . 'q.relation_type, q.relation_id, q.priority, t.template_key, '
                 . '(q.not_after IS NOT NULL AND q.not_after <= CURRENT_TIMESTAMP) AS expired '
                 . 'FROM mail_queue q INNER JOIN mail_templates t ON t.id = q.mail_template_id '
-                . "WHERE q.status = 'waiting' AND q.available_at <= CURRENT_TIMESTAMP "
+                . "WHERE q.status = 'waiting' AND q.available_at <= CURRENT_TIMESTAMP AND {$condition} "
                 . 'ORDER BY q.priority ASC, q.id ASC LIMIT 1 FOR UPDATE SKIP LOCKED'
             );
-            $row = $statement === false ? false : $statement->fetch();
+            $statement->execute($parameters);
+            $row = $statement->fetch();
             if (!is_array($row)) {
                 $this->pdo->commit();
                 return null;
@@ -111,12 +181,48 @@ final class MailWorker
                 'template_key' => (string) $row['template_key'],
                 'relation_type' => $row['relation_type'] === null ? null : (string) $row['relation_type'],
                 'relation_id' => $row['relation_id'] === null ? null : (int) $row['relation_id'],
+                'priority' => (int) $row['priority'],
             ];
         } catch (Throwable $exception) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
             throw $exception;
+        }
+    }
+
+    /**
+     * @param array{
+     *   id: int, recipient_email: string, recipient_name: string|null, subject: string,
+     *   html_body: string, text_body: string, expired: bool, template_key: string,
+     *   relation_type: string|null, relation_id: int|null, priority: int
+     * } $message
+     * @return 'sent'|'deferred'|'failed'|'expired'|'canceled'
+     */
+    private function process(array $message): string
+    {
+        if ($this->shouldSuppress($message)) {
+            $this->finishSuppressed($message['id']);
+            return 'canceled';
+        }
+
+        if ($message['expired']) {
+            $this->finishExpired($message['id']);
+            return 'expired';
+        }
+
+        try {
+            $this->sender->send(new MailMessage(
+                $message['recipient_email'],
+                $message['recipient_name'],
+                $message['subject'],
+                $message['html_body'],
+                $message['text_body'],
+            ));
+            $this->finishSent($message['id']);
+            return 'sent';
+        } catch (Throwable $exception) {
+            return $this->finishFailure($message['id'], $exception->getMessage()) ? 'deferred' : 'failed';
         }
     }
 
@@ -202,6 +308,18 @@ final class MailWorker
         $statement = $this->pdo->query(
             "SELECT COUNT(*) FROM mail_delivery_history WHERE status = 'sent' "
             . 'AND recorded_at >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 HOUR)'
+        );
+        $value = $statement === false ? false : $statement->fetchColumn();
+
+        return $value === false ? 0 : (int) $value;
+    }
+
+    private function immediateSentLastHour(): int
+    {
+        $statement = $this->pdo->query(
+            "SELECT COUNT(*) FROM mail_delivery_history h INNER JOIN mail_queue q ON q.id = h.mail_queue_id "
+            . "WHERE h.status = 'sent' AND h.recorded_at >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 HOUR) "
+            . 'AND q.priority <= ' . self::IMMEDIATE_PRIORITY_MAX
         );
         $value = $statement === false ? false : $statement->fetchColumn();
 
