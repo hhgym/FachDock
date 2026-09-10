@@ -163,5 +163,10 @@ final class LocalConfigWriter
             throw new RuntimeException('Lokale Konfiguration konnte nicht gespeichert werden.');
         }
         @chmod($target, $mode);
+
+        clearstatcache(true, $target);
+        if (function_exists('opcache_invalidate')) {
+            @opcache_invalidate($target, true);
+        }
     }
 }
