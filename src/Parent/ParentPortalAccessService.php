@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace FachDock\Parent;
 
 use DomainException;
-use FachDock\Config\Config;
 use FachDock\Mail\MailQueueService;
 use FachDock\Mail\MailWorker;
-use FachDock\Mail\MailWorkerFactory;
 use PDO;
 use RuntimeException;
 
@@ -139,24 +137,9 @@ final class ParentPortalAccessService
             $issued->expiresAt,
         );
 
-        $this->immediateWorker()?->runImmediate($queueId);
+        $this->immediateMailWorker?->runImmediate($queueId);
 
         return $queueId;
-    }
-
-    private function immediateWorker(): ?MailWorker
-    {
-        if ($this->immediateMailWorker !== null) {
-            return $this->immediateMailWorker;
-        }
-
-        $root = dirname(__DIR__, 2);
-        $config = Config::load($root);
-        if ($config->get('app.installed', false) !== true) {
-            return null;
-        }
-
-        return (new MailWorkerFactory($config))->create($this->pdo, $this->mailQueue);
     }
 
     /** @return array{id: int, email: string, first_name: string|null, last_name: string|null, active: bool, verified: bool}|null */
