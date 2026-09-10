@@ -1,0 +1,41 @@
+.skip-link {
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    z-index: 200;
+    transform: translateY(-160%);
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: #fff;
+    color: #172033;
+    box-shadow: 0 8px 24px rgba(22, 34, 58, .18);
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.skip-link:focus {
+    transform: translateY(0);
+}
+
+:where(a, button, summary, input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid #3854a5;
+    outline-offset: 3px;
+}
+
+:where(button, summary, .nav-link, .button) {
+    min-height: 40px;
+}
+
+.alert-error:focus {
+    outline: 3px solid #3854a5;
+    outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .001ms !important;
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}
