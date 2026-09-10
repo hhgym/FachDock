@@ -157,7 +157,7 @@ final class ParentBookingMapService
                     ++$restrictedCount;
                 }
 
-                $lockers[] = $locker + [
+                $lockers[] = array_replace($locker, [
                     'booking_status' => $bookingStatus,
                     'recommended' => isset($recommended[$lockerId]),
                     'score' => is_array($authoritative) ? (int) $authoritative['score'] : null,
@@ -168,19 +168,19 @@ final class ParentBookingMapService
                         ? (string) $authoritative['long_name']
                         : (string) ($locker['short_name'] ?? ''),
                     'can_select' => $bookingStatus === 'selectable' && !$paymentRunning,
-                ];
+                ]);
             }
 
             $markerStatus = $selectedCount > 0
                 ? 'selected'
                 : ($selectableCount > 0 ? 'free' : ($restrictedCount > 0 ? 'warning' : 'full'));
-            $groups[] = $group + [
+            $groups[] = array_replace($group, [
                 'lockers' => $lockers,
                 'booking_marker_status' => $markerStatus,
                 'selectable_count' => $selectableCount,
                 'restricted_count' => $restrictedCount,
                 'selected_count' => $selectedCount,
-            ];
+            ]);
         }
 
         $plan['groups'] = $groups;
