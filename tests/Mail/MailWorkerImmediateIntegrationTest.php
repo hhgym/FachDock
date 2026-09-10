@@ -51,8 +51,8 @@ final class MailWorkerImmediateIntegrationTest extends TestCase
         $regular = $worker->run(10);
 
         self::assertSame(1, $regular['sent']);
-        self::assertSame('sent', $this->status($firstStandard));
-        self::assertSame('waiting', $this->status($secondStandard));
+        self::assertSame('sent', $this->queueStatus($firstStandard));
+        self::assertSame('waiting', $this->queueStatus($secondStandard));
         self::assertCount(2, $sender->messages);
         self::assertSame(2, $this->sentLastHour());
     }
@@ -76,15 +76,15 @@ final class MailWorkerImmediateIntegrationTest extends TestCase
         $regular = $worker->run(10);
 
         self::assertSame(2, $regular['sent']);
-        self::assertSame('sent', $this->status($first));
-        self::assertSame('sent', $this->status($second));
-        self::assertSame('waiting', $this->status($third));
+        self::assertSame('sent', $this->queueStatus($first));
+        self::assertSame('sent', $this->queueStatus($second));
+        self::assertSame('waiting', $this->queueStatus($third));
 
         $immediateId = $this->enqueue(MailWorker::IMMEDIATE_PRIORITY_MAX, 'magic-link');
         $immediate = $worker->runImmediate($immediateId);
 
         self::assertSame(1, $immediate['sent']);
-        self::assertSame('sent', $this->status($immediateId));
+        self::assertSame('sent', $this->queueStatus($immediateId));
         self::assertSame(3, $this->sentLastHour());
         self::assertCount(3, $sender->messages);
     }
@@ -101,14 +101,14 @@ final class MailWorkerImmediateIntegrationTest extends TestCase
 
         $standardId = $this->enqueue(100, 'fills-limit');
         self::assertSame(1, $worker->run(1)['sent']);
-        self::assertSame('sent', $this->status($standardId));
+        self::assertSame('sent', $this->queueStatus($standardId));
 
         $immediateId = $this->enqueue(MailWorker::IMMEDIATE_PRIORITY_MAX, 'rate-limited');
         $result = $worker->runImmediate($immediateId);
 
         self::assertSame(1, $result['rate_limited']);
         self::assertSame(0, $result['processed']);
-        self::assertSame('waiting', $this->status($immediateId));
+        self::assertSame('waiting', $this->queueStatus($immediateId));
     }
 
     private function enqueue(int $priority, string $suffix): int
@@ -128,7 +128,7 @@ final class MailWorkerImmediateIntegrationTest extends TestCase
         );
     }
 
-    private function status(int $queueId): string
+    private function queueStatus(int $queueId): string
     {
         $statement = $this->pdo->prepare('SELECT status FROM mail_queue WHERE id = :id');
         $statement->execute(['id' => $queueId]);
