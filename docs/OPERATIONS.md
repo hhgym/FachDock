@@ -27,6 +27,8 @@ Zeitkritische Zugangs-E-Mails – derzeit Eltern-Magic-Links und E-Mail-Bestäti
 
 Sofortmails zählen vollständig gegen `mail.max_per_hour`. Damit größere Mengen normaler Nachrichten – etwa Verlängerungserinnerungen – die zeitkritischen Zugangs-E-Mails nicht blockieren, reserviert `mail.immediate_reserve_per_hour` einen Teil der Stundenkapazität. Standardmäßig sind von 50 möglichen Versandplätzen 10 zunächst für Sofortmails reserviert. Bereits innerhalb des rollierenden Fensters versandte Sofortmails verbrauchen diese Reserve, sodass die Kapazität nicht doppelt zurückgehalten wird.
 
+Die manuell ausgelöste SMTP-Testmail unter **Konfiguration → E-Mail & SMTP** dient ausschließlich der Transportprüfung. Sie läuft bewusst nicht über die produktive Queue und wird daher nicht auf `mail.max_per_hour` angerechnet.
+
 Die Retry-Liste `mail.retry_minutes` enthält die Wartezeiten nach aufeinanderfolgenden Fehlversuchen. Bei `[15, 60, 360]` folgt auf den ersten Fehler ein neuer Versuch nach 15 Minuten, auf den zweiten nach 60 und auf den dritten nach 360 Minuten. Scheitert anschließend ein weiterer Versuch, wird die Mail endgültig als `failed` markiert. `mail.processing_timeout_minutes` ist ausschließlich ein Crash-Schutz für Einträge, die nach einem abgebrochenen Worker-Lauf auf `processing` stehen geblieben sind; er ist kein SMTP-Verbindungs-Timeout.
 
 ## Backup
