@@ -21,12 +21,12 @@ final class ReleaseWorkflowTest extends TestCase
         self::assertStringContainsString('--verify-tag', $workflow);
         self::assertStringContainsString('sha256sum -c', $workflow);
         self::assertStringContainsString('unzip -t', $workflow);
-        self::assertStringContainsString("test ! -e \"${ROOT}/config/secrets.local.php\"", $workflow);
+        self::assertStringContainsString('test ! -e "${ROOT}/config/secrets.local.php"', $workflow);
 
         $client = file_get_contents($root . '/src/Update/GitHubReleaseClient.php');
         self::assertIsString($client);
         self::assertStringContainsString('/releases/latest', $client);
         self::assertStringContainsString("preg_match('/^v([0-9]+\\.[0-9]+\\.[0-9]+)$/',", $client);
-        self::assertStringContainsString("($data['prerelease'] ?? false) === true", $client);
+        self::assertStringContainsString('(\u0024data[\'prerelease\'] ?? false) === true', $client);
     }
 }
