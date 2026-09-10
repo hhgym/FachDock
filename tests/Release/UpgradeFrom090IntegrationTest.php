@@ -57,14 +57,14 @@ final class UpgradeFrom090IntegrationTest extends TestCase
             'INSERT INTO app_settings (setting_key, setting_value, updated_at) VALUES (:key, :value, CURRENT_TIMESTAMP)'
         )->execute(['key' => 'release.upgrade.marker', 'value' => 'v0.9.0-data']);
         $pdo->exec(
-            "INSERT INTO staff_users (username, display_name, email, password_hash, role, active, created_at, updated_at) "
+            'INSERT INTO staff_users (username, display_name, email, password_hash, role, active, created_at, updated_at) '
             . "VALUES ('upgrade-admin', 'Upgrade Admin', 'upgrade@example.test', 'hash', 'administrator', 1, NOW(), NOW())"
         );
 
         self::assertSame(
             'NO',
             (string) $pdo->query(
-                "SELECT IS_NULLABLE FROM information_schema.columns WHERE table_schema = DATABASE() "
+                'SELECT IS_NULLABLE FROM information_schema.columns WHERE table_schema = DATABASE() '
                 . "AND table_name = 'privacy_anonymization_runs' AND column_name = 'staff_user_id'"
             )->fetchColumn(),
         );
@@ -90,7 +90,7 @@ final class UpgradeFrom090IntegrationTest extends TestCase
         self::assertSame(
             'YES',
             (string) $pdo->query(
-                "SELECT IS_NULLABLE FROM information_schema.columns WHERE table_schema = DATABASE() "
+                'SELECT IS_NULLABLE FROM information_schema.columns WHERE table_schema = DATABASE() '
                 . "AND table_name = 'privacy_anonymization_runs' AND column_name = 'staff_user_id'"
             )->fetchColumn(),
         );
