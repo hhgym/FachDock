@@ -3,6 +3,7 @@
 
 declare(strict_types=1);
 
+use FachDock\Backup\BackupService;
 use FachDock\Booking\AllocationRuleEvaluator;
 use FachDock\Config\Config;
 use FachDock\Database\ConnectionFactory;
@@ -13,6 +14,7 @@ use FachDock\Mail\MailTemplateRenderer;
 use FachDock\Mail\MailWorker;
 use FachDock\Mail\PhpMailerSmtpSender;
 use FachDock\Migration\MigrationRunner;
+use FachDock\Privacy\DataRetentionService;
 use FachDock\SchoolYear\SchoolYearTransitionService;
 use FachDock\System\WorkerHeartbeatService;
 
@@ -31,13 +33,24 @@ $command = $argv[1] ?? 'help';
 if ($command === 'help' || $command === '--help' || $command === '-h') {
     echo "FachDock CLI\n\n";
     echo "Commands:\n";
-    echo "  migrate           Run all pending database migrations\n";
-    echo "  mail:work         Process one batch of queued emails\n";
-    echo "  school-year:tick  Queue due renewal reminders and perform overdue August rollover\n";
+    echo "  migrate                         Run all pending database migrations\n";
+    echo "  mail:work                       Process one batch of queued emails\n";
+    echo "  school-year:tick                Queue due renewal reminders and perform overdue August rollover\n";
+    echo "  privacy:tick                    Apply configured retention and anonymization rules\n";
+    echo "  backup:create                   Create a full local backup with SHA-256 checksum\n";
+    echo "  backup:restore <file> --force   Restore a backup after creating a safety backup\n";
     exit(0);
 }
 
-if (!in_array($command, ['migrate', 'mail:work', 'school-year:tick'], true)) {
+$allowedCommands = [
+    'migrate',
+    'mail:work',
+    'school-year:tick',
+    'privacy:tick',
+    'backup:create',
+    'backup:restore',
+];
+if (!in_array($command, $allowedCommands, true)) {
     fwrite(STDERR, "Unknown command: {$command}\n");
     exit(2);
 }
@@ -56,6 +69,61 @@ try {
         echo $count === 1
             ? "1 migration applied.\n"
             : sprintf("%d migrations applied.\n", $count);
+        exit(0);
+    }
+
+    if ($command === 'backup:create') {
+        $result = (new BackupService($root, $pdo))->create();
+        printf(
+            "Backup created: %s (%d tables, %d rows, %d files)\nSHA-256: %s\n",
+            $result['file'],
+            $result['tables'],
+            $result['rows'],
+            $result['files'],
+            $result['sha256'],
+        );
+        exit(0);
+    }
+
+    if ($command === 'backup:restore') {
+        $backupFile = $argv[2] ?? '';
+        $force = in_array('--force', $argv, true);
+        if ($backupFile === '' || !$force) {
+            fwrite(STDERR, "Usage: php bin/fachdock backup:restore <file> --force\n");
+            exit(2);
+        }
+        $backup = new BackupService($root, $pdo);
+        $safety = $backup->create();
+        printf("Safety backup created: %s\n", $safety['file']);
+        $result = $backup->restore($backupFile);
+        printf(
+            "Backup restored: %d tables, %d rows, %d files.\n",
+            $result['tables'],
+            $result['rows'],
+            $result['files'],
+        );
+        exit(0);
+    }
+
+    if ($command === 'privacy:tick') {
+        $heartbeat = new WorkerHeartbeatService($pdo, 'privacy');
+        $heartbeat->started();
+        try {
+            $result = (new DataRetentionService($pdo))->anonymize(null);
+            $heartbeat->succeeded($result);
+        } catch (Throwable $exception) {
+            $heartbeat->failed($exception->getMessage());
+            throw $exception;
+        }
+        printf(
+            "Privacy job: %d student(s), %d parent(s), %d mail(s), %d mail history row(s), %d audit row(s), %d incident(s) anonymized.\n",
+            $result['students'],
+            $result['parents'],
+            $result['mails'],
+            $result['mail_history'],
+            $result['audit_entries'],
+            $result['incidents'],
+        );
         exit(0);
     }
 
