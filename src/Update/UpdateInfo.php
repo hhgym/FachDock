@@ -26,6 +26,10 @@ final readonly class UpdateInfo
     public function isAvailableFor(string $currentVersion, ?string $currentDevelopBuildId = null): bool
     {
         if ($this->channel === UpdateChannel::Develop) {
+            if (version_compare($this->version, $currentVersion, '<')) {
+                return false;
+            }
+
             return $this->buildId !== null && $this->buildId !== $currentDevelopBuildId;
         }
 
