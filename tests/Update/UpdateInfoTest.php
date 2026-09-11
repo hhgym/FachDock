@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FachDock\Tests\Update;
 
+use FachDock\Update\UpdateChannel;
 use FachDock\Update\UpdateInfo;
 use PHPUnit\Framework\TestCase;
 
@@ -38,5 +39,26 @@ final class UpdateInfoTest extends TestCase
 
         self::assertTrue($stable->isNewerThan('1.0.0-rc.1'));
         self::assertFalse($stable->isNewerThan('1.0.0'));
+    }
+
+    public function testDevelopBuildUsesCommitIdentity(): void
+    {
+        $buildId = '1234567890abcdef1234567890abcdef12345678';
+        $develop = new UpdateInfo(
+            '1.0.0-rc.2',
+            'develop-1234567890ab',
+            'https://github.com/hhgym/FachDock/raw/refs/heads/develop-build/FachDock-develop.zip',
+            'https://github.com/hhgym/FachDock/raw/refs/heads/develop-build/FachDock-develop.zip.sha256',
+            'https://github.com/hhgym/FachDock/commit/' . $buildId,
+            null,
+            UpdateChannel::Develop,
+            $buildId,
+        );
+
+        self::assertTrue($develop->isAvailableFor('1.0.0-rc.2'));
+        self::assertFalse($develop->isAvailableFor('1.0.0-rc.2', $buildId));
+        self::assertFalse($develop->isAvailableFor('1.0.0'));
+        self::assertSame($buildId, $develop->identity());
+        self::assertSame('1.0.0-rc.2 · Develop 1234567890ab', $develop->displayVersion());
     }
 }

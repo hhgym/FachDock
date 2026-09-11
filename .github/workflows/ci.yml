@@ -81,3 +81,98 @@ jobs:
 
       - name: Code style
         run: composer cs-check
+
+  publish-develop-update:
+    needs: quality
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: fachdock-develop-update
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout verified develop commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          extensions: curl, zip
+          tools: composer:v2
+
+      - name: Install production dependencies
+        run: composer install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
+
+      - name: Build rolling develop package
+        shell: bash
+        run: |
+          VERSION="$(php -r '$config = require "config/app.php"; echo $config["app"]["version"] ?? "";')"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-rc\.[1-9][0-9]*)?$ ]]; then
+            echo "config/app.php contains an unsupported version: ${VERSION}"
+            exit 1
+          fi
+
+          PACKAGE="FachDock-${VERSION}"
+          mkdir -p "dist/${PACKAGE}"
+          rsync -a ./ "dist/${PACKAGE}/" \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='dist/' \
+            --exclude='tests/' \
+            --exclude='storage/*' \
+            --exclude='config/app.local.php' \
+            --exclude='config/secrets.local.php' \
+            --exclude='.php-cs-fixer.dist.php' \
+            --exclude='phpstan.neon.dist' \
+            --exclude='phpunit.xml.dist'
+
+          curl -fsSL \
+            'https://raw.githubusercontent.com/spdx/license-list-data/3ac5a9c241d97f95b22a5e366c9c841404a35639/text/AGPL-3.0-only.txt' \
+            -o "dist/${PACKAGE}/LICENSE"
+
+          mkdir -p "dist/${PACKAGE}/storage"
+          touch "dist/${PACKAGE}/storage/.gitkeep"
+          cd dist
+          zip -qr FachDock-develop.zip "${PACKAGE}"
+          sha256sum FachDock-develop.zip > FachDock-develop.zip.sha256
+
+          BUILT_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          PREFIX="https://github.com/${GITHUB_REPOSITORY}/raw/refs/heads/develop-build"
+          php -r '
+            $manifest = [
+              "version" => $argv[1],
+              "build_id" => $argv[2],
+              "built_at" => $argv[3],
+              "zip_url" => $argv[4] . "/FachDock-develop.zip",
+              "checksum_url" => $argv[4] . "/FachDock-develop.zip.sha256",
+            ];
+            file_put_contents("manifest.json", json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . PHP_EOL);
+          ' "$VERSION" "$GITHUB_SHA" "$BUILT_AT" "$PREFIX"
+
+          sha256sum -c FachDock-develop.zip.sha256
+          unzip -t FachDock-develop.zip
+          php -r '$data = json_decode(file_get_contents("manifest.json"), true, 512, JSON_THROW_ON_ERROR); if (($data["build_id"] ?? "") !== getenv("GITHUB_SHA")) { exit(1); }'
+
+      - name: Publish rolling develop build branch
+        shell: bash
+        run: |
+          PUBLISH_DIR="$(mktemp -d)"
+          cp dist/FachDock-develop.zip "$PUBLISH_DIR/"
+          cp dist/FachDock-develop.zip.sha256 "$PUBLISH_DIR/"
+          cp dist/manifest.json "$PUBLISH_DIR/"
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout --orphan develop-build-publish
+          git rm -rf . >/dev/null 2>&1 || true
+          git clean -fdx
+          cp "$PUBLISH_DIR/"* .
+          git add FachDock-develop.zip FachDock-develop.zip.sha256 manifest.json
+          git commit -m "Develop build ${GITHUB_SHA}"
+          git push --force origin HEAD:develop-build
