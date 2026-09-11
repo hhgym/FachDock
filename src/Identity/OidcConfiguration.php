@@ -105,11 +105,8 @@ final class OidcConfiguration
         return is_numeric($value) ? min(10080, max(15, (int) $value)) : 480;
     }
 
-    public function assertReady(): void
+    public function assertConfigured(): void
     {
-        if (!$this->enabled()) {
-            throw new RuntimeException('Die IServ-Anmeldung ist nicht aktiviert.');
-        }
         $issuer = $this->issuer();
         if (!$this->validHttpsUrl($issuer)) {
             throw new RuntimeException('Für IServ muss eine gültige HTTPS-Issuer-URL konfiguriert sein.');
@@ -123,6 +120,14 @@ final class OidcConfiguration
         if (!$this->validHttpsUrl($this->callbackUrl())) {
             throw new RuntimeException('Die öffentliche FachDock-Basis-URL muss für OIDC als HTTPS-URL konfiguriert sein.');
         }
+    }
+
+    public function assertReady(): void
+    {
+        if (!$this->enabled()) {
+            throw new RuntimeException('Die IServ-Anmeldung ist nicht aktiviert.');
+        }
+        $this->assertConfigured();
     }
 
     public function ready(): bool
