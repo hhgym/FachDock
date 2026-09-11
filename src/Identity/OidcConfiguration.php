@@ -44,12 +44,15 @@ final class OidcConfiguration
     {
         $value = trim((string) $this->config->get(
             'oidc.scopes',
-            'openid profile email iserv:uuid iserv:groups iserv:roles',
+            'openid profile email iserv:uuid iserv:groups iserv:roles iserv:untis',
         ));
 
         return $value !== '' ? $value : 'openid profile email';
     }
 
+    /**
+     * Legacy compatibility for installations that still contain student_auto_match.
+     */
     public function studentAutoMatch(): string
     {
         $value = (string) $this->config->get('oidc.student_auto_match', 'email');
@@ -57,19 +60,42 @@ final class OidcConfiguration
         return in_array($value, ['none', 'email', 'username_to_matrikelnummer'], true) ? $value : 'email';
     }
 
+    public function studentMatchField(): string
+    {
+        $configured = $this->config->get('oidc.student_match_field');
+        if (is_string($configured) && in_array($configured, ['none', 'email', 'matrikelnummer'], true)) {
+            return $configured;
+        }
+
+        return match ($this->studentAutoMatch()) {
+            'none' => 'none',
+            'username_to_matrikelnummer' => 'matrikelnummer',
+            default => 'email',
+        };
+    }
+
+    public function studentMatchClaim(): string
+    {
+        $configured = trim((string) $this->config->get('oidc.student_match_claim', ''));
+        if ($configured !== '' && preg_match('/^[A-Za-z0-9_.:-]{1,128}$/', $configured) === 1) {
+            return $configured;
+        }
+
+        return $this->studentAutoMatch() === 'username_to_matrikelnummer'
+            ? 'preferred_username'
+            : 'email';
+    }
+
+    /** @return list<string> */
+    public function studentRoleNames(): array
+    {
+        return $this->roleNames((string) $this->config->get('oidc.student_role_names', ''));
+    }
+
     /** @return list<string> */
     public function teacherRoleNames(): array
     {
-        $raw = (string) $this->config->get('oidc.teacher_role_names', 'Lehrer,Lehrkräfte');
-        $result = [];
-        foreach (preg_split('/[,;\n]+/', $raw) ?: [] as $role) {
-            $role = mb_strtolower(trim($role));
-            if ($role !== '' && !in_array($role, $result, true)) {
-                $result[] = $role;
-            }
-        }
-
-        return $result;
+        return $this->roleNames((string) $this->config->get('oidc.teacher_role_names', 'Lehrer,Lehrkräfte'));
     }
 
     public function sessionLifetimeMinutes(): int
@@ -108,6 +134,20 @@ final class OidcConfiguration
         } catch (RuntimeException) {
             return false;
         }
+    }
+
+    /** @return list<string> */
+    private function roleNames(string $raw): array
+    {
+        $result = [];
+        foreach (preg_split('/[,;\n]+/', $raw) ?: [] as $role) {
+            $role = mb_strtolower(trim($role));
+            if ($role !== '' && !in_array($role, $result, true)) {
+                $result[] = $role;
+            }
+        }
+
+        return $result;
     }
 
     private function validHttpsUrl(string $url): bool
