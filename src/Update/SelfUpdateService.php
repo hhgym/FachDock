@@ -19,13 +19,14 @@ final class SelfUpdateService
         private readonly string $root,
         private readonly PDO $pdo,
         private readonly GitHubReleaseClient $client,
-        private readonly DevelopBuildState $developBuildState,
+        private readonly ?DevelopBuildState $developBuildState = null,
     ) {
     }
 
     public function install(UpdateInfo $update, string $currentVersion, int $staffUserId): void
     {
-        if (!$update->isAvailableFor($currentVersion, $this->developBuildState->currentBuildId())) {
+        $developBuildState = $this->developBuildState();
+        if (!$update->isAvailableFor($currentVersion, $developBuildState->currentBuildId())) {
             throw new RuntimeException('Die ausgewählte Version ist nicht neuer als der installierte Stand.');
         }
         if (!is_writable($this->root)) {
@@ -51,7 +52,7 @@ final class SelfUpdateService
 
         $packageRoot = $extractDir . '/FachDock-' . $update->version;
         if (!is_dir($packageRoot) || !is_file($packageRoot . '/public/index.php')) {
-            throw new RuntimeException('Das Release-Paket besitzt nicht die erwartete FachDock-Struktur.');
+            throw new RuntimeException('Das Update-Paket besitzt nicht die erwartete FachDock-Struktur.');
         }
 
         $fullBackup = (new BackupService($this->root, $this->pdo))->create();
@@ -94,9 +95,9 @@ final class SelfUpdateService
             );
 
             if ($update->channel === UpdateChannel::Develop) {
-                $this->developBuildState->markInstalled($update);
+                $developBuildState->markInstalled($update);
             } else {
-                $this->developBuildState->clear();
+                $developBuildState->clear();
             }
 
             @unlink($maintenanceFile);
@@ -183,11 +184,11 @@ final class SelfUpdateService
     private function verifyChecksum(string $zipFile, string $checksumText): void
     {
         if (preg_match('/\b([a-fA-F0-9]{64})\b/', $checksumText, $matches) !== 1) {
-            throw new RuntimeException('Die SHA-256-Prüfsumme des Releases ist ungültig.');
+            throw new RuntimeException('Die SHA-256-Prüfsumme des Update-Pakets ist ungültig.');
         }
         $actual = hash_file('sha256', $zipFile);
         if (!is_string($actual) || !hash_equals(strtolower($matches[1]), strtolower($actual))) {
-            throw new RuntimeException('Die SHA-256-Prüfung des Release-Pakets ist fehlgeschlagen.');
+            throw new RuntimeException('Die SHA-256-Prüfung des Update-Pakets ist fehlgeschlagen.');
         }
     }
 
@@ -195,23 +196,23 @@ final class SelfUpdateService
     {
         $zip = new ZipArchive();
         if ($zip->open($zipFile) !== true) {
-            throw new RuntimeException('Das Release-ZIP konnte nicht geöffnet werden.');
+            throw new RuntimeException('Das Update-ZIP konnte nicht geöffnet werden.');
         }
 
         try {
             for ($index = 0; $index < $zip->numFiles; $index++) {
                 $name = $zip->getNameIndex($index);
                 if (!is_string($name) || $name === '' || str_contains($name, "\0")) {
-                    throw new RuntimeException('Das Release-ZIP enthält einen ungültigen Dateinamen.');
+                    throw new RuntimeException('Das Update-ZIP enthält einen ungültigen Dateinamen.');
                 }
                 $normalized = str_replace('\\', '/', $name);
                 if (str_starts_with($normalized, '/') || preg_match('#(^|/)\.\.(/|$)#', $normalized) === 1) {
-                    throw new RuntimeException('Das Release-ZIP enthält einen unsicheren Dateipfad.');
+                    throw new RuntimeException('Das Update-ZIP enthält einen unsicheren Dateipfad.');
                 }
             }
             $this->ensureDirectory($target);
             if (!$zip->extractTo($target)) {
-                throw new RuntimeException('Das Release-ZIP konnte nicht entpackt werden.');
+                throw new RuntimeException('Das Update-ZIP konnte nicht entpackt werden.');
             }
         } finally {
             $zip->close();
@@ -248,6 +249,11 @@ final class SelfUpdateService
                 'backup' => $backupFile,
             ], JSON_THROW_ON_ERROR),
         ]);
+    }
+
+    private function developBuildState(): DevelopBuildState
+    {
+        return $this->developBuildState ?? new DevelopBuildState($this->root);
     }
 
     private function ensureDirectory(string $directory): void
