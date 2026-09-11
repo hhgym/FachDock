@@ -62,7 +62,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
         </nav>
         <p><?= $e($selectedChannel->description()) ?></p>
         <?php if ($selectedChannel === UpdateChannel::Develop): ?>
-            <div class="alert alert-warning">
+            <div class="alert alert-neutral">
                 Develop enthält den letzten Build des <code>develop</code>-Branches, dessen CI vollständig erfolgreich war.
                 Dieser Kanal ist ausschließlich für Tests vorgesehen.
             </div>
