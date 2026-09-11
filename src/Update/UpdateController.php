@@ -7,6 +7,7 @@ namespace FachDock\Update;
 use FachDock\Auth\PasswordHasher;
 use FachDock\Auth\StaffSessionService;
 use FachDock\Auth\StaffUserRepository;
+use FachDock\Config\Config;
 use FachDock\Http\Request;
 use FachDock\Http\Response;
 use FachDock\Http\Router;
@@ -17,20 +18,31 @@ use Throwable;
 
 final class UpdateController
 {
+    private readonly UpdateChannel $defaultChannel;
+    private readonly bool $allowReleaseCandidates;
+    private readonly bool $allowDevelop;
+    private readonly UpdateDiscoveryService $discovery;
+    private readonly DevelopBuildState $developBuildState;
+
     public function __construct(
         private readonly string $currentVersion,
-        private readonly UpdateChannel $defaultChannel,
-        private readonly bool $allowReleaseCandidates,
-        private readonly bool $allowDevelop,
-        private readonly UpdateDiscoveryService $discovery,
+        GitHubReleaseClient $client,
         private readonly SelfUpdateService $updater,
-        private readonly DevelopBuildState $developBuildState,
         private readonly StaffUserRepository $users,
         private readonly PasswordHasher $passwords,
         private readonly StaffSessionService $sessions,
         private readonly ViewRenderer $views,
         private readonly Csrf $csrf,
     ) {
+        $root = dirname(__DIR__, 2);
+        $config = Config::load($root);
+        $this->defaultChannel = UpdateChannel::tryFrom(
+            (string) $config->get('updates.default_channel', UpdateChannel::Stable->value),
+        ) ?? UpdateChannel::Stable;
+        $this->allowReleaseCandidates = $config->get('updates.allow_rc', false) === true;
+        $this->allowDevelop = $config->get('updates.allow_develop', false) === true;
+        $this->discovery = new UpdateDiscoveryService($client);
+        $this->developBuildState = new DevelopBuildState($root);
     }
 
     public function register(Router $router): void
