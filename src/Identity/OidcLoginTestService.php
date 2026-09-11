@@ -22,6 +22,20 @@ final class OidcLoginTestService
         return is_array($_SESSION[self::FLOW_KEY] ?? null);
     }
 
+    /** @return array{issuer:string,authorization_endpoint:string,token_endpoint:string,userinfo_endpoint:string} */
+    public function connectionCheck(): array
+    {
+        $this->configuration->assertConfigured();
+        $metadata = $this->metadata();
+
+        return [
+            'issuer' => (string) $metadata['issuer'],
+            'authorization_endpoint' => (string) $metadata['authorization_endpoint'],
+            'token_endpoint' => (string) $metadata['token_endpoint'],
+            'userinfo_endpoint' => (string) $metadata['userinfo_endpoint'],
+        ];
+    }
+
     public function begin(): string
     {
         $this->configuration->assertConfigured();
