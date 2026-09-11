@@ -6,6 +6,7 @@ use FachDock\Application;
 use FachDock\Booking\BookingRulesFrontController;
 use FachDock\Booking\ParentBookingMapFrontController;
 use FachDock\Identity\IdentityFrontController;
+use FachDock\Identity\OidcAdminFrontController;
 use FachDock\Operations\OperationsFrontController;
 use FachDock\Platform\PlatformFrontController;
 
@@ -20,6 +21,12 @@ if (!is_file($autoload)) {
 }
 
 require $autoload;
+
+$oidcAdminResponse = OidcAdminFrontController::handle($root);
+if ($oidcAdminResponse !== null) {
+    $oidcAdminResponse->send();
+    exit;
+}
 
 $identityResponse = IdentityFrontController::handle($root);
 if ($identityResponse !== null) {

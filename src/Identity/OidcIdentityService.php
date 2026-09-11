@@ -208,7 +208,7 @@ final class OidcIdentityService
         $type = is_array($existing) ? (string) $existing['identity_type'] : 'pending';
         $studentId = is_array($existing) && $existing['student_id'] !== null ? (int) $existing['student_id'] : null;
         if ($assignmentSource === 'automatic') {
-            [$type, $studentId] = $this->classify($userinfo, $email, $account);
+            [$type, $studentId] = $this->classify($userinfo);
         }
 
         if (is_array($existing)) {
@@ -253,28 +253,44 @@ final class OidcIdentityService
      * @param array<string, mixed> $userinfo
      * @return array{0:string,1:?int}
      */
-    private function classify(array $userinfo, ?string $email, ?string $account): array
+    private function classify(array $userinfo): array
     {
-        $studentId = null;
-        if ($this->configuration->studentAutoMatch() === 'email' && $email !== null) {
-            $studentId = $this->uniqueStudentId('LOWER(email) = LOWER(:value)', $email);
-        } elseif ($this->configuration->studentAutoMatch() === 'username_to_matrikelnummer' && $account !== null) {
-            $studentId = $this->uniqueStudentId('matrikelnummer = :value', $account);
+        $studentRoles = $this->configuration->studentRoleNames();
+        $studentRoleMatches = $studentRoles === [] || $this->hasRole($userinfo, $studentRoles);
+        if ($studentRoleMatches) {
+            $claim = $this->nullableClaim($userinfo, $this->configuration->studentMatchClaim(), 255);
+            $studentId = $this->matchStudent($this->configuration->studentMatchField(), $claim);
+            if ($studentId !== null) {
+                return ['student', $studentId];
+            }
         }
-        if ($studentId !== null) {
-            return ['student', $studentId];
-        }
-        if ($this->hasTeacherRole($userinfo)) {
+
+        if ($this->hasRole($userinfo, $this->configuration->teacherRoleNames())) {
             return ['teacher', null];
         }
 
         return ['pending', null];
     }
 
-    /** @param array<string, mixed> $userinfo */
-    private function hasTeacherRole(array $userinfo): bool
+    private function matchStudent(string $field, ?string $value): ?int
     {
-        $accepted = $this->configuration->teacherRoleNames();
+        if ($value === null || $field === 'none') {
+            return null;
+        }
+
+        return match ($field) {
+            'email' => $this->uniqueStudentId('LOWER(email) = LOWER(:value)', $value),
+            'matrikelnummer' => $this->uniqueStudentId('matrikelnummer = :value', $value),
+            default => null,
+        };
+    }
+
+    /**
+     * @param array<string, mixed> $userinfo
+     * @param list<string> $accepted
+     */
+    private function hasRole(array $userinfo, array $accepted): bool
+    {
         if ($accepted === []) {
             return false;
         }
@@ -283,10 +299,13 @@ final class OidcIdentityService
             return false;
         }
         foreach ($roles as $role) {
+            if (is_string($role) && in_array(mb_strtolower(trim($role)), $accepted, true)) {
+                return true;
+            }
             if (!is_array($role)) {
                 continue;
             }
-            $name = $role['displayName'] ?? null;
+            $name = $role['displayName'] ?? $role['name'] ?? null;
             if (is_string($name) && in_array(mb_strtolower(trim($name)), $accepted, true)) {
                 return true;
             }
