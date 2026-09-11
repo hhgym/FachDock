@@ -59,6 +59,11 @@ return [
         'from_email' => '',
         'from_name' => 'FachDock',
     ],
+    'updates' => [
+        'default_channel' => 'stable',
+        'allow_rc' => false,
+        'allow_develop' => false,
+    ],
     'database' => [
         'driver' => 'mysql',
         'host' => '127.0.0.1',
