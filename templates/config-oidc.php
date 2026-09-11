@@ -11,7 +11,27 @@ use FachDock\Auth\AuthenticatedStaff;
 /** @var list<string> $errors */
 /** @var bool $saved */
 /** @var array<string, string>|null $testResult */
+/** @var array<string, mixed>|null $loginTestResult */
+$loginTestResult = $loginTestResult ?? null;
 $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+$claimValue = static function (mixed $value): string {
+    if (is_string($value)) {
+        return $value;
+    }
+    if ($value === null) {
+        return 'null';
+    }
+    if (is_bool($value)) {
+        return $value ? 'true' : 'false';
+    }
+    if (is_int($value) || is_float($value)) {
+        return (string) $value;
+    }
+
+    $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+
+    return is_string($encoded) ? $encoded : '[nicht darstellbar]';
+};
 ?>
 <!doctype html>
 <html lang="de">
@@ -44,7 +64,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
 
     <form class="card stack" method="post" action="/admin/config/oidc">
         <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
-        <label><input type="checkbox" name="enabled" value="1" <?= !empty($settings['enabled']) ? 'checked' : '' ?>> IServ-Anmeldung aktivieren</label>
+        <label><input type="checkbox" name="enabled" value="1" <?= !empty($settings['enabled']) ? 'checked' : '' ?>> IServ-Anmeldung produktiv aktivieren</label>
         <div class="grid">
             <label>Issuer / IServ-Adresse
                 <input name="issuer" type="url" value="<?= $e((string) $settings['issuer']) ?>" placeholder="https://iserv.example.schule">
@@ -62,15 +82,34 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
         </div>
         <label>Scopes
             <input name="scopes" value="<?= $e((string) $settings['scopes']) ?>">
-            <small>Empfohlen: openid profile email iserv:uuid iserv:groups iserv:roles</small>
+            <small>Grundlage: <code>openid profile email iserv:uuid iserv:groups iserv:roles</code>. Für den IServ-Claim <code>untis_username</code> zusätzlich <code>iserv:untis</code> anfordern und im IServ-Client freigeben.</small>
         </label>
-        <label>Automatische Schülerzuordnung
-            <select name="student_auto_match">
-                <option value="none" <?= $settings['student_auto_match'] === 'none' ? 'selected' : '' ?>>keine</option>
-                <option value="email" <?= $settings['student_auto_match'] === 'email' ? 'selected' : '' ?>>IServ-E-Mail = Schüler-E-Mail</option>
-                <option value="username_to_matrikelnummer" <?= $settings['student_auto_match'] === 'username_to_matrikelnummer' ? 'selected' : '' ?>>IServ-Benutzername = Matrikelnummer</option>
-            </select>
-        </label>
+
+        <div class="card stack">
+            <div>
+                <span class="eyebrow">Automatische Zuordnung</span>
+                <h2>Schüler</h2>
+            </div>
+            <label>IServ-Rollen für Schüler
+                <input name="student_role_names" value="<?= $e((string) ($settings['student_role_names'] ?? '')) ?>" placeholder="z. B. Schüler">
+                <small>Kommagetrennte Werte aus <code>iserv:roles</code>. Ist das Feld leer, wird die Rolle nicht als zusätzliche Bedingung geprüft.</small>
+            </label>
+            <div class="grid">
+                <label>OIDC-Claim zur Zuordnung
+                    <input name="student_match_claim" value="<?= $e((string) ($settings['student_match_claim'] ?? 'email')) ?>" placeholder="z. B. untis_username">
+                    <small>Beispiel: <code>untis_username</code>. Welche Claims IServ tatsächlich liefert, zeigt die Testanmeldung unten.</small>
+                </label>
+                <label>FachDock-Zielfeld
+                    <select name="student_match_field">
+                        <option value="none" <?= ($settings['student_match_field'] ?? 'email') === 'none' ? 'selected' : '' ?>>keine automatische Zuordnung</option>
+                        <option value="email" <?= ($settings['student_match_field'] ?? 'email') === 'email' ? 'selected' : '' ?>>Schüler-E-Mail</option>
+                        <option value="matrikelnummer" <?= ($settings['student_match_field'] ?? 'email') === 'matrikelnummer' ? 'selected' : '' ?>>Matrikelnummer</option>
+                    </select>
+                    <small>Für IServ/Untis kann z. B. <code>untis_username → Matrikelnummer</code> verwendet werden. Bitte über die Testanmeldung prüfen, ob der übertragene Wert tatsächlich der Matrikelnummer entspricht.</small>
+                </label>
+            </div>
+        </div>
+
         <label>IServ-Rollen für Lehrkräfte
             <input name="teacher_role_names" value="<?= $e((string) $settings['teacher_role_names']) ?>" placeholder="Lehrer, Lehrkräfte">
             <small>Kommagetrennte Werte aus dem Claim <code>iserv:roles</code>.</small>
@@ -85,17 +124,51 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
         </div>
     </form>
 
-    <form class="card stack" method="post" action="/admin/config/oidc/test">
-        <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
-        <h2>Verbindung testen</h2>
-        <p>Prüft Discovery-Dokument, Issuer und die sicherheitsrelevanten HTTPS-Endpunkte der aktuell gespeicherten Konfiguration. Es wird dabei keine Benutzeranmeldung gestartet.</p>
-        <button class="button button-secondary" type="submit">OIDC-Discovery testen</button>
-    </form>
+    <section class="grid">
+        <form class="card stack" method="post" action="/admin/config/oidc/test">
+            <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+            <h2>Verbindung testen</h2>
+            <p>Prüft Discovery-Dokument, Issuer und die sicherheitsrelevanten HTTPS-Endpunkte der gespeicherten Konfiguration. Die produktive IServ-Anmeldung muss dafür noch nicht aktiviert sein.</p>
+            <button class="button button-secondary" type="submit">OIDC-Discovery testen</button>
+        </form>
+
+        <form class="card stack" method="post" action="/admin/config/oidc/login-test">
+            <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+            <h2>Anmeldung testen</h2>
+            <p>Startet eine echte OIDC-Anmeldung mit den gespeicherten Scopes. Danach zeigt FachDock die vom UserInfo-Endpunkt übertragenen Claims an.</p>
+            <p class="form-hint">Der Test legt keine OIDC-Identität an, erzeugt keine FachDock-Benutzersitzung und verändert keine Schülerzuordnung.</p>
+            <button class="button button-secondary" type="submit">Testanmeldung mit IServ starten</button>
+        </form>
+    </section>
+
+    <?php if ($loginTestResult !== null): ?>
+        <section class="card stack">
+            <div>
+                <span class="eyebrow">Testanmeldung erfolgreich</span>
+                <h2>Von IServ übertragene Daten</h2>
+                <p class="form-hint">Angezeigt werden die Claims, die der konfigurierte UserInfo-Endpunkt für diese Testanmeldung tatsächlich zurückgegeben hat. Access- und ID-Tokens werden nicht angezeigt oder gespeichert.</p>
+            </div>
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead><tr><th>Claim</th><th>Übertragener Wert</th></tr></thead>
+                    <tbody>
+                    <?php foreach ($loginTestResult as $claim => $value): ?>
+                        <tr>
+                            <td><code><?= $e((string) $claim) ?></code></td>
+                            <td><code><?= nl2br($e($claimValue($value))) ?></code></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php if ($loginTestResult === []): ?><tr><td colspan="2">IServ hat keine Claims zurückgegeben.</td></tr><?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    <?php endif; ?>
 
     <section class="card stack">
         <h2>Bekannte IServ-Identitäten</h2>
         <p class="form-hint">Automatische Zuordnungen werden bei jeder IServ-Anmeldung erneut geprüft. Manuelle Zuordnungen bleiben bestehen, bis wieder auf Automatik umgestellt wird.</p>
-        <div class="table-scroll"><table>
+        <div class="table-scroll"><table class="data-table">
             <thead><tr><th>IServ-Konto</th><th>Typ</th><th>Zuordnung</th><th>Letzte Anmeldung</th><th>Aktionen</th></tr></thead>
             <tbody>
             <?php foreach ($identities as $identity): ?>
@@ -145,6 +218,11 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
             <?php if ($identities === []): ?><tr><td colspan="5">Noch keine IServ-Anmeldung protokolliert.</td></tr><?php endif; ?>
             </tbody>
         </table></div>
+    </section>
+
+    <section class="card stack">
+        <h2>Spätere Erweiterung: Eltern</h2>
+        <p>Eine OIDC-Anmeldung für Eltern ist bewusst noch nicht Bestandteil der aktuellen Umsetzung. Sie ist als mögliche Weiterentwicklung vorgemerkt; bis dahin bleibt der bestehende Magic-Link-Zugang für Eltern unverändert.</p>
     </section>
 </main>
 </body>
