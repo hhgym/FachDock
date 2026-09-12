@@ -149,7 +149,10 @@ final class Application
         );
         $audit = new AuditLogger($pdo);
         $locations = new LocationCatalogService($pdo);
-        $schoolYears = new SchoolYearService($pdo);
+        $schoolYears = new SchoolYearService(
+            $pdo,
+            max(0, (int) $this->config->get('booking.default_annual_fee_cents', 0)),
+        );
         $stripeState = StripeConfigurationState::fromConfig($this->config);
 
         (new LocationAdminController(
