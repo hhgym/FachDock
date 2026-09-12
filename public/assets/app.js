@@ -59,6 +59,149 @@
         });
     });
 
+    const enhanceLockerSelect = (select, index) => {
+        if (!(select instanceof HTMLSelectElement) || select.dataset.lockerGridEnhanced === '1') {
+            return;
+        }
+        const form = select.closest('form');
+        if (form instanceof HTMLFormElement && form.querySelector('.locker-grid-stack') !== null) {
+            select.dataset.lockerGridEnhanced = '1';
+            return;
+        }
+
+        const entries = [];
+        Array.from(select.options).forEach((option) => {
+            if (option.value === '') {
+                return;
+            }
+            const label = (option.textContent || '').trim();
+            const shortName = label.split('·')[0].trim();
+            const match = shortName.match(/^(.+)-([0-9]+)-([0-9]+)$/);
+            if (match === null) {
+                return;
+            }
+            entries.push({
+                id: option.value,
+                shortName,
+                group: match[1],
+                corpus: Number(match[2]),
+                position: Number(match[3]),
+                description: label,
+            });
+        });
+        if (entries.length < 2) {
+            return;
+        }
+
+        if (select.id === '') {
+            select.id = `locker-select-${index + 1}`;
+        }
+        const groups = new Map();
+        entries.forEach((entry) => {
+            if (!groups.has(entry.group)) {
+                groups.set(entry.group, new Map());
+            }
+            const corpuses = groups.get(entry.group);
+            if (!corpuses.has(entry.corpus)) {
+                corpuses.set(entry.corpus, new Map());
+            }
+            corpuses.get(entry.corpus).set(entry.position, entry);
+        });
+
+        const details = document.createElement('details');
+        details.className = 'entity-row';
+        const summary = document.createElement('summary');
+        summary.textContent = 'Schließfach im Raster wählen';
+        details.append(summary);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'compact-form locker-grid-stack';
+        details.append(wrapper);
+
+        groups.forEach((corpuses, groupCode) => {
+            const section = document.createElement('section');
+            section.className = 'locker-grid-group';
+            const heading = document.createElement('header');
+            const headingText = document.createElement('div');
+            const eyebrow = document.createElement('span');
+            eyebrow.className = 'eyebrow';
+            eyebrow.textContent = 'Schrankgruppe';
+            const title = document.createElement('h3');
+            title.textContent = groupCode;
+            headingText.append(eyebrow, title);
+            heading.append(headingText);
+            section.append(heading);
+
+            const scroll = document.createElement('div');
+            scroll.className = 'locker-grid-scroll';
+            const table = document.createElement('table');
+            table.className = 'locker-grid-table';
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            const positionHeading = document.createElement('th');
+            positionHeading.textContent = 'Fach';
+            headerRow.append(positionHeading);
+            const corpusNumbers = Array.from(corpuses.keys()).sort((a, b) => a - b);
+            corpusNumbers.forEach((corpus) => {
+                const th = document.createElement('th');
+                th.textContent = `Korpus ${String(corpus).padStart(2, '0')}`;
+                headerRow.append(th);
+            });
+            thead.append(headerRow);
+            table.append(thead);
+
+            const maxPosition = Math.max(...entries.filter((entry) => entry.group === groupCode).map((entry) => entry.position));
+            const tbody = document.createElement('tbody');
+            for (let position = 1; position <= maxPosition; position += 1) {
+                const row = document.createElement('tr');
+                const rowHeading = document.createElement('th');
+                rowHeading.textContent = `Position ${position}`;
+                row.append(rowHeading);
+                corpusNumbers.forEach((corpus) => {
+                    const td = document.createElement('td');
+                    const entry = corpuses.get(corpus).get(position);
+                    if (entry === undefined) {
+                        const empty = document.createElement('span');
+                        empty.className = 'locker-grid-empty';
+                        empty.textContent = '–';
+                        td.append(empty);
+                    } else {
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.className = 'locker-grid-cell';
+                        button.dataset.lockerGridChoice = entry.id;
+                        button.dataset.lockerGridTarget = select.id;
+                        button.title = entry.description;
+                        const strong = document.createElement('strong');
+                        strong.textContent = entry.shortName;
+                        const small = document.createElement('small');
+                        small.textContent = select.value === entry.id ? 'ausgewählt' : 'wählen';
+                        if (select.value === entry.id) {
+                            button.classList.add('is-selected');
+                        }
+                        button.append(strong, small);
+                        td.append(button);
+                    }
+                    row.append(td);
+                });
+                tbody.append(row);
+            }
+            table.append(tbody);
+            scroll.append(table);
+            section.append(scroll);
+            wrapper.append(section);
+        });
+
+        const label = select.closest('label');
+        if (label !== null) {
+            label.insertAdjacentElement('afterend', details);
+        } else {
+            select.insertAdjacentElement('afterend', details);
+        }
+        select.dataset.lockerGridEnhanced = '1';
+    };
+
+    document.querySelectorAll('select[name="locker_id"]').forEach(enhanceLockerSelect);
+
     const desktopMenus = document.querySelectorAll('details.nav-menu, details.account-menu');
     desktopMenus.forEach((menu) => {
         if (!(menu instanceof HTMLDetailsElement)) {
