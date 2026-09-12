@@ -218,6 +218,8 @@ final class BookingSelectionAdminController
 
             if ($currentBooking !== null) {
                 $selectionBlockedReason = 'Für diesen Schüler besteht in diesem Schuljahr bereits eine aktive Buchung.';
+            } elseif ($activeReservation !== null && (string) $activeReservation['status'] === 'payment_running') {
+                $selectionBlockedReason = 'Für diesen Schüler läuft bereits ein Zahlungsvorgang. Änderungen sind bis zum Abschluss nur in der Zahlungsverwaltung möglich.';
             } else {
                 try {
                     $available = $this->recommendations->availableForStudent(
