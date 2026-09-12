@@ -7,6 +7,7 @@ namespace FachDock\Auth;
 use DomainException;
 use PDO;
 use PDOException;
+use RuntimeException;
 
 final class StaffUserManagementService
 {
@@ -28,6 +29,9 @@ final class StaffUserManagementService
             . 'last_login_at, created_at, updated_at '
             . 'FROM staff_users ORDER BY anonymized_at IS NOT NULL, active DESC, display_name, username'
         );
+        if ($statement === false) {
+            throw new RuntimeException('Die lokalen Benutzer konnten nicht geladen werden.');
+        }
 
         /** @var list<array<string, mixed>> $rows */
         $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
@@ -273,6 +277,9 @@ final class StaffUserManagementService
             . "AND REFERENCED_COLUMN_NAME = 'id' "
             . "AND TABLE_NAME NOT IN ('staff_sessions', 'staff_password_reset_tokens')"
         );
+        if ($statement === false) {
+            throw new RuntimeException('Referenzen des lokalen Benutzerkontos konnten nicht geprüft werden.');
+        }
         $references = $statement->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($references as $reference) {
