@@ -23,9 +23,17 @@ final class PersonAccountAdminService
         $where = [];
         $search = trim($search);
         if ($search !== '') {
-            $where[] = '(s.matrikelnummer LIKE :search OR s.first_name LIKE :search OR s.last_name LIKE :search '
-                . 'OR s.class_name LIKE :search OR s.email LIKE :search)';
-            $params['search'] = '%' . $search . '%';
+            $where[] = '(s.matrikelnummer LIKE :search_matrikel OR s.first_name LIKE :search_first_name '
+                . 'OR s.last_name LIKE :search_last_name OR s.class_name LIKE :search_class '
+                . 'OR s.email LIKE :search_email)';
+            $term = '%' . $search . '%';
+            $params = [
+                'search_matrikel' => $term,
+                'search_first_name' => $term,
+                'search_last_name' => $term,
+                'search_class' => $term,
+                'search_email' => $term,
+            ];
         }
         if ($status === 'active') {
             $where[] = 's.active = 1 AND s.anonymized_at IS NULL';
@@ -64,8 +72,13 @@ final class PersonAccountAdminService
         }
         $search = trim($search);
         if ($search !== '') {
-            $where[] = '(s.matrikelnummer LIKE :search OR s.first_name LIKE :search OR s.last_name LIKE :search OR s.class_name LIKE :search)';
-            $params['search'] = '%' . $search . '%';
+            $where[] = '(s.matrikelnummer LIKE :search_matrikel OR s.first_name LIKE :search_first_name '
+                . 'OR s.last_name LIKE :search_last_name OR s.class_name LIKE :search_class)';
+            $term = '%' . $search . '%';
+            $params['search_matrikel'] = $term;
+            $params['search_first_name'] = $term;
+            $params['search_last_name'] = $term;
+            $params['search_class'] = $term;
         }
         $this->appendStudentAccountStatus($where, $status);
 
@@ -96,8 +109,14 @@ final class PersonAccountAdminService
         $where = [];
         $search = trim($search);
         if ($search !== '') {
-            $where[] = '(pc.email LIKE :search OR pc.first_name LIKE :search OR pc.last_name LIKE :search)';
-            $params['search'] = '%' . $search . '%';
+            $where[] = '(pc.email LIKE :search_email OR pc.first_name LIKE :search_first_name '
+                . 'OR pc.last_name LIKE :search_last_name)';
+            $term = '%' . $search . '%';
+            $params = [
+                'search_email' => $term,
+                'search_first_name' => $term,
+                'search_last_name' => $term,
+            ];
         }
         if ($status === 'active') {
             $where[] = "pc.active = 1 AND pc.status <> 'anonymized' AND pc.anonymized_at IS NULL";
