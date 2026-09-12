@@ -62,18 +62,18 @@ final class MailImmediateAdminFrontController
             self::makeAvailableNow($pdo, $queueId);
             $queue = new MailQueueService($pdo, new MailTemplateRenderer());
             $result = (new MailWorkerFactory($config))->create($pdo, $queue)->runImmediate($queueId);
-            if ((int) ($result['rate_limited'] ?? 0) === 1) {
+            if ($result['rate_limited'] === 1) {
                 self::setQueueError($pdo, $queueId, 'Sofortversand durch das globale 60-Minuten-Versandlimit zurückgestellt.');
             }
             (new AuditLogger($pdo))->staff($staff, 'mail_queue.immediate_delivery.requested', 'mail_queue', $queueId, [
-                'sent' => (int) ($result['sent'] ?? 0),
-                'failed' => (int) ($result['failed'] ?? 0),
-                'rate_limited' => (int) ($result['rate_limited'] ?? 0),
-                'deferred' => (int) ($result['deferred'] ?? 0),
+                'sent' => $result['sent'],
+                'failed' => $result['failed'],
+                'rate_limited' => $result['rate_limited'],
+                'deferred' => $result['deferred'],
             ]);
             $csrf->rotate();
 
-            $outcome = (int) ($result['sent'] ?? 0) === 1 ? 'sent' : 'deferred';
+            $outcome = $result['sent'] === 1 ? 'sent' : 'deferred';
 
             return Response::redirect('/admin/mail?send_now=' . $outcome);
         } catch (Throwable) {
