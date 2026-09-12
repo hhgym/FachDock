@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
 
 final class OidcLoginTestCspFlowTest extends TestCase
 {
-    public function testLoginTestUsesSameOriginGetHopBeforeLeavingFachDock(): void
+    public function testLoginTestEndsFormNavigationBeforeLeavingFachDock(): void
     {
         $source = (string) file_get_contents(
             dirname(__DIR__, 2) . '/src/Identity/OidcAdminFrontController.php',
@@ -19,11 +19,23 @@ final class OidcLoginTestCspFlowTest extends TestCase
             $source,
         );
         self::assertStringContainsString(
-            "Response::redirect('/admin/config/oidc/login-test?continue=1')",
+            'return self::loginTestHandoffPage();',
+            $source,
+        );
+        self::assertStringContainsString(
+            '<meta http-equiv="refresh" content="0;url=',
+            $source,
+        );
+        self::assertStringContainsString(
+            "'/admin/config/oidc/login-test?continue=1'",
             $source,
         );
         self::assertStringContainsString(
             'Response::redirect(self::consumeLoginTestRedirect())',
+            $source,
+        );
+        self::assertStringNotContainsString(
+            "Response::redirect('/admin/config/oidc/login-test?continue=1')",
             $source,
         );
         self::assertStringNotContainsString(
