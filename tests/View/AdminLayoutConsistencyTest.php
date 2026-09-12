@@ -54,7 +54,7 @@ final class AdminLayoutConsistencyTest extends TestCase
         self::assertStringContainsString('data-dashboard-counter=', $template);
         self::assertStringContainsString('data-dashboard-progress=', $template);
         self::assertStringContainsString('<progress class="dashboard-progress"', $template);
-        self::assertStringContainsString("prefers-reduced-motion: reduce", $script);
+        self::assertStringContainsString('prefers-reduced-motion: reduce', $script);
     }
 
     public function testOperationsFiltersStackWithoutOverlapOnNarrowScreens(): void
