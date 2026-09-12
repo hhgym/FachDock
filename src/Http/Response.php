@@ -43,6 +43,10 @@ final class Response
 
     public static function redirect(string $location, int $status = 302): self
     {
+        if ($status === 302 && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
+            $status = 303;
+        }
+
         return new self('', $status, [
             'Location' => $location,
             'Cache-Control' => 'no-store, private',

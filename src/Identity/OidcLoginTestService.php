@@ -50,6 +50,9 @@ final class OidcLoginTestService
             'started_at' => time(),
         ];
         session_regenerate_id(true);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
 
         $query = http_build_query([
             'response_type' => 'code',
