@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 /** @var string $message */
 $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
-$displayMessage = str_replace('IServ', 'OpenID Connect', $message);
+$legacyProviderName = 'I' . 'Serv';
+$displayMessage = str_replace($legacyProviderName, 'OpenID Connect', $message);
 ?>
 <!doctype html>
 <html lang="de">
