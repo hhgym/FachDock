@@ -14,6 +14,7 @@ use FachDock\Http\Response;
 use FachDock\Installation\InstallationState;
 use FachDock\Logging\LoggerFactory;
 use FachDock\Security\Csrf;
+use PDO;
 use Throwable;
 
 final class PaymentAdminActionFrontController
@@ -57,6 +58,7 @@ final class PaymentAdminActionFrontController
         }
         try {
             $reason = $request->postString('reason');
+            self::expireRemoteCheckout($pdo, $config, $paymentId);
             (new AdminPaymentTerminationService($pdo))->terminate($paymentId, $reason, $staff->displayName);
             (new AuditLogger($pdo))->staff($staff, 'payment.open_attempt.terminated', 'payment', $paymentId, [
                 'reason' => mb_substr(trim($reason), 0, 500),
@@ -77,6 +79,38 @@ final class PaymentAdminActionFrontController
 
             return Response::redirect('/admin/payments/detail?id=' . $paymentId . '&terminate_error=technical');
         }
+    }
+
+    private static function expireRemoteCheckout(PDO $pdo, Config $config, int $paymentId): void
+    {
+        $statement = $pdo->prepare(
+            'SELECT status, stripe_checkout_session_id FROM payments WHERE id = :id LIMIT 1'
+        );
+        $statement->execute(['id' => $paymentId]);
+        $payment = $statement->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($payment)) {
+            throw new DomainException('Der Zahlungsvorgang wurde nicht gefunden.');
+        }
+        if (!in_array((string) $payment['status'], [PaymentStatus::Creating->value, PaymentStatus::CheckoutOpen->value], true)) {
+            throw new DomainException('Nur noch nicht bestätigte offene Zahlungsvorgänge können manuell beendet werden.');
+        }
+
+        $sessionId = trim((string) ($payment['stripe_checkout_session_id'] ?? ''));
+        if ($sessionId === '') {
+            return;
+        }
+        $secretKey = trim((string) $config->get('stripe.secret_key', ''));
+        if ($secretKey === '') {
+            throw new DomainException(
+                'Die Stripe-Konfiguration fehlt. Der externe Checkout kann deshalb nicht sicher beendet werden.'
+            );
+        }
+
+        (new StripePhpGateway(
+            $secretKey,
+            (string) $config->get('stripe.webhook_secret', ''),
+            (string) $config->get('stripe.mode', 'test'),
+        ))->expireCheckoutSession($sessionId);
     }
 
     private static function positiveId(string $value): ?int
