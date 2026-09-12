@@ -184,19 +184,19 @@ final class AdministrativeLockerAssignmentIntegrationTest extends TestCase
         $pdo->exec("INSERT INTO cabinet_groups (id, area_id, code, active, created_at, updated_at) VALUES (1, 1, 'A', 1, NOW(), NOW())");
         $pdo->exec('INSERT INTO corpuses (id, cabinet_group_id, corpus_type_id, position_no, active, created_at, updated_at) VALUES (1, 1, 1, 1, 1, NOW(), NOW())');
         $pdo->exec(
-            "INSERT INTO lockers (id, corpus_id, position_no, short_name, barrier_friendly, bookable, active, operating_status, created_at, updated_at) VALUES "
+            'INSERT INTO lockers (id, corpus_id, position_no, short_name, barrier_friendly, bookable, active, operating_status, created_at, updated_at) VALUES '
             . "(1, 1, 1, 'A-01-1', 0, 1, 1, 'operational', NOW(), NOW()), "
             . "(2, 1, 2, 'A-01-2', 0, 1, 1, 'operational', NOW(), NOW()), "
             . "(3, 1, 3, 'A-01-3', 1, 1, 1, 'operational', NOW(), NOW()), "
             . "(4, 1, 4, 'A-01-4', 0, 0, 1, 'operational', NOW(), NOW())"
         );
         $pdo->exec(
-            "INSERT INTO students (id, matrikelnummer, first_name, last_name, class_name, grade, active, created_at, updated_at) VALUES "
+            'INSERT INTO students (id, matrikelnummer, first_name, last_name, class_name, grade, active, created_at, updated_at) VALUES '
             . "(1, '1001', 'Max', 'Muster', '8-1', 8, 1, NOW(), NOW()), "
             . "(2, '1002', 'Anna', 'Beispiel', '7-1', 7, 1, NOW(), NOW())"
         );
         $pdo->exec(
-            "INSERT INTO school_years (id, label, starts_on, ends_on, status, new_booking_opens_on, annual_fee_cents, created_at, updated_at) "
+            'INSERT INTO school_years (id, label, starts_on, ends_on, status, new_booking_opens_on, annual_fee_cents, created_at, updated_at) '
             . "VALUES (1, '2026/27', '2026-08-01', '2027-07-31', 'current', '2026-01-01', 3000, NOW(), NOW())"
         );
     }
