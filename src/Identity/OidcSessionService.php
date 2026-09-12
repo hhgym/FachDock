@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FachDock\Identity;
 
+use DomainException;
 use PDO;
 use RuntimeException;
 
@@ -95,6 +96,22 @@ final class OidcSessionService
             $row['email'] === null ? null : (string) $row['email'],
             (int) $row['session_id'],
         );
+    }
+
+    /** @return array<string,mixed> */
+    public function student(int $studentId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, matrikelnummer, first_name, last_name, class_name, grade, email '
+            . 'FROM students WHERE id = :id AND account_deactivated_at IS NULL AND anonymized_at IS NULL'
+        );
+        $statement->execute(['id' => $studentId]);
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($row)) {
+            throw new DomainException('Der Schülerzugang ist nicht mehr gültig.');
+        }
+
+        return $row;
     }
 
     public function logout(): void
