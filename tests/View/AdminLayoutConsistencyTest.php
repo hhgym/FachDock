@@ -16,6 +16,16 @@ final class AdminLayoutConsistencyTest extends TestCase
         self::assertStringContainsString('class="check-label"><input type="checkbox" name="skip_invalid"', $template);
     }
 
+    public function testAllDirectCheckboxLabelsStayInlineGlobally(): void
+    {
+        $css = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/accessibility.css');
+
+        self::assertStringContainsString('label:has(> input[type="checkbox"]) {', $css);
+        self::assertStringContainsString('display: flex;', $css);
+        self::assertStringContainsString('align-items: center;', $css);
+        self::assertStringContainsString('label:has(> input[type="checkbox"]) > input[type="checkbox"] {', $css);
+    }
+
     public function testFloorplanPageUsesStandardAdminWidthAndSingleColumnLayout(): void
     {
         $css = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/floorplans.css');
@@ -31,9 +41,20 @@ final class AdminLayoutConsistencyTest extends TestCase
 
         self::assertStringContainsString('.compact-actions {', $css);
         self::assertStringContainsString('flex-wrap: wrap;', $css);
-        self::assertStringContainsString('@media (max-width: 600px)', $css);
+        self::assertStringContainsString('@media (max-width: 680px)', $css);
         self::assertStringContainsString('grid-template-columns: 1fr;', $css);
         self::assertStringContainsString('width: 100%;', $css);
+    }
+
+    public function testDashboardIncludesAnimatedCountersAndAccessibleProgressComparison(): void
+    {
+        $template = (string) file_get_contents(dirname(__DIR__, 2) . '/templates/home.php');
+        $script = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/dashboard.js');
+
+        self::assertStringContainsString('data-dashboard-counter=', $template);
+        self::assertStringContainsString('data-dashboard-progress=', $template);
+        self::assertStringContainsString('<progress class="dashboard-progress"', $template);
+        self::assertStringContainsString("prefers-reduced-motion: reduce", $script);
     }
 
     public function testOperationsFiltersStackWithoutOverlapOnNarrowScreens(): void
