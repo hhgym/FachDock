@@ -215,7 +215,7 @@ final class AccountLifecycleService
         );
 
         $reactivated = $this->pdo->query(
-            "SELECT id FROM students WHERE active = 1 AND anonymized_at IS NULL "
+            'SELECT id FROM students WHERE active = 1 AND anonymized_at IS NULL '
             . "AND account_deactivated_at IS NOT NULL AND account_deactivation_source = 'lifecycle'"
         );
         if ($reactivated === false) {
@@ -367,7 +367,7 @@ final class AccountLifecycleService
         $identities = $this->identityIdsForStudent($studentId);
         foreach ($identities as $identityId) {
             $this->pdo->prepare(
-                "UPDATE oidc_identities SET subject = :subject, uuid = NULL, account_name = NULL, display_name = NULL, "
+                'UPDATE oidc_identities SET subject = :subject, uuid = NULL, account_name = NULL, display_name = NULL, '
                 . "email = NULL, identity_type = 'pending', active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = :id"
             )->execute([
                 'subject' => 'anonymized-student-' . $studentId . '-' . $identityId,
@@ -377,7 +377,7 @@ final class AccountLifecycleService
         $this->pdo->prepare(
             "UPDATE students SET matrikelnummer = :matrikel, first_name = 'Anonymisiert', last_name = :last_name, "
             . "class_name = '-', grade = 0, email = NULL, access_code_hash = NULL, access_code_generated_at = NULL, "
-            . "active = 0, account_deactivated_at = COALESCE(account_deactivated_at, CURRENT_TIMESTAMP), "
+            . 'active = 0, account_deactivated_at = COALESCE(account_deactivated_at, CURRENT_TIMESTAMP), '
             . "account_deactivation_source = COALESCE(account_deactivation_source, 'lifecycle'), anonymized_at = CURRENT_TIMESTAMP, "
             . 'updated_at = CURRENT_TIMESTAMP WHERE id = :id'
         )->execute([
@@ -431,8 +431,8 @@ final class AccountLifecycleService
     private function parentLifecycleStartAt(int $parentId): string
     {
         $statement = $this->pdo->prepare(
-            "SELECT COALESCE(NULLIF(GREATEST("
-            . "COALESCE((SELECT MAX(s.inactive_since) FROM parent_student_link_slots psls "
+            'SELECT COALESCE(NULLIF(GREATEST('
+            . 'COALESCE((SELECT MAX(s.inactive_since) FROM parent_student_link_slots psls '
             . "INNER JOIN students s ON s.id = psls.student_id WHERE psls.parent_contact_id = :slot_parent), '1000-01-01 00:00:00'), "
             . "COALESCE((SELECT MAX(psl.ended_at) FROM parent_student_links psl WHERE psl.parent_contact_id = :history_parent), '1000-01-01 00:00:00')"
             . "), '1000-01-01 00:00:00'), CURRENT_TIMESTAMP)"
