@@ -118,13 +118,20 @@ final class ViewRenderer
     {
         $root = dirname($this->templateDirectory);
         $version = $this->assetVersion($root . '/public/assets/app.js');
-        if ($version === null || str_contains($content, '/assets/app.js')) {
-            return $content;
+        if ($version !== null && !str_contains($content, '/assets/app.js')) {
+            $script = '    <script src="/assets/app.js?v=' . $version . '" defer></script>' . "\n";
+            $content = str_replace('</body>', $script . '</body>', $content);
         }
 
-        $script = '    <script src="/assets/app.js?v=' . $version . '" defer></script>' . "\n";
+        if (str_contains($content, 'floorplan-page') && str_contains($content, 'data-booking-map-dialog-content')) {
+            $mapVersion = $this->assetVersion($root . '/public/assets/locker-grid-map.js');
+            if ($mapVersion !== null && !str_contains($content, '/assets/locker-grid-map.js')) {
+                $script = '    <script src="/assets/locker-grid-map.js?v=' . $mapVersion . '" defer></script>' . "\n";
+                $content = str_replace('</body>', $script . '</body>', $content);
+            }
+        }
 
-        return str_replace('</body>', $script . '</body>', $content);
+        return $content;
     }
 
     private function injectAccessibilityShell(string $content): string

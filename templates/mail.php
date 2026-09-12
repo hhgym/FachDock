@@ -18,6 +18,7 @@ $statusLabels = [
     'failed' => 'fehlgeschlagen',
     'canceled' => 'abgebrochen',
 ];
+$sendNow = isset($_GET['send_now']) && is_scalar($_GET['send_now']) ? (string) $_GET['send_now'] : '';
 ?>
 <!doctype html>
 <html lang="de">
@@ -41,6 +42,13 @@ $statusLabels = [
 
     <?php if ($errors !== []): ?>
         <div class="alert alert-error"><ul><?php foreach ($errors as $error): ?><li><?= $e($error) ?></li><?php endforeach; ?></ul></div>
+    <?php endif; ?>
+    <?php if ($sendNow === 'sent'): ?>
+        <div class="alert alert-success"><strong>Sofortversand erfolgreich.</strong> Die ausgewählte Nachricht wurde direkt an den SMTP-Server übergeben.</div>
+    <?php elseif ($sendNow === 'deferred'): ?>
+        <div class="alert alert-neutral"><strong>Sofortversand nicht abgeschlossen.</strong> Die Nachricht bleibt für einen erneuten Versuch in der Warteschlange. Prüfen Sie Status und Fehlertext.</div>
+    <?php elseif ($sendNow === 'failed'): ?>
+        <div class="alert alert-error"><strong>Sofortversand fehlgeschlagen.</strong> Bitte SMTP-Konfiguration und Warteschlangenstatus prüfen.</div>
     <?php endif; ?>
 
     <?php if ($smtpConfigured): ?>
@@ -97,7 +105,7 @@ $statusLabels = [
     <section class="card stack">
         <div>
             <h2>Versandwarteschlange</h2>
-            <p class="form-hint">Der Cronjob ruft <code>bin/fachdock mail:work</code> auf. Standardmäßig werden höchstens 50 erfolgreiche Nachrichten pro rollierender Stunde versendet.</p>
+            <p class="form-hint">Der Cronjob ruft <code>bin/fachdock mail:work</code> auf. Magic Links werden mit Sofortpriorität eingereiht und direkt im anfordernden Request versendet. Die Queue bleibt dabei als sichere Persistenz und für Wiederholungsversuche erhalten.</p>
         </div>
 
         <?php if ($queue === []): ?>
@@ -119,11 +127,18 @@ $statusLabels = [
                             <td><?= $mail['last_error'] === null ? '–' : $e((string) $mail['last_error']) ?></td>
                             <td>
                                 <div class="row-actions">
+                                    <?php if (in_array($status, ['waiting', 'failed'], true)): ?>
+                                        <form method="post" action="/admin/mail/send-now">
+                                            <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+                                            <input type="hidden" name="queue_id" value="<?= (int) $mail['id'] ?>">
+                                            <button class="button" type="submit">Jetzt senden</button>
+                                        </form>
+                                    <?php endif; ?>
                                     <?php if ($status === 'failed'): ?>
                                         <form method="post" action="/admin/mail/retry">
                                             <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
                                             <input type="hidden" name="queue_id" value="<?= (int) $mail['id'] ?>">
-                                            <button class="button button-secondary" type="submit">Erneut versuchen</button>
+                                            <button class="button button-secondary" type="submit">Erneut einreihen</button>
                                         </form>
                                     <?php endif; ?>
                                     <?php if (in_array($status, ['waiting', 'failed'], true)): ?>
@@ -141,7 +156,7 @@ $statusLabels = [
                 </table>
             </div>
         <?php endif; ?>
-        <p class="form-hint">Gerenderte Nachrichtentexte und Authentifizierungstoken werden in dieser Übersicht nicht angezeigt. Die dauerhafte Versandhistorie speichert keine Nachrichtentexte und keine geheimen Platzhalter.</p>
+        <p class="form-hint">„Jetzt senden“ umgeht den Cron-Zeitpunkt, nicht jedoch das globale Versandlimit. Bei SMTP-Fehlern bleibt die Nachricht mit Fehlertext und neuem Retry-Zeitpunkt erhalten.</p>
     </section>
 </main>
 </body>

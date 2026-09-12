@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use FachDock\Auth\AuthenticatedStaff;
+use FachDock\View\LockerGridRenderer;
 
 /** @var AuthenticatedStaff $staff */
 /** @var string $csrfToken */
@@ -150,36 +151,63 @@ $paymentRunning = $activeReservation !== null && (string) $activeReservation['st
         </section>
 
         <section class="card stack">
-            <h2>Alle verfügbaren Schließfächer</h2>
+            <div class="school-year-heading">
+                <div>
+                    <h2>Alle verfügbaren Schließfächer</h2>
+                    <p class="form-hint">Die Rasteransicht ordnet die Fächer nach Schrankgruppe, Korpus und Fachposition.</p>
+                </div>
+                <span class="badge"><?= count($available) ?> frei</span>
+            </div>
             <?php if ($available === []): ?>
                 <p>Keine weiteren verfügbaren Schließfächer.</p>
             <?php else: ?>
-                <div class="table-scroll">
-                    <table class="data-table">
-                        <thead><tr><th>Fach</th><th>Langbezeichnung</th><th>Etage</th><th>Bereich</th><th>Score</th><th>Merkmal</th><th>Auswahl</th></tr></thead>
-                        <tbody>
-                        <?php foreach ($available as $locker): ?>
-                            <tr>
-                                <td><code><?= $e((string) $locker['short_name']) ?></code></td>
-                                <td><?= $e((string) $locker['long_name']) ?></td>
-                                <td><?= $e((string) $locker['floor_code']) ?></td>
-                                <td><?= $e((string) $locker['area_code']) ?> · <?= $e((string) $locker['area_name']) ?></td>
-                                <td><?= (int) $locker['score'] ?></td>
-                                <td><?= (bool) $locker['barrier_friendly'] ? 'barrierearm' : '–' ?></td>
-                                <td>
-                                    <form method="post" action="/admin/booking-selection/reserve">
-                                        <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
-                                        <input type="hidden" name="student_id" value="<?= $selectedStudentId ?>">
-                                        <input type="hidden" name="school_year_id" value="<?= $selectedSchoolYearId ?>">
-                                        <input type="hidden" name="locker_id" value="<?= (int) $locker['locker_id'] ?>">
-                                        <button class="button button-secondary" type="submit" <?= $paymentRunning ? 'disabled' : '' ?>>Auswählen</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+                <details class="entity-row" open>
+                    <summary>Rasterauswahl</summary>
+                    <div class="compact-form stack">
+                        <?= LockerGridRenderer::formGrid(
+                            $available,
+                            '/admin/booking-selection/reserve',
+                            [
+                                '_csrf' => $csrfToken,
+                                'student_id' => (int) $selectedStudentId,
+                                'school_year_id' => (int) $selectedSchoolYearId,
+                            ],
+                            'locker_id',
+                            'auswählen',
+                            $paymentRunning,
+                        ) ?>
+                        <p class="form-hint">Leere Rasterzellen stehen in dieser Buchungsauswahl nicht zur Verfügung.</p>
+                    </div>
+                </details>
+                <details class="entity-row">
+                    <summary>Listenansicht</summary>
+                    <div class="compact-form table-scroll">
+                        <table class="data-table">
+                            <thead><tr><th>Fach</th><th>Langbezeichnung</th><th>Etage</th><th>Bereich</th><th>Score</th><th>Merkmal</th><th>Auswahl</th></tr></thead>
+                            <tbody>
+                            <?php foreach ($available as $locker): ?>
+                                <tr>
+                                    <td><code><?= $e((string) $locker['short_name']) ?></code></td>
+                                    <td><?= $e((string) $locker['long_name']) ?></td>
+                                    <td><?= $e((string) $locker['floor_code']) ?></td>
+                                    <td><?= $e((string) $locker['area_code']) ?> · <?= $e((string) $locker['area_name']) ?></td>
+                                    <td><?= (int) $locker['score'] ?></td>
+                                    <td><?= (bool) $locker['barrier_friendly'] ? 'barrierearm' : '–' ?></td>
+                                    <td>
+                                        <form method="post" action="/admin/booking-selection/reserve">
+                                            <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+                                            <input type="hidden" name="student_id" value="<?= $selectedStudentId ?>">
+                                            <input type="hidden" name="school_year_id" value="<?= $selectedSchoolYearId ?>">
+                                            <input type="hidden" name="locker_id" value="<?= (int) $locker['locker_id'] ?>">
+                                            <button class="button button-secondary" type="submit" <?= $paymentRunning ? 'disabled' : '' ?>>Auswählen</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
             <?php endif; ?>
         </section>
 

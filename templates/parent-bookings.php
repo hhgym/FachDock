@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use FachDock\Parent\AuthenticatedParent;
+use FachDock\View\LockerGridRenderer;
 
 /** @var AuthenticatedParent $parent */
 /** @var list<array<string, mixed>> $bookings */
@@ -45,7 +46,7 @@ $statusLabel = static fn (string $status): string => match ($status) {
     <header class="hero">
         <span class="eyebrow">Elternportal</span>
         <h1>Meine Schließfachbuchungen</h1>
-        <p>Hier können Sie ein bestehendes Schließfach wechseln und die Buchung für ein Folgeschuljahr verlängern.</p>
+        <p>Hier können Sie Belege herunterladen, ein bestehendes Schließfach wechseln und die Buchung für ein Folgeschuljahr verlängern.</p>
     </header>
 
     <?php if ($success !== null): ?><div class="alert alert-success"><?= $e($success) ?></div><?php endif; ?>
@@ -68,6 +69,7 @@ $statusLabel = static fn (string $status): string => match ($status) {
         /** @var list<array<string, mixed>> $renewalPlans */
         $renewalPlans = is_array($booking['renewal_plans'] ?? null) ? $booking['renewal_plans'] : [];
         $remaining = $booking['changes_remaining'] ?? null;
+        $selectId = 'parent-change-locker-' . (int) $booking['booking_id'];
         ?>
         <section class="card stack">
             <div class="school-year-heading">
@@ -92,7 +94,10 @@ $statusLabel = static fn (string $status): string => match ($status) {
                     <?php endif; ?>
                 </div>
             </div>
-            <p><a href="/parent/booking/status?booking_id=<?= (int) $booking['booking_id'] ?>">Buchungsstatus anzeigen</a></p>
+            <div class="button-row">
+                <a class="button button-secondary" href="/parent/booking/status?booking_id=<?= (int) $booking['booking_id'] ?>">Buchungsstatus</a>
+                <a class="button button-secondary" href="/parent/bookings/document?booking_id=<?= (int) $booking['booking_id'] ?>">PDF-Bestätigung / Zahlungsbeleg</a>
+            </div>
 
             <div class="stack">
                 <h3>Schließfach wechseln</h3>
@@ -108,13 +113,20 @@ $statusLabel = static fn (string $status): string => match ($status) {
                         <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
                         <input type="hidden" name="booking_id" value="<?= (int) $booking['booking_id'] ?>">
                         <label>Neues Schließfach
-                            <select name="locker_id" required>
+                            <select id="<?= $e($selectId) ?>" name="locker_id" required>
                                 <option value="">Bitte auswählen</option>
                                 <?php foreach ($lockerOptions as $locker): ?>
                                     <option value="<?= (int) $locker['id'] ?>"><?= $e($locker['short_name'] . ' · ' . $locker['building_name'] . ' · ' . $locker['floor_name'] . ' · ' . $locker['area_name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </label>
+                        <details class="entity-row">
+                            <summary>Schließfach im Raster wählen</summary>
+                            <div class="compact-form stack">
+                                <?= LockerGridRenderer::pickerGrid($lockerOptions, $selectId) ?>
+                                <p class="form-hint">Die Rasterwahl trägt das Fach in das Auswahlfeld darüber ein. Leere Zellen sind nicht verfügbar.</p>
+                            </div>
+                        </details>
                         <button class="button" type="submit">Kostenlos wechseln</button>
                     </form>
                 <?php endif; ?>

@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 use FachDock\Application;
 use FachDock\Auth\StaffUserAdminFrontController;
+use FachDock\Booking\BookingDocumentFrontController;
 use FachDock\Booking\BookingRulesFrontController;
 use FachDock\Booking\ParentBookingMapFrontController;
+use FachDock\Dashboard\DashboardFrontController;
 use FachDock\Identity\IdentityFrontController;
 use FachDock\Identity\OidcAdminFrontController;
 use FachDock\Identity\PersonAccountAdminFrontController;
+use FachDock\Mail\MailImmediateAdminFrontController;
 use FachDock\Operations\OperationsFrontController;
+use FachDock\Payment\PaymentAdminActionFrontController;
 use FachDock\Platform\PlatformFrontController;
 
 $root = dirname(__DIR__);
@@ -23,6 +27,30 @@ if (!is_file($autoload)) {
 }
 
 require $autoload;
+
+$dashboardResponse = DashboardFrontController::handle($root);
+if ($dashboardResponse !== null) {
+    $dashboardResponse->send();
+    exit;
+}
+
+$mailImmediateResponse = MailImmediateAdminFrontController::handle($root);
+if ($mailImmediateResponse !== null) {
+    $mailImmediateResponse->send();
+    exit;
+}
+
+$paymentAdminActionResponse = PaymentAdminActionFrontController::handle($root);
+if ($paymentAdminActionResponse !== null) {
+    $paymentAdminActionResponse->send();
+    exit;
+}
+
+$bookingDocumentResponse = BookingDocumentFrontController::handle($root);
+if ($bookingDocumentResponse !== null) {
+    $bookingDocumentResponse->send();
+    exit;
+}
 
 $oidcAdminResponse = OidcAdminFrontController::handle($root);
 if ($oidcAdminResponse !== null) {
