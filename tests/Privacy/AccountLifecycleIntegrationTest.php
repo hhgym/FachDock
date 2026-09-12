@@ -20,7 +20,7 @@ final class AccountLifecycleIntegrationTest extends TestCase
         $this->student($pdo, 1, '1001', 0, '2026-07-01 00:00:00');
         $this->oidcIdentity($pdo, 1, 1);
         $pdo->exec(
-            "INSERT INTO oidc_sessions (identity_id, token_hash, created_at, last_seen_at, expires_at) "
+            'INSERT INTO oidc_sessions (identity_id, token_hash, created_at, last_seen_at, expires_at) '
             . "VALUES (1, REPEAT('a', 64), '2026-09-01', '2026-09-01', '2027-01-01')"
         );
 
@@ -88,11 +88,11 @@ final class AccountLifecycleIntegrationTest extends TestCase
         $this->parent($pdo, 1, 'old-parent@example.test');
         $this->link($pdo, 1, 1, 1);
         $pdo->exec(
-            "INSERT INTO parent_sessions (parent_contact_id, token_hash, created_at, last_seen_at, expires_at) "
+            'INSERT INTO parent_sessions (parent_contact_id, token_hash, created_at, last_seen_at, expires_at) '
             . "VALUES (1, REPEAT('b', 64), '2022-01-01', '2022-01-01', '2030-01-01')"
         );
         $pdo->exec(
-            "INSERT INTO parent_magic_links (parent_contact_id, token_hash, purpose, expires_at, created_at) "
+            'INSERT INTO parent_magic_links (parent_contact_id, token_hash, purpose, expires_at, created_at) '
             . "VALUES (1, REPEAT('c', 64), 'login', '2030-01-01', '2022-01-01')"
         );
 
@@ -138,7 +138,7 @@ final class AccountLifecycleIntegrationTest extends TestCase
     private function baseStaff(PDO $pdo): void
     {
         $pdo->exec(
-            "INSERT INTO staff_users (id, username, display_name, email, password_hash, role, active, created_at, updated_at) "
+            'INSERT INTO staff_users (id, username, display_name, email, password_hash, role, active, created_at, updated_at) '
             . "VALUES (1, 'admin', 'Admin', 'admin@example.test', 'hash', 'administrator', 1, NOW(), NOW())"
         );
     }
