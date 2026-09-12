@@ -35,6 +35,14 @@ final class AdminLayoutConsistencyTest extends TestCase
         self::assertStringNotContainsString('min(1500px, calc(100% - 32px))', $css);
     }
 
+    public function testFloorplanUploadUsesGeneralFilePicker(): void
+    {
+        $template = (string) file_get_contents(dirname(__DIR__, 2) . '/templates/floorplans.php');
+
+        self::assertStringContainsString('<input type="file" name="floor_plan" required>', $template);
+        self::assertStringNotContainsString('name="floor_plan" accept=', $template);
+    }
+
     public function testDashboardActionsStackOnNarrowScreens(): void
     {
         $css = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/dashboard.css');

@@ -87,9 +87,9 @@ $unplacedGroups = $plan !== null ? array_values(array_filter($plan['groups'], st
                 <label>Titel
                     <input type="text" name="title" maxlength="255" placeholder="z. B. Hauptflur" required>
                 </label>
-                <label>Bilddatei
-                    <input type="file" name="floor_plan" accept="image/png,image/jpeg,image/webp" required>
-                    <small>PNG, JPEG oder WebP, maximal 10 MB. SVG wird aus Sicherheitsgründen nicht akzeptiert.</small>
+                <label>Lageplandatei
+                    <input type="file" name="floor_plan" required>
+                    <small>Datei auswählen. Zulässig sind PNG, JPEG oder WebP bis maximal 10 MB; andere Dateitypen werden beim Upload abgelehnt.</small>
                 </label>
                 <div><button class="button" type="submit">Lageplan hochladen</button></div>
             </form>
