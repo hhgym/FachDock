@@ -44,4 +44,27 @@ final class AppJavascriptTest extends TestCase
         self::assertStringContainsString("updatePlacementField(addForm, 'width_percent', finalWidth);", $script);
         self::assertStringContainsString('addForm.requestSubmit();', $script);
     }
+
+    public function testLockerSelectsAreProgressivelyEnhancedWithCorpusGrid(): void
+    {
+        $script = file_get_contents(dirname(__DIR__, 2) . '/public/assets/app.js');
+        self::assertIsString($script);
+
+        self::assertStringContainsString('select[name="locker_id"]', $script);
+        self::assertStringContainsString("details.className = 'entity-row';", $script);
+        self::assertStringContainsString("table.className = 'locker-grid-table';", $script);
+        self::assertStringContainsString('button.dataset.lockerGridChoice = entry.id;', $script);
+        self::assertStringContainsString('select.value = lockerId;', $script);
+    }
+
+    public function testBookingMapGridEnhancementKeepsExistingLockerActions(): void
+    {
+        $script = file_get_contents(dirname(__DIR__, 2) . '/public/assets/locker-grid-map.js');
+        self::assertIsString($script);
+
+        self::assertStringContainsString('[data-booking-map-dialog-content]', $script);
+        self::assertStringContainsString("table.className = 'locker-grid-table locker-grid-map-table';", $script);
+        self::assertStringContainsString('td.append(row);', $script);
+        self::assertStringContainsString('new MutationObserver', $script);
+    }
 }
