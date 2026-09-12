@@ -42,6 +42,7 @@ return [
         'payment_grace_minutes' => 30,
         'but_rejection_payment_days' => 14,
         'self_service_change_limit' => 2,
+        'default_annual_fee_cents' => 0,
     ],
     'stripe' => [
         'mode' => 'test',
