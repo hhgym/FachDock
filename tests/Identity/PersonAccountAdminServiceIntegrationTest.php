@@ -97,15 +97,15 @@ final class PersonAccountAdminServiceIntegrationTest extends TestCase
     private function seed(): void
     {
         $this->pdo()->exec(
-            "INSERT INTO students (id, matrikelnummer, first_name, last_name, class_name, grade, email, active, access_code_hash, created_at, updated_at) "
+            'INSERT INTO students (id, matrikelnummer, first_name, last_name, class_name, grade, email, active, access_code_hash, created_at, updated_at) '
             . "VALUES (1, '1001', 'Max', 'Muster', '8-1', 8, 'max@example.test', 1, 'test-hash', NOW(), NOW())"
         );
         $this->pdo()->exec(
-            "INSERT INTO parent_contacts (id, email, first_name, last_name, status, verified_at, active, created_at, updated_at) "
+            'INSERT INTO parent_contacts (id, email, first_name, last_name, status, verified_at, active, created_at, updated_at) '
             . "VALUES (1, 'parent@example.test', 'Erika', 'Muster', 'verified', NOW(), 1, NOW(), NOW())"
         );
         $this->pdo()->exec(
-            "INSERT INTO parent_student_links (id, parent_contact_id, student_id, link_origin, started_at, created_at) "
+            'INSERT INTO parent_student_links (id, parent_contact_id, student_id, link_origin, started_at, created_at) '
             . "VALUES (1, 1, 1, 'staff', NOW(), NOW())"
         );
         $this->pdo()->exec(
