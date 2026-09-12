@@ -81,7 +81,7 @@ final class StudentSupportSessionService
             if ($this->pdo !== null) {
                 return $this->student($studentId);
             }
-            if ($oidcIdentityId !== null && $this->oidcSessions !== null) {
+            if ($oidcIdentityId !== null) {
                 return $this->oidcSessions->student($studentId);
             }
 
