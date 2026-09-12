@@ -28,9 +28,13 @@ textarea { resize: vertical; }
 input:focus, select:focus, textarea:focus { outline: 3px solid rgba(56, 84, 165, .15); border-color: #3854a5; }
 input[type="checkbox"] { width: auto; padding: 0; }
 .check-label { display: flex; align-items: center; gap: 9px; align-self: end; min-height: 44px; }
-.button { justify-self: start; max-width: 100%; border: 0; border-radius: 10px; padding: 12px 18px; background: #263f8f; color: #fff; font: inherit; font-weight: 700; cursor: pointer; white-space: normal; }
+.button { display: inline-flex; align-items: center; justify-content: center; justify-self: start; max-width: 100%; border: 0; border-radius: 10px; padding: 12px 18px; background: #263f8f; color: #fff; font: inherit; font-weight: 700; line-height: 1.25; cursor: pointer; text-align: center; text-decoration: none; white-space: normal; }
 .button-secondary { background: #eef1f7; color: #263f8f; }
 .button:disabled { opacity: .45; cursor: not-allowed; }
+.actions, .button-row, .cluster { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.actions > *, .button-row > *, .cluster > * { min-width: 0; }
+.actions form, .button-row form, .cluster form { margin: 0; }
+.toolbar-form { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(160px, .65fr) auto auto; gap: 12px; align-items: end; }
 .requirements { display: grid; gap: 8px; }
 .requirement { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; background: #f7f8fa; }
 .requirement > span { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; font-weight: 800; }
@@ -119,7 +123,7 @@ code, .code-value { font-family: ui-monospace, SFMono-Regular, Consolas, monospa
 
 @media (max-width: 680px) {
     .shell { margin: 28px auto; }
-    .grid, .recommendation-grid { grid-template-columns: 1fr; }
+    .grid, .recommendation-grid, .toolbar-form { grid-template-columns: 1fr; }
     .wide { grid-column: auto; }
     .card { padding: 18px; }
     .session-row, .school-year-heading { align-items: flex-start; flex-direction: column; }
