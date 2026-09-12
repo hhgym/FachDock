@@ -37,7 +37,7 @@ final class OidcIdentityService
     {
         $this->configuration->assertReady();
         if (!in_array($area, ['student', 'teacher'], true)) {
-            throw new RuntimeException('Der gewünschte IServ-Anmeldebereich ist ungültig.');
+            throw new RuntimeException('Der gewünschte OpenID-Connect-Anmeldebereich ist ungültig.');
         }
         $metadata = $this->metadata();
         $state = bin2hex(random_bytes(32));
@@ -71,7 +71,7 @@ final class OidcIdentityService
         $flow = $_SESSION[self::FLOW_KEY] ?? null;
         unset($_SESSION[self::FLOW_KEY]);
         if (!is_array($flow)) {
-            throw new RuntimeException('Die IServ-Anmeldung ist abgelaufen. Bitte erneut starten.');
+            throw new RuntimeException('Die OpenID-Connect-Anmeldung ist abgelaufen. Bitte erneut starten.');
         }
         $expectedState = $flow['state'] ?? null;
         $verifier = $flow['verifier'] ?? null;
@@ -80,10 +80,10 @@ final class OidcIdentityService
         if (!is_string($expectedState) || !hash_equals($expectedState, $state)
             || !is_string($verifier) || !is_string($area) || !is_int($startedAt)
             || $startedAt < time() - self::FLOW_LIFETIME_SECONDS) {
-            throw new RuntimeException('Die IServ-Anmeldung konnte nicht sicher bestätigt werden.');
+            throw new RuntimeException('Die OpenID-Connect-Anmeldung konnte nicht sicher bestätigt werden.');
         }
         if ($code === '') {
-            throw new RuntimeException('IServ hat keinen Autorisierungscode geliefert.');
+            throw new RuntimeException('Der Anbieter hat keinen Autorisierungscode geliefert.');
         }
 
         $metadata = $this->metadata();
@@ -100,14 +100,14 @@ final class OidcIdentityService
         ]);
         $accessToken = $token['access_token'] ?? null;
         if (!is_string($accessToken) || $accessToken === '') {
-            throw new RuntimeException('IServ hat kein gültiges Access Token geliefert.');
+            throw new RuntimeException('Der Anbieter hat kein gültiges Access Token geliefert.');
         }
         $userinfo = $this->http->getJson((string) $metadata['userinfo_endpoint'], [
             'Authorization' => 'Bearer ' . $accessToken,
         ]);
         $subject = $userinfo['sub'] ?? null;
         if (!is_string($subject) || trim($subject) === '') {
-            throw new RuntimeException('IServ hat keine OpenID-Subject-ID geliefert.');
+            throw new RuntimeException('Der Anbieter hat keine OpenID-Subject-ID geliefert.');
         }
 
         return ['identity' => $this->upsertIdentity($userinfo), 'area' => $area];
@@ -146,7 +146,7 @@ final class OidcIdentityService
     {
         $studentId = $this->uniqueStudentId('matrikelnummer = :value', trim($matrikelnummer));
         if ($studentId === null) {
-            throw new RuntimeException('Es wurde kein eindeutiger aktiver Schüler mit dieser Matrikelnummer gefunden.');
+            throw new RuntimeException('Es wurde kein eindeutiger, nicht gesperrter Schüler mit dieser Matrikelnummer gefunden.');
         }
         $statement = $this->pdo->prepare(
             "UPDATE oidc_identities SET identity_type = 'student', assignment_source = 'manual', student_id = :student_id, active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = :id"
@@ -371,7 +371,8 @@ final class OidcIdentityService
             return null;
         }
         $statement = $this->pdo->prepare(
-            'SELECT id FROM students WHERE active = 1 AND ' . $condition . ' ORDER BY id LIMIT 2'
+            'SELECT id FROM students WHERE account_deactivated_at IS NULL AND anonymized_at IS NULL AND '
+            . $condition . ' ORDER BY id LIMIT 2'
         );
         $statement->execute(['value' => $value]);
         $rows = $statement->fetchAll(PDO::FETCH_COLUMN);
