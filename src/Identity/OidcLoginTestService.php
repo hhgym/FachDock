@@ -72,10 +72,10 @@ final class OidcLoginTestService
         unset($_SESSION[self::FLOW_KEY]);
 
         if ($providerError !== '') {
-            throw new RuntimeException('IServ hat die Testanmeldung abgebrochen: ' . $providerError);
+            throw new RuntimeException('Der OpenID-Connect-Anbieter hat die Testanmeldung abgebrochen: ' . $providerError);
         }
         if (!is_array($flow)) {
-            throw new RuntimeException('Die OIDC-Testanmeldung ist abgelaufen. Bitte erneut starten.');
+            throw new RuntimeException('Die OpenID-Connect-Testanmeldung ist abgelaufen. Bitte erneut starten.');
         }
 
         $expectedState = $flow['state'] ?? null;
@@ -84,10 +84,10 @@ final class OidcLoginTestService
         if (!is_string($expectedState) || !hash_equals($expectedState, $state)
             || !is_string($verifier) || !is_int($startedAt)
             || $startedAt < time() - self::FLOW_LIFETIME_SECONDS) {
-            throw new RuntimeException('Die OIDC-Testanmeldung konnte nicht sicher bestätigt werden.');
+            throw new RuntimeException('Die OpenID-Connect-Testanmeldung konnte nicht sicher bestätigt werden.');
         }
         if ($code === '') {
-            throw new RuntimeException('IServ hat keinen Autorisierungscode geliefert.');
+            throw new RuntimeException('Der OpenID-Connect-Anbieter hat keinen Autorisierungscode geliefert.');
         }
 
         $metadata = $this->metadata();
@@ -105,7 +105,7 @@ final class OidcLoginTestService
 
         $accessToken = $token['access_token'] ?? null;
         if (!is_string($accessToken) || $accessToken === '') {
-            throw new RuntimeException('IServ hat kein gültiges Access Token geliefert.');
+            throw new RuntimeException('Der OpenID-Connect-Anbieter hat kein gültiges Access Token geliefert.');
         }
 
         $claims = $this->http->getJson((string) $metadata['userinfo_endpoint'], [
@@ -113,7 +113,7 @@ final class OidcLoginTestService
         ]);
         $subject = $claims['sub'] ?? null;
         if (!is_string($subject) || trim($subject) === '') {
-            throw new RuntimeException('IServ hat bei der Testanmeldung keine OpenID-Subject-ID geliefert.');
+            throw new RuntimeException('Der OpenID-Connect-Anbieter hat bei der Testanmeldung keine Subject-ID geliefert.');
         }
 
         ksort($claims);
@@ -127,12 +127,12 @@ final class OidcLoginTestService
         $issuer = $this->configuration->issuer();
         $metadata = $this->http->getJson($issuer . '/.well-known/openid-configuration');
         if (($metadata['issuer'] ?? null) !== $issuer) {
-            throw new RuntimeException('Der OIDC-Issuer der Discovery-Antwort stimmt nicht mit der Konfiguration überein.');
+            throw new RuntimeException('Der OpenID-Connect-Issuer der Discovery-Antwort stimmt nicht mit der Konfiguration überein.');
         }
         foreach (['authorization_endpoint', 'token_endpoint', 'userinfo_endpoint'] as $key) {
             $endpoint = $metadata[$key] ?? null;
             if (!is_string($endpoint) || !$this->sameOriginHttps($issuer, $endpoint)) {
-                throw new RuntimeException('Die OIDC-Discovery enthält einen unzulässigen Endpunkt: ' . $key . '.');
+                throw new RuntimeException('Die OpenID-Connect-Discovery enthält einen unzulässigen Endpunkt: ' . $key . '.');
             }
         }
 
