@@ -35,7 +35,13 @@ final class StudentSupportSessionService
     /** @return array<string, mixed> */
     public function createForStudentId(int $studentId, ?int $oidcIdentityId = null): array
     {
-        $student = $this->pdo === null ? $this->support->student($studentId) : $this->student($studentId);
+        if ($this->pdo !== null) {
+            $student = $this->student($studentId);
+        } elseif ($oidcIdentityId !== null && $this->oidcSessions !== null) {
+            $student = $this->oidcSessions->student($studentId);
+        } else {
+            $student = $this->support->student($studentId);
+        }
 
         return $this->establish($student, $oidcIdentityId);
     }
@@ -72,7 +78,14 @@ final class StudentSupportSessionService
         }
 
         try {
-            return $this->pdo === null ? $this->support->student($studentId) : $this->student($studentId);
+            if ($this->pdo !== null) {
+                return $this->student($studentId);
+            }
+            if ($oidcIdentityId !== null && $this->oidcSessions !== null) {
+                return $this->oidcSessions->student($studentId);
+            }
+
+            return $this->support->student($studentId);
         } catch (\Throwable) {
             $this->logout();
 
