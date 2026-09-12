@@ -431,11 +431,11 @@ final class AccountLifecycleService
     private function parentLifecycleStartAt(int $parentId): string
     {
         $statement = $this->pdo->prepare(
-            'SELECT COALESCE('
-            . '(SELECT MAX(s.inactive_since) FROM parent_student_link_slots psls '
-            . 'INNER JOIN students s ON s.id = psls.student_id WHERE psls.parent_contact_id = :slot_parent), '
-            . '(SELECT MAX(psl.ended_at) FROM parent_student_links psl WHERE psl.parent_contact_id = :history_parent), '
-            . 'CURRENT_TIMESTAMP)'
+            "SELECT COALESCE(NULLIF(GREATEST("
+            . "COALESCE((SELECT MAX(s.inactive_since) FROM parent_student_link_slots psls "
+            . "INNER JOIN students s ON s.id = psls.student_id WHERE psls.parent_contact_id = :slot_parent), '1000-01-01 00:00:00'), "
+            . "COALESCE((SELECT MAX(psl.ended_at) FROM parent_student_links psl WHERE psl.parent_contact_id = :history_parent), '1000-01-01 00:00:00')"
+            . "), '1000-01-01 00:00:00'), CURRENT_TIMESTAMP)"
         );
         $statement->execute([
             'slot_parent' => $parentId,
