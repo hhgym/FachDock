@@ -62,6 +62,7 @@ final class PersonAccountAdminController
         ]));
     }
 
+    /** @param list<string> $errors */
     private function accountIndex(Request $request, array $errors = [], int $statusCode = 200): Response
     {
         $staff = $this->administrator();
