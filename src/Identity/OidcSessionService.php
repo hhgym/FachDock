@@ -22,7 +22,7 @@ final class OidcSessionService
     public function create(int $identityId, string $ipAddress, string $userAgent): AuthenticatedOidcIdentity
     {
         if (!$this->enabled) {
-            throw new RuntimeException('Die IServ-Anmeldung ist nicht aktiviert.');
+            throw new RuntimeException('Die OpenID-Connect-Anmeldung ist nicht aktiviert.');
         }
         $token = bin2hex(random_bytes(32));
         $lifetime = max(15, $this->maxLifetimeMinutes);
@@ -43,7 +43,7 @@ final class OidcSessionService
 
         $identity = $this->current();
         if ($identity === null) {
-            throw new RuntimeException('Die IServ-Sitzung konnte nicht erstellt werden.');
+            throw new RuntimeException('Die OpenID-Connect-Sitzung konnte nicht erstellt werden.');
         }
 
         return $identity;
@@ -71,7 +71,7 @@ final class OidcSessionService
             . 'AND s.last_seen_at >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL ' . $idle . ' MINUTE) '
             . 'AND i.active = 1 '
             . "AND i.identity_type IN ('student','teacher') "
-            . "AND (i.identity_type <> 'student' OR (st.id IS NOT NULL AND st.active = 1)) "
+            . "AND (i.identity_type <> 'student' OR (st.id IS NOT NULL AND st.account_deactivated_at IS NULL AND st.anonymized_at IS NULL)) "
             . 'LIMIT 1'
         );
         $statement->execute(['token_hash' => hash('sha256', $token)]);
