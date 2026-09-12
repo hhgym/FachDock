@@ -4,6 +4,7 @@
     const destructiveActions = new Map([
         ['/admin/bookings/end', 'Diese Buchung wirklich beenden? Das Schließfach wird sofort freigegeben. Bereits verbuchte Zahlungen werden nicht automatisch erstattet.'],
         ['/admin/bookings/cancel', 'Diese Buchung wirklich stornieren? Das Schließfach wird sofort freigegeben. Bereits verbuchte Zahlungen werden nicht automatisch erstattet.'],
+        ['/admin/payments/terminate', 'Diesen offenen Zahlungsvorgang wirklich beenden? Ein bereits bestätigter Zahlungseingang darf hierüber nicht verworfen werden.'],
     ]);
 
     document.addEventListener('submit', (event) => {
@@ -27,6 +28,35 @@
         if (message !== undefined && !window.confirm(message)) {
             event.preventDefault();
         }
+    });
+
+    document.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) {
+            return;
+        }
+        const choice = target.closest('[data-locker-grid-choice][data-locker-grid-target]');
+        if (!(choice instanceof HTMLButtonElement)) {
+            return;
+        }
+        const selectId = choice.dataset.lockerGridTarget || '';
+        const lockerId = choice.dataset.lockerGridChoice || '';
+        const select = document.getElementById(selectId);
+        if (!(select instanceof HTMLSelectElement) || lockerId === '') {
+            return;
+        }
+
+        select.value = lockerId;
+        select.dispatchEvent(new Event('change', {bubbles: true}));
+        document.querySelectorAll(`[data-locker-grid-target="${CSS.escape(selectId)}"]`).forEach((button) => {
+            if (button instanceof HTMLElement) {
+                button.classList.toggle('is-selected', button.dataset.lockerGridChoice === lockerId);
+                const label = button.querySelector('small');
+                if (label instanceof HTMLElement) {
+                    label.textContent = button.dataset.lockerGridChoice === lockerId ? 'ausgewählt' : 'wählen';
+                }
+            }
+        });
     });
 
     const desktopMenus = document.querySelectorAll('details.nav-menu, details.account-menu');
