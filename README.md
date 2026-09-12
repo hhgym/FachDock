@@ -6,20 +6,24 @@ FachDock ist eine webbasierte Verwaltungs- und Buchungslösung für schulische S
 
 ## Projektstatus
 
-Aktuelle veröffentlichte Version: **1.0.0-rc.2**
+Aktuelle veröffentlichte Version: **1.0.0-rc.3**
 
-> `1.0.0-rc.2` ist der zweite Release Candidate für FachDock 1.0. Er enthält die Korrekturen aus der manuellen Abnahme von `1.0.0-rc.1` und ist für die nächste produktionsnahe Testphase vorgesehen. Der Release Candidate ist noch nicht die finale Freigabe für den produktiven Schulbetrieb.
+> `1.0.0-rc.3` ist der dritte Release Candidate für FachDock 1.0. Er erweitert `1.0.0-rc.2` insbesondere um den realen OpenID-Connect-Testlogin mit Claim-Anzeige, konfigurierbare Schülerzuordnung, auswählbare Updatekanäle sowie die getrennte Verwaltung und den automatisierten Lebenszyklus von Schüler- und Elternkonten. Der Release Candidate ist noch nicht die finale Freigabe für den produktiven Schulbetrieb.
 
-Release Candidates werden auf GitHub ausdrücklich als **Prerelease** veröffentlicht. Der integrierte FachDock-Updater bleibt auf stabile Releases beschränkt und bietet einen RC daher nicht automatisch als normales Produktivupdate an.
+Release Candidates werden auf GitHub ausdrücklich als **Prerelease** veröffentlicht. Der integrierte FachDock-Updater verwendet standardmäßig ausschließlich stabile Releases. Ein RC-Kanal kann gezielt freigeschaltet werden; ein zusätzlicher Develop-Kanal kann für rolling Test-Builds aktiviert werden.
 
 ## Enthaltene Kernfunktionen
 
 - Web-Installer mit migrationsbasierter Datenbankeinrichtung
-- lokale Anmeldung für Administratoren und Schließfachverwalter
-- IServ/OIDC für Schülerinnen und Schüler sowie Lehrkräfte
+- lokale Anmeldung für Administratoren und Schließfachverwalter einschließlich Benutzer-Lifecycle
+- OpenID Connect für Schülerinnen und Schüler sowie Lehrkräfte, mit echtem Admin-Testlogin und Anzeige der übertragenen UserInfo-Claims
+- konfigurierbare Schülerzuordnung über Rolle, Claim und Zielfeld, unter anderem `untis_username` → Matrikelnummer
 - passwortloses Elternportal über Magic Links
 - zentrale responsive und rollenabhängige Navigation
-- zentrale Konfiguration für Anwendung, Authentifizierung, OIDC, Buchung, Stripe und E-Mail
+- zentrale Konfiguration für Anwendung, Authentifizierung, OpenID Connect, Buchung, Stripe und E-Mail
+- getrennte Übersichten für Schülerstammdaten und Benutzerkonten
+- konfigurierbarer Schüler-Lifecycle mit Nachlauf, Kontosperre, Rückkehrbehandlung und Anonymisierung
+- konfigurierbarer Eltern-Lifecycle nach Wegfall des letzten aktiven Kindes
 - Gebäude, Etagen, Bereiche, Schrankgruppen, Korpustypen und automatisch erzeugte Schließfächer
 - automatische Fachbezeichnungen wie `A-07-2`
 - mehrere Bild-Lagepläne je Etage mit Zoom, Verschieben, Größenanpassung und direkter Rechteckplatzierung vorhandener Schrankgruppen
@@ -44,22 +48,22 @@ Release Candidates werden auf GitHub ausdrücklich als **Prerelease** veröffent
 - Vollbackup und vollständiger Restore mit SHA-256-Prüfung
 - automatische Sicherheitsbackups vor Restore und Self-Update
 - Systemjobs für Mailversand, Schuljahreswechsel, Datenschutz und Backups
-- stabiler GitHub-Updatekanal für freigegebene stabile Releases
+- Updatekanäle Stable, RC und optional Develop; Stable bleibt die Voreinstellung
 
 ## Release-Candidate-Abnahme
 
-Für `1.0.0-rc.2` sollen insbesondere die in `rc.1` aufgefallenen realen Abläufe erneut geprüft werden:
+Für `1.0.0-rc.3` sollen neben den bisherigen Kernabläufen insbesondere die seit `rc.2` hinzugekommenen Funktionen geprüft werden:
 
-1. Neuinstallation aus dem Release-ZIP auf einer leeren Datenbank.
-2. Upgrade einer bestehenden Testinstallation mit gesichertem Datenbestand.
-3. Anmeldung und Rechte als Administrator, Schließfachverwalter, Lehrkraft, Schüler und Elternkontakt.
-4. Elternbuchung per Liste und Lageplan einschließlich Reservierung, Zahlung und BuT.
-5. Lageplan-Zoom, Verschieben, Größenänderung und Rechteckplatzierung von Schrankgruppen.
-6. CSV-Schülerimport einschließlich Vorschau und Fehleranzeige.
-7. SMTP-Mailversand, Magic Links, Mail-Warteschlange und Stundenlimit/Reserve.
-8. IServ/OIDC in der vorgesehenen Zielumgebung.
-9. Defektmeldung und Notöffnung einschließlich mobiler Bedienung.
-10. Vollbackup, Restore, Produktionsbereitschaftsprüfung und grundlegende Tastaturbedienung.
+1. Neuinstallation aus dem Release-ZIP auf einer leeren Datenbank und Upgrade einer bestehenden Testinstallation.
+2. Anmeldung und Rechte als Administrator, Schließfachverwalter, Lehrkraft, Schüler und Elternkontakt.
+3. OpenID-Connect-Discovery und echter Testlogin mit Kontrolle der übertragenen Claims.
+4. Automatische Schülerzuordnung über konfigurierte Rolle und Claim, insbesondere optional `untis_username` → Matrikelnummer.
+5. Schüler-Lifecycle: 30-Tage-Nachlauf, automatische Sperre, Rückkehr und Anonymisierung nach einem Jahr.
+6. Eltern-Lifecycle: Fristbeginn erst nach Wegfall des letzten aktiven Kindes und Standardfrist von drei Jahren.
+7. Manuelle Deaktivierung/Reaktivierung sowie sofortige Anonymisierung nur nach exakter Texteingabe-Bestätigung.
+8. Getrennte Ansichten für Schülerdaten und Benutzerkonten einschließlich Verweis vom Schüler zum vorhandenen Konto.
+9. Stable-, RC- und Develop-Updatekanal einschließlich korrekter Upgrade-Erkennung ohne Downgrade.
+10. Elternbuchung per Liste und Lageplan einschließlich Reservierung, Zahlung und BuT sowie die übrigen Betriebs- und Backupabläufe.
 
 Die ausführliche Checkliste befindet sich in `docs/RELEASE_CANDIDATE.md`, der Anforderungsabgleich in `docs/REQUIREMENTS_AUDIT_1.0.md`.
 
@@ -69,6 +73,7 @@ Die folgenden Punkte sind bewusst als spätere Erweiterungen vorgesehen und bloc
 
 - optional kostenpflichtige Fachwechsel
 - spätere REST-/WPDataAccess-API für automatisierte Stammdatenintegration
+- optionaler OpenID-Connect-Zugang für Eltern; das Elternportal verwendet weiterhin Magic Links
 - weitergehende Dokumenten- und PDF-Funktionen
 
 ## Technische Basis
@@ -91,7 +96,7 @@ FachDock verwendet Git Flow:
 - `release/*` – Release-Stabilisierung
 - `hotfix/*` – dringende Korrekturen veröffentlichter Versionen
 
-Stabile Releases verwenden Tags wie `v0.9.0` bzw. künftig `v1.0.0`. Release Candidates verwenden Tags wie `v1.0.0-rc.1` oder `v1.0.0-rc.2` und werden als GitHub-Prerelease markiert.
+Stabile Releases verwenden Tags wie `v0.9.0` bzw. künftig `v1.0.0`. Release Candidates verwenden Tags wie `v1.0.0-rc.1`, `v1.0.0-rc.2` oder `v1.0.0-rc.3` und werden als GitHub-Prerelease markiert.
 
 ## Installation
 
@@ -99,7 +104,7 @@ Die Erstinstallation erfolgt über den Web-Installer. Siehe `docs/INSTALLATION.m
 
 ## Sicherheit
 
-Geheime Konfigurationswerte wie Stripe-, SMTP- oder OIDC-Secrets werden nicht in das Repository eingecheckt. Lokale Secrets werden außerhalb des Webroots in einer lokalen Konfigurationsdatei verwaltet.
+Geheime Konfigurationswerte wie Stripe-, SMTP- oder OpenID-Connect-Secrets werden nicht in das Repository eingecheckt. Lokale Secrets werden außerhalb des Webroots in einer lokalen Konfigurationsdatei verwaltet.
 
 ## Lizenz
 

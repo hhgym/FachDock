@@ -7,7 +7,7 @@ $root = dirname(__DIR__);
 return [
     'app' => [
         'name' => 'FachDock',
-        'version' => '1.0.0-rc.2',
+        'version' => '1.0.0-rc.3',
         'environment' => 'production',
         'debug' => false,
         'installed' => false,
