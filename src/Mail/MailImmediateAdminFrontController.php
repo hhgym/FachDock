@@ -62,6 +62,9 @@ final class MailImmediateAdminFrontController
             self::makeAvailableNow($pdo, $queueId);
             $queue = new MailQueueService($pdo, new MailTemplateRenderer());
             $result = (new MailWorkerFactory($config))->create($pdo, $queue)->runImmediate($queueId);
+            if ((int) ($result['rate_limited'] ?? 0) === 1) {
+                self::setQueueError($pdo, $queueId, 'Sofortversand durch das globale 60-Minuten-Versandlimit zurückgestellt.');
+            }
             (new AuditLogger($pdo))->staff($staff, 'mail_queue.immediate_delivery.requested', 'mail_queue', $queueId, [
                 'sent' => (int) ($result['sent'] ?? 0),
                 'failed' => (int) ($result['failed'] ?? 0),
@@ -81,11 +84,19 @@ final class MailImmediateAdminFrontController
     private static function makeAvailableNow(PDO $pdo, int $queueId): void
     {
         $statement = $pdo->prepare(
-            "UPDATE mail_queue SET status = 'waiting', available_at = CURRENT_TIMESTAMP, "
-            . 'processing_started_at = NULL, updated_at = CURRENT_TIMESTAMP '
+            "UPDATE mail_queue SET status = 'waiting', available_at = CURRENT_TIMESTAMP, priority = :priority, "
+            . 'processing_started_at = NULL, locked_at = NULL, updated_at = CURRENT_TIMESTAMP '
             . "WHERE id = :id AND status IN ('waiting','failed')"
         );
-        $statement->execute(['id' => $queueId]);
+        $statement->execute(['id' => $queueId, 'priority' => MailWorker::IMMEDIATE_PRIORITY_MAX]);
+    }
+
+    private static function setQueueError(PDO $pdo, int $queueId, string $message): void
+    {
+        $statement = $pdo->prepare(
+            'UPDATE mail_queue SET last_error = :message, updated_at = CURRENT_TIMESTAMP WHERE id = :id'
+        );
+        $statement->execute(['id' => $queueId, 'message' => $message]);
     }
 
     private static function positiveId(string $value): ?int
