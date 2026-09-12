@@ -21,6 +21,8 @@ use Throwable;
 
 final class OidcAdminFrontController
 {
+    private const LOGIN_TEST_REDIRECT_KEY = 'oidc_admin_login_test_redirect';
+
     /** @var list<string> */
     private const PATHS = [
         '/admin/config/oidc',
@@ -143,10 +145,17 @@ final class OidcAdminFrontController
                 );
             }
 
+            if ($path === '/admin/config/oidc/login-test'
+                && $request->method() === 'GET'
+                && self::queryString($request, 'continue') === '1') {
+                return Response::redirect(self::consumeLoginTestRedirect());
+            }
+
             if ($path === '/admin/config/oidc/login-test' && $request->method() === 'POST') {
                 self::assertCsrf($request, $csrf);
+                self::storeLoginTestRedirect($loginTest->begin());
 
-                return Response::redirect($loginTest->begin());
+                return Response::redirect('/admin/config/oidc/login-test?continue=1');
             }
 
             if ($path === '/admin/config/oidc/identity' && $request->method() === 'POST') {
@@ -391,6 +400,32 @@ final class OidcAdminFrontController
         if (!$csrf->verify($request->postString('_csrf'))) {
             throw new RuntimeException('Die Sitzung ist abgelaufen. Bitte erneut versuchen.');
         }
+    }
+
+    private static function storeLoginTestRedirect(string $url): void
+    {
+        if (!str_starts_with(strtolower($url), 'https://')) {
+            throw new RuntimeException('Die OpenID-Connect-Testanmeldung enthält keine sichere Weiterleitungsadresse.');
+        }
+        if (session_status() !== PHP_SESSION_ACTIVE && !session_start()) {
+            throw new RuntimeException('Die Sitzung für die OpenID-Connect-Testanmeldung konnte nicht fortgesetzt werden.');
+        }
+        $_SESSION[self::LOGIN_TEST_REDIRECT_KEY] = $url;
+        session_write_close();
+    }
+
+    private static function consumeLoginTestRedirect(): string
+    {
+        $url = $_SESSION[self::LOGIN_TEST_REDIRECT_KEY] ?? null;
+        unset($_SESSION[self::LOGIN_TEST_REDIRECT_KEY]);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+        if (!is_string($url) || !str_starts_with(strtolower($url), 'https://')) {
+            throw new RuntimeException('Die OpenID-Connect-Testanmeldung ist abgelaufen. Bitte erneut starten.');
+        }
+
+        return $url;
     }
 
     private static function queryString(Request $request, string $key, string $default = ''): string
