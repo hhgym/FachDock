@@ -12,6 +12,7 @@ use FachDock\Mail\MailQueueService;
 use FachDock\Mail\MailTemplateRenderer;
 use FachDock\Mail\MailWorkerFactory;
 use FachDock\Migration\MigrationRunner;
+use FachDock\Privacy\AccountLifecycleService;
 use FachDock\Privacy\DataRetentionService;
 use FachDock\SchoolYear\SchoolYearTransitionService;
 use FachDock\System\WorkerHeartbeatService;
@@ -34,7 +35,7 @@ if ($command === 'help' || $command === '--help' || $command === '-h') {
     echo "  migrate                         Run all pending database migrations\n";
     echo "  mail:work                       Process one batch of queued emails\n";
     echo "  school-year:tick                Queue due renewal reminders and perform overdue August rollover\n";
-    echo "  privacy:tick                    Apply configured retention and anonymization rules\n";
+    echo "  privacy:tick                    Apply account lifecycle, retention and anonymization rules\n";
     echo "  backup:create                   Create a full local backup with SHA-256 checksum\n";
     echo "  backup:restore <file> --force   Restore a backup after creating a safety backup\n";
     exit(0);
@@ -107,7 +108,8 @@ try {
         $heartbeat = new WorkerHeartbeatService($pdo, 'privacy');
         $heartbeat->started();
         try {
-            $result = (new DataRetentionService($pdo))->anonymize(null);
+            $accountLifecycle = new AccountLifecycleService($pdo);
+            $result = (new DataRetentionService($pdo, $accountLifecycle))->anonymize(null);
             $heartbeat->succeeded($result);
         } catch (Throwable $exception) {
             $heartbeat->failed($exception->getMessage());

@@ -7,7 +7,7 @@ $root = dirname(__DIR__);
 return [
     'app' => [
         'name' => 'FachDock',
-        'version' => '1.0.0-rc.2',
+        'version' => '1.0.0-rc.3',
         'environment' => 'production',
         'debug' => false,
         'installed' => false,
@@ -27,8 +27,12 @@ return [
         'enabled' => false,
         'issuer' => '',
         'client_id' => '',
+        'login_label' => 'Mit OpenID Connect anmelden',
         'scopes' => 'openid profile email iserv:uuid iserv:groups iserv:roles',
         'student_auto_match' => 'email',
+        'student_role_names' => '',
+        'student_match_claim' => 'email',
+        'student_match_field' => 'email',
         'teacher_role_names' => 'Lehrer, Lehrkräfte',
         'session_lifetime_minutes' => 480,
     ],
@@ -58,6 +62,11 @@ return [
         'encryption' => 'tls',
         'from_email' => '',
         'from_name' => 'FachDock',
+    ],
+    'updates' => [
+        'default_channel' => 'stable',
+        'allow_rc' => false,
+        'allow_develop' => false,
     ],
     'database' => [
         'driver' => 'mysql',

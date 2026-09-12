@@ -3,9 +3,12 @@
 declare(strict_types=1);
 
 use FachDock\Application;
+use FachDock\Auth\StaffUserAdminFrontController;
 use FachDock\Booking\BookingRulesFrontController;
 use FachDock\Booking\ParentBookingMapFrontController;
 use FachDock\Identity\IdentityFrontController;
+use FachDock\Identity\OidcAdminFrontController;
+use FachDock\Identity\PersonAccountAdminFrontController;
 use FachDock\Operations\OperationsFrontController;
 use FachDock\Platform\PlatformFrontController;
 
@@ -20,6 +23,24 @@ if (!is_file($autoload)) {
 }
 
 require $autoload;
+
+$oidcAdminResponse = OidcAdminFrontController::handle($root);
+if ($oidcAdminResponse !== null) {
+    $oidcAdminResponse->send();
+    exit;
+}
+
+$personAccountResponse = PersonAccountAdminFrontController::handle($root);
+if ($personAccountResponse !== null) {
+    $personAccountResponse->send();
+    exit;
+}
+
+$staffUserAdminResponse = StaffUserAdminFrontController::handle($root);
+if ($staffUserAdminResponse !== null) {
+    $staffUserAdminResponse->send();
+    exit;
+}
 
 $identityResponse = IdentityFrontController::handle($root);
 if ($identityResponse !== null) {

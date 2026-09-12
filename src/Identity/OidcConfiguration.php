@@ -33,6 +33,13 @@ final class OidcConfiguration
         return (string) $this->config->get('oidc.client_secret', '');
     }
 
+    public function loginLabel(): string
+    {
+        $value = trim((string) $this->config->get('oidc.login_label', 'Mit OpenID Connect anmelden'));
+
+        return $value !== '' ? mb_substr($value, 0, 80) : 'Mit OpenID Connect anmelden';
+    }
+
     public function callbackUrl(): string
     {
         $base = rtrim(trim((string) $this->config->get('app.base_url', '')), '/');
@@ -44,12 +51,15 @@ final class OidcConfiguration
     {
         $value = trim((string) $this->config->get(
             'oidc.scopes',
-            'openid profile email iserv:uuid iserv:groups iserv:roles',
+            'openid profile email iserv:uuid iserv:groups iserv:roles iserv:untis',
         ));
 
         return $value !== '' ? $value : 'openid profile email';
     }
 
+    /**
+     * Legacy compatibility for installations that still contain student_auto_match.
+     */
     public function studentAutoMatch(): string
     {
         $value = (string) $this->config->get('oidc.student_auto_match', 'email');
@@ -57,19 +67,42 @@ final class OidcConfiguration
         return in_array($value, ['none', 'email', 'username_to_matrikelnummer'], true) ? $value : 'email';
     }
 
+    public function studentMatchField(): string
+    {
+        $configured = $this->config->get('oidc.student_match_field');
+        if (is_string($configured) && in_array($configured, ['none', 'email', 'matrikelnummer'], true)) {
+            return $configured;
+        }
+
+        return match ($this->studentAutoMatch()) {
+            'none' => 'none',
+            'username_to_matrikelnummer' => 'matrikelnummer',
+            default => 'email',
+        };
+    }
+
+    public function studentMatchClaim(): string
+    {
+        $configured = trim((string) $this->config->get('oidc.student_match_claim', ''));
+        if ($configured !== '' && preg_match('/^[A-Za-z0-9_.:-]{1,128}$/', $configured) === 1) {
+            return $configured;
+        }
+
+        return $this->studentAutoMatch() === 'username_to_matrikelnummer'
+            ? 'preferred_username'
+            : 'email';
+    }
+
+    /** @return list<string> */
+    public function studentRoleNames(): array
+    {
+        return $this->roleNames((string) $this->config->get('oidc.student_role_names', ''));
+    }
+
     /** @return list<string> */
     public function teacherRoleNames(): array
     {
-        $raw = (string) $this->config->get('oidc.teacher_role_names', 'Lehrer,Lehrkräfte');
-        $result = [];
-        foreach (preg_split('/[,;\n]+/', $raw) ?: [] as $role) {
-            $role = mb_strtolower(trim($role));
-            if ($role !== '' && !in_array($role, $result, true)) {
-                $result[] = $role;
-            }
-        }
-
-        return $result;
+        return $this->roleNames((string) $this->config->get('oidc.teacher_role_names', 'Lehrer,Lehrkräfte'));
     }
 
     public function sessionLifetimeMinutes(): int
@@ -79,24 +112,29 @@ final class OidcConfiguration
         return is_numeric($value) ? min(10080, max(15, (int) $value)) : 480;
     }
 
+    public function assertConfigured(): void
+    {
+        $issuer = $this->issuer();
+        if (!$this->validHttpsUrl($issuer)) {
+            throw new RuntimeException('Für OpenID Connect muss eine gültige HTTPS-Issuer-URL konfiguriert sein.');
+        }
+        if ($this->clientId() === '') {
+            throw new RuntimeException('Die OpenID-Connect-Client-ID fehlt.');
+        }
+        if ($this->clientSecret() === '') {
+            throw new RuntimeException('Das OpenID-Connect-Client-Geheimnis fehlt.');
+        }
+        if (!$this->validHttpsUrl($this->callbackUrl())) {
+            throw new RuntimeException('Die öffentliche FachDock-Basis-URL muss für OpenID Connect als HTTPS-URL konfiguriert sein.');
+        }
+    }
+
     public function assertReady(): void
     {
         if (!$this->enabled()) {
-            throw new RuntimeException('Die IServ-Anmeldung ist nicht aktiviert.');
+            throw new RuntimeException('Die OpenID-Connect-Anmeldung ist nicht aktiviert.');
         }
-        $issuer = $this->issuer();
-        if (!$this->validHttpsUrl($issuer)) {
-            throw new RuntimeException('Für IServ muss eine gültige HTTPS-Issuer-URL konfiguriert sein.');
-        }
-        if ($this->clientId() === '') {
-            throw new RuntimeException('Die OIDC-Client-ID fehlt.');
-        }
-        if ($this->clientSecret() === '') {
-            throw new RuntimeException('Das OIDC-Client-Geheimnis fehlt.');
-        }
-        if (!$this->validHttpsUrl($this->callbackUrl())) {
-            throw new RuntimeException('Die öffentliche FachDock-Basis-URL muss für OIDC als HTTPS-URL konfiguriert sein.');
-        }
+        $this->assertConfigured();
     }
 
     public function ready(): bool
@@ -108,6 +146,20 @@ final class OidcConfiguration
         } catch (RuntimeException) {
             return false;
         }
+    }
+
+    /** @return list<string> */
+    private function roleNames(string $raw): array
+    {
+        $result = [];
+        foreach (preg_split('/[,;\n]+/', $raw) ?: [] as $role) {
+            $role = mb_strtolower(trim($role));
+            if ($role !== '' && !in_array($role, $result, true)) {
+                $result[] = $role;
+            }
+        }
+
+        return $result;
     }
 
     private function validHttpsUrl(string $url): bool

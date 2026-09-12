@@ -13,8 +13,10 @@ use Throwable;
 
 final class DataRetentionService
 {
-    public function __construct(private readonly PDO $pdo)
-    {
+    public function __construct(
+        private readonly PDO $pdo,
+        private readonly ?AccountLifecycleService $accountLifecycle = null,
+    ) {
     }
 
     /** @return array{retention_years:int,mail_retention_days:int} */
@@ -53,12 +55,19 @@ final class DataRetentionService
         $settings = $this->settings();
         $cutoff = $today->modify('-' . $settings['retention_years'] . ' years')->format('Y-m-d');
         $mailCutoff = $today->modify('-' . $settings['mail_retention_days'] . ' days')->format('Y-m-d H:i:s');
+        $studentCount = $this->candidateStudentCount($cutoff);
+        $parentCount = $this->candidateParentCount($cutoff);
+        if ($this->accountLifecycle !== null) {
+            $accountPreview = $this->accountLifecycle->preview($today);
+            $studentCount = $accountPreview['students_to_anonymize'];
+            $parentCount = $accountPreview['parents_to_anonymize'];
+        }
 
         return [
             'cutoff_date' => $cutoff,
             'mail_cutoff_date' => $mailCutoff,
-            'students' => $this->candidateStudentCount($cutoff),
-            'parents' => $this->candidateParentCount($cutoff),
+            'students' => $studentCount,
+            'parents' => $parentCount,
             'mails' => $this->countBefore('mail_queue', 'created_at', $mailCutoff),
             'audit_entries' => $this->countBefore('audit_log', 'created_at', $cutoff . ' 00:00:00'),
         ];
@@ -78,6 +87,11 @@ final class DataRetentionService
         $cutoff = $today->modify('-' . $settings['retention_years'] . ' years')->format('Y-m-d');
         $mailCutoff = $today->modify('-' . $settings['mail_retention_days'] . ' days')->format('Y-m-d H:i:s');
 
+        $accountSummary = null;
+        if ($this->accountLifecycle !== null) {
+            $accountSummary = $this->accountLifecycle->process($today);
+        }
+
         $this->pdo->beginTransaction();
         try {
             $run = $this->pdo->prepare(
@@ -96,45 +110,54 @@ final class DataRetentionService
                 throw new RuntimeException('Der Datenschutzlauf konnte nicht protokolliert werden.');
             }
 
-            $studentIds = $this->candidateStudentIds($cutoff);
+            $studentCount = 0;
+            $parentCount = 0;
             $incidents = 0;
-            foreach ($studentIds as $studentId) {
-                $this->pdo->prepare('DELETE FROM parent_student_link_slots WHERE student_id = :id')->execute(['id' => $studentId]);
-                $this->pdo->prepare(
-                    'UPDATE parent_student_links SET ended_at = COALESCE(ended_at, CURRENT_TIMESTAMP), '
-                    . "end_reason = COALESCE(end_reason, 'Datenschutz-Anonymisierung') WHERE student_id = :id AND ended_at IS NULL"
-                )->execute(['id' => $studentId]);
-                $incidentUpdate = $this->pdo->prepare(
-                    "UPDATE locker_incidents SET reporter_email = NULL, reporter_name = 'Anonymisiert', "
-                    . "description = '[anonymisiert]', resolution_note = CASE WHEN resolution_note IS NULL THEN NULL ELSE '[anonymisiert]' END "
-                    . 'WHERE student_id = :id'
-                );
-                $incidentUpdate->execute(['id' => $studentId]);
-                $incidents += $incidentUpdate->rowCount();
-                $this->pdo->prepare(
-                    "UPDATE bookings SET student_snapshot = '{\"anonymized\":true}' WHERE student_id = :id"
-                )->execute(['id' => $studentId]);
-                $this->pdo->prepare(
-                    "UPDATE students SET matrikelnummer = :matrikel, first_name = 'Anonymisiert', last_name = :last_name, "
-                    . "class_name = '-', email = NULL, access_code_hash = NULL, access_code_generated_at = NULL, "
-                    . 'active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = :id'
-                )->execute([
-                    'id' => $studentId,
-                    'matrikel' => 'ANON-' . $studentId . '-' . substr(hash('sha256', 'student:' . $studentId), 0, 12),
-                    'last_name' => '#' . $studentId,
-                ]);
-            }
+            if ($accountSummary === null) {
+                $studentIds = $this->candidateStudentIds($cutoff);
+                foreach ($studentIds as $studentId) {
+                    $this->pdo->prepare('DELETE FROM parent_student_link_slots WHERE student_id = :id')->execute(['id' => $studentId]);
+                    $this->pdo->prepare(
+                        'UPDATE parent_student_links SET ended_at = COALESCE(ended_at, CURRENT_TIMESTAMP), '
+                        . "end_reason = COALESCE(end_reason, 'Datenschutz-Anonymisierung') WHERE student_id = :id AND ended_at IS NULL"
+                    )->execute(['id' => $studentId]);
+                    $incidentUpdate = $this->pdo->prepare(
+                        "UPDATE locker_incidents SET reporter_email = NULL, reporter_name = 'Anonymisiert', "
+                        . "description = '[anonymisiert]', resolution_note = CASE WHEN resolution_note IS NULL THEN NULL ELSE '[anonymisiert]' END "
+                        . 'WHERE student_id = :id'
+                    );
+                    $incidentUpdate->execute(['id' => $studentId]);
+                    $incidents += $incidentUpdate->rowCount();
+                    $this->pdo->prepare(
+                        "UPDATE bookings SET student_snapshot = '{\"anonymized\":true}' WHERE student_id = :id"
+                    )->execute(['id' => $studentId]);
+                    $this->pdo->prepare(
+                        "UPDATE students SET matrikelnummer = :matrikel, first_name = 'Anonymisiert', last_name = :last_name, "
+                        . "class_name = '-', email = NULL, access_code_hash = NULL, access_code_generated_at = NULL, "
+                        . 'active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = :id'
+                    )->execute([
+                        'id' => $studentId,
+                        'matrikel' => 'ANON-' . $studentId . '-' . substr(hash('sha256', 'student:' . $studentId), 0, 12),
+                        'last_name' => '#' . $studentId,
+                    ]);
+                }
+                $studentCount = count($studentIds);
 
-            $parentIds = $this->candidateParentIds($cutoff);
-            foreach ($parentIds as $parentId) {
-                $this->pdo->prepare(
-                    'UPDATE parent_sessions SET revoked_at = COALESCE(revoked_at, CURRENT_TIMESTAMP) WHERE parent_contact_id = :id'
-                )->execute(['id' => $parentId]);
-                $this->pdo->prepare('DELETE FROM parent_magic_links WHERE parent_contact_id = :id')->execute(['id' => $parentId]);
-                $this->pdo->prepare(
-                    "UPDATE parent_contacts SET email = :email, first_name = NULL, last_name = NULL, status = 'anonymized', "
-                    . 'verified_at = NULL, stripe_customer_id = NULL, active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = :id'
-                )->execute(['id' => $parentId, 'email' => 'anon-parent-' . $parentId . '@invalid.local']);
+                $parentIds = $this->candidateParentIds($cutoff);
+                foreach ($parentIds as $parentId) {
+                    $this->pdo->prepare(
+                        'UPDATE parent_sessions SET revoked_at = COALESCE(revoked_at, CURRENT_TIMESTAMP) WHERE parent_contact_id = :id'
+                    )->execute(['id' => $parentId]);
+                    $this->pdo->prepare('DELETE FROM parent_magic_links WHERE parent_contact_id = :id')->execute(['id' => $parentId]);
+                    $this->pdo->prepare(
+                        "UPDATE parent_contacts SET email = :email, first_name = NULL, last_name = NULL, status = 'anonymized', "
+                        . 'verified_at = NULL, stripe_customer_id = NULL, active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = :id'
+                    )->execute(['id' => $parentId, 'email' => 'anon-parent-' . $parentId . '@invalid.local']);
+                }
+                $parentCount = count($parentIds);
+            } else {
+                $studentCount = $accountSummary['students_anonymized'];
+                $parentCount = $accountSummary['parents_anonymized'];
             }
 
             $mail = $this->pdo->prepare(
@@ -155,8 +178,8 @@ final class DataRetentionService
             $auditCount = $audit->rowCount();
 
             $summary = [
-                'students' => count($studentIds),
-                'parents' => count($parentIds),
+                'students' => $studentCount,
+                'parents' => $parentCount,
                 'mails' => $mailCount,
                 'mail_history' => $historyCount,
                 'audit_entries' => $auditCount,

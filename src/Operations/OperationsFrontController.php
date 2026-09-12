@@ -143,6 +143,7 @@ final class OperationsFrontController
             $support,
             new AccessCodeGenerator(),
             $oidcSessions,
+            $pdo,
         );
         $studentSupport = new StudentSupportController(
             $support,

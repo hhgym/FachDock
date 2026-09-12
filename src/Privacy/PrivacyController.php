@@ -22,6 +22,7 @@ final class PrivacyController
 {
     public function __construct(
         private readonly DataRetentionService $retention,
+        private readonly AccountLifecycleService $accountLifecycle,
         private readonly AdminExportService $exports,
         private readonly ProductionReadinessService $readiness,
         private readonly StaffSessionService $sessions,
@@ -55,10 +56,24 @@ final class PrivacyController
         try {
             $years = $this->positiveInt($request->postString('retention_years'), 'Aufbewahrungsfrist');
             $days = $this->positiveInt($request->postString('mail_retention_days'), 'E-Mail-Aufbewahrung');
+            $studentDeactivation = $this->positiveInt($request->postString('student_deactivation_days'), 'Schüler-Deaktivierungsfrist');
+            $studentAnonymization = $this->positiveInt($request->postString('student_anonymization_days'), 'Schüler-Anonymisierungsfrist');
+            $parentDeactivation = $this->positiveInt($request->postString('parent_deactivation_days'), 'Eltern-Deaktivierungsfrist');
+            $parentAnonymization = $this->positiveInt($request->postString('parent_anonymization_days'), 'Eltern-Anonymisierungsfrist');
             $this->retention->saveSettings($years, $days);
+            $this->accountLifecycle->saveSettings(
+                $studentDeactivation,
+                $studentAnonymization,
+                $parentDeactivation,
+                $parentAnonymization,
+            );
             $this->audit->staff($staff, 'privacy.settings_updated', 'privacy_settings', null, [
                 'retention_years' => $years,
                 'mail_retention_days' => $days,
+                'student_deactivation_days' => $studentDeactivation,
+                'student_anonymization_days' => $studentAnonymization,
+                'parent_deactivation_days' => $parentDeactivation,
+                'parent_anonymization_days' => $parentAnonymization,
             ]);
             $this->csrf->rotate();
 
@@ -122,7 +137,7 @@ final class PrivacyController
         $query = $request->query();
         $notice = null;
         if (($query['saved'] ?? null) === '1') {
-            $notice = 'Die Aufbewahrungsfristen wurden gespeichert.';
+            $notice = 'Die Aufbewahrungs- und Account-Lifecycle-Fristen wurden gespeichert.';
         } elseif (($query['anonymized'] ?? null) === '1') {
             $notice = 'Der Datenschutzlauf wurde erfolgreich abgeschlossen.';
         }
@@ -130,6 +145,8 @@ final class PrivacyController
         return Response::html($this->views->render('privacy.php', [
             'staff' => $staff,
             'settings' => $this->retention->settings(),
+            'accountSettings' => $this->accountLifecycle->settings(),
+            'accountPreview' => $this->accountLifecycle->preview(),
             'preview' => $this->retention->preview(),
             'runs' => $this->retention->recentRuns(),
             'readiness' => $this->readiness->snapshot(),

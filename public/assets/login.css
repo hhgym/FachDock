@@ -1,0 +1,90 @@
+.login-shell {
+    width: min(860px, calc(100% - 32px));
+}
+
+.login-primary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.login-choice {
+    min-height: 220px;
+    align-content: start;
+}
+
+.login-choice h2,
+.login-secondary h2 {
+    margin: 0;
+    font-size: 1.45rem;
+}
+
+.login-choice p {
+    margin: 0;
+    color: #5d6678;
+}
+
+.login-choice .button {
+    margin-top: auto;
+}
+
+.login-choice-primary {
+    border-color: #cfd8f2;
+    background: linear-gradient(145deg, #ffffff 0%, #f7f9ff 100%);
+}
+
+.login-teacher-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.login-teacher-row > div {
+    min-width: 0;
+}
+
+.login-teacher-row p {
+    margin: 4px 0 0;
+    color: #667085;
+}
+
+.login-secondary {
+    padding: 0;
+    overflow: hidden;
+}
+
+.login-secondary > summary {
+    cursor: pointer;
+    padding: 18px 22px;
+    font-weight: 750;
+    color: #44506a;
+}
+
+.login-secondary[open] > summary {
+    border-bottom: 1px solid #edf0f4;
+}
+
+.login-secondary form {
+    padding: 22px;
+}
+
+@media (max-width: 680px) {
+    .login-primary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .login-choice {
+        min-height: auto;
+    }
+
+    .login-teacher-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .login-teacher-row .button {
+        width: 100%;
+        text-align: center;
+    }
+}

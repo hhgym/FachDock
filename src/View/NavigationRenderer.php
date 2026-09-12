@@ -137,8 +137,11 @@ final class NavigationRenderer
         $groups[] = [
             'label' => 'Personen',
             'items' => [
-                ['label' => 'Schüler', 'href' => '/admin/students'],
-                ['label' => 'Eltern', 'href' => '/admin/parents'],
+                ['label' => 'Schülerdaten', 'href' => '/admin/student-data'],
+                ['label' => 'Schülerimport', 'href' => '/admin/students'],
+                ['label' => 'Elternkontakte', 'href' => '/admin/parents'],
+                ['label' => 'Benutzerkonten', 'href' => '/admin/accounts'],
+                ['label' => 'Lokale Benutzer', 'href' => '/admin/users'],
             ],
         ];
         $groups[] = [

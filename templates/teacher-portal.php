@@ -22,7 +22,7 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
 <header class="topbar"><div><strong>FachDock</strong> · Lehrkräfte</div></header>
 <main class="shell stack">
     <header class="hero">
-        <span class="eyebrow">IServ · nur lesend</span>
+        <span class="eyebrow">OpenID Connect · nur lesend</span>
         <h1>Schließfachübersicht</h1>
         <p>Angemeldet als <?= $e($identity->label()) ?>. Dieser Bereich bietet ausschließlich lesenden Zugriff.</p>
     </header>
