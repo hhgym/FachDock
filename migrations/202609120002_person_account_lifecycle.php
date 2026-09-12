@@ -47,11 +47,11 @@ return new class () implements Migration {
             . "deactivation_source = 'lifecycle' WHERE status = 'anonymized'"
         );
         $pdo->exec(
-            'UPDATE parent_contacts pc SET lifecycle_started_at = COALESCE('
-            . '(SELECT MAX(s.inactive_since) FROM parent_student_link_slots psls '
-            . 'INNER JOIN students s ON s.id = psls.student_id WHERE psls.parent_contact_id = pc.id), '
-            . '(SELECT MAX(psl.ended_at) FROM parent_student_links psl WHERE psl.parent_contact_id = pc.id), '
-            . 'pc.updated_at, pc.created_at, CURRENT_TIMESTAMP) '
+            "UPDATE parent_contacts pc SET lifecycle_started_at = COALESCE(NULLIF(GREATEST("
+            . "COALESCE((SELECT MAX(s.inactive_since) FROM parent_student_link_slots psls "
+            . "INNER JOIN students s ON s.id = psls.student_id WHERE psls.parent_contact_id = pc.id), '1000-01-01 00:00:00'), "
+            . "COALESCE((SELECT MAX(psl.ended_at) FROM parent_student_links psl WHERE psl.parent_contact_id = pc.id), '1000-01-01 00:00:00')"
+            . "), '1000-01-01 00:00:00'), pc.updated_at, pc.created_at, CURRENT_TIMESTAMP) "
             . "WHERE pc.status <> 'anonymized' AND NOT EXISTS ("
             . 'SELECT 1 FROM parent_student_link_slots psls '
             . 'INNER JOIN students s ON s.id = psls.student_id '
