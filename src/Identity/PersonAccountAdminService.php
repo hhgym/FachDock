@@ -171,9 +171,21 @@ final class PersonAccountAdminService
         }
     }
 
-    /** @param array<mixed> $rows @return list<array<string,mixed>> */
+    /**
+     * @param array<array-key,mixed> $rows
+     * @return list<array<string,mixed>>
+     */
     private function rows(array $rows): array
     {
-        return array_values(array_filter($rows, 'is_array'));
+        $result = [];
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            /** @var array<string,mixed> $row */
+            $result[] = $row;
+        }
+
+        return $result;
     }
 }
