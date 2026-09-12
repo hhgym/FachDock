@@ -79,7 +79,10 @@ $statusLabel = match ((string) $booking['status']) {
         <?php else: ?>
             <p>Aktueller Status: <?= $e($statusLabel) ?></p>
         <?php endif; ?>
-        <p><a class="button button-secondary" href="/parent/bookings">Buchung verwalten</a></p>
+        <div class="button-row">
+            <a class="button button-secondary" href="/parent/bookings">Buchung verwalten</a>
+            <a class="button button-secondary" href="/parent/bookings/document?booking_id=<?= (int) $booking['booking_id'] ?>">PDF-Bestätigung / Zahlungsbeleg</a>
+        </div>
     </section>
 </main>
 </body>
