@@ -115,6 +115,28 @@ code, .code-value { font-family: ui-monospace, SFMono-Regular, Consolas, monospa
 .recommendation-card h3 { margin: 6px 0 8px; font-size: 1.35rem; }
 .recommendation-card p { margin: 4px 0; }
 
+.locker-grid-stack { display: grid; gap: 18px; }
+.locker-grid-group { display: grid; gap: 10px; min-width: 0; }
+.locker-grid-group > header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.locker-grid-group h3 { margin: 2px 0 0; font-size: 1.15rem; }
+.locker-grid-group header > small { color: #667085; text-align: right; }
+.locker-grid-scroll { overflow-x: auto; border: 1px solid #e1e5eb; border-radius: 12px; background: #f8fafc; }
+.locker-grid-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 8px; }
+.locker-grid-table th { min-width: 86px; padding: 4px 8px; color: #667085; font-size: .76rem; font-weight: 750; text-align: center; white-space: nowrap; }
+.locker-grid-table thead th:first-child, .locker-grid-table tbody th { position: sticky; left: 0; z-index: 2; background: #f8fafc; }
+.locker-grid-table td { min-width: 116px; height: 64px; padding: 0; vertical-align: stretch; }
+.locker-grid-table td > form { height: 100%; margin: 0; }
+.locker-grid-cell { width: 100%; min-height: 64px; height: 100%; display: grid; place-items: center; gap: 2px; padding: 8px; border: 1px solid #b8c4df; border-radius: 10px; background: #fff; color: #263f8f; font: inherit; cursor: pointer; text-align: center; }
+.locker-grid-cell:hover { border-color: #3854a5; background: #f4f7ff; }
+.locker-grid-cell:focus-visible { outline: 3px solid rgba(56, 84, 165, .2); outline-offset: 2px; }
+.locker-grid-cell strong { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .9rem; }
+.locker-grid-cell small { color: #667085; font-size: .72rem; }
+.locker-grid-cell.is-selected { background: #e8eefc; border-color: #263f8f; box-shadow: inset 0 0 0 1px #263f8f; }
+.locker-grid-cell:disabled { opacity: .45; cursor: not-allowed; }
+.locker-grid-empty { min-height: 64px; display: grid; place-items: center; color: #9aa3b2; border: 1px dashed #d8dde6; border-radius: 10px; }
+.locker-grid-status-occupied, .locker-grid-status-unavailable, .locker-grid-status-restricted { color: #667085; background: #f5f6f8; border-color: #d5dae3; cursor: default; }
+.locker-grid-status-selected { background: #e8eefc; border-color: #263f8f; }
+
 @media (max-width: 900px) {
     .primary-nav, .account-menu { display: none; }
     .mobile-navigation { display: block; }
@@ -130,4 +152,7 @@ code, .code-value { font-family: ui-monospace, SFMono-Regular, Consolas, monospa
     .school-year-heading > .compact-actions { width: 100%; flex-direction: column; align-items: stretch; }
     .school-year-heading > .compact-actions .button { width: 100%; text-align: center; }
     .app-brand-text small { display: none; }
+    .locker-grid-group > header { align-items: flex-start; flex-direction: column; }
+    .locker-grid-group header > small { text-align: left; }
+    .locker-grid-table td { min-width: 104px; }
 }
