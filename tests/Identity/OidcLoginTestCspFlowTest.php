@@ -23,7 +23,7 @@ final class OidcLoginTestCspFlowTest extends TestCase
             $source,
         );
         self::assertStringContainsString(
-            "Response::redirect(self::consumeLoginTestRedirect())",
+            'Response::redirect(self::consumeLoginTestRedirect())',
             $source,
         );
         self::assertStringNotContainsString(
