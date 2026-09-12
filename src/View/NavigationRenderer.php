@@ -139,6 +139,7 @@ final class NavigationRenderer
             'items' => [
                 ['label' => 'Schüler', 'href' => '/admin/students'],
                 ['label' => 'Eltern', 'href' => '/admin/parents'],
+                ['label' => 'Lokale Benutzer', 'href' => '/admin/users'],
             ],
         ];
         $groups[] = [
