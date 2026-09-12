@@ -151,6 +151,102 @@ final class LockerRecommendationService
         return $result;
     }
 
+    /** @return list<array<string, mixed>> */
+    public function lockerOverview(int $schoolYearId): array
+    {
+        $this->schoolYearAvailability($schoolYearId, true);
+        $statement = $this->pdo->prepare(
+            'SELECT l.id AS locker_id, l.short_name, l.bookable, l.operating_status, l.barrier_friendly, '
+            . 'l.position_no AS locker_position, c.position_no AS corpus_position, '
+            . 'cg.id AS cabinet_group_id, cg.code AS group_code, '
+            . 'a.code AS area_code, a.name AS area_name, '
+            . 'f.code AS floor_code, f.name AS floor_name, '
+            . 'b.code AS building_code, b.name AS building_name, '
+            . 'lo.booking_id, ob.student_id AS occupied_student_id, '
+            . 'os.first_name AS occupied_first_name, os.last_name AS occupied_last_name, '
+            . 'os.class_name AS occupied_class_name, '
+            . 'rs.reservation_id, lr.student_id AS reserved_student_id, lr.status AS reservation_status, '
+            . 'lr.expires_at AS reservation_expires_at, lr.payment_grace_expires_at, '
+            . 'rstudent.first_name AS reserved_first_name, rstudent.last_name AS reserved_last_name, '
+            . 'rstudent.class_name AS reserved_class_name '
+            . 'FROM lockers l '
+            . 'INNER JOIN corpuses c ON c.id = l.corpus_id '
+            . 'INNER JOIN cabinet_groups cg ON cg.id = c.cabinet_group_id '
+            . 'INNER JOIN areas a ON a.id = cg.area_id '
+            . 'INNER JOIN floors f ON f.id = a.floor_id '
+            . 'INNER JOIN buildings b ON b.id = f.building_id '
+            . 'LEFT JOIN locker_occupancies lo '
+            . 'ON lo.locker_id = l.id AND lo.school_year_id = :occupancy_school_year_id '
+            . 'LEFT JOIN bookings ob ON ob.id = lo.booking_id '
+            . 'LEFT JOIN students os ON os.id = ob.student_id '
+            . 'LEFT JOIN reservation_slots rs '
+            . 'ON rs.locker_id = l.id AND rs.school_year_id = :reservation_school_year_id '
+            . 'LEFT JOIN locker_reservations lr ON lr.id = rs.reservation_id '
+            . 'LEFT JOIN students rstudent ON rstudent.id = lr.student_id '
+            . 'WHERE l.active = 1 AND c.active = 1 AND cg.active = 1 '
+            . 'AND a.active = 1 AND f.active = 1 AND b.active = 1 '
+            . 'ORDER BY f.sort_order, a.code, cg.code, c.position_no, l.position_no'
+        );
+        $statement->execute([
+            'occupancy_school_year_id' => $schoolYearId,
+            'reservation_school_year_id' => $schoolYearId,
+        ]);
+
+        $result = [];
+        foreach ($statement->fetchAll() as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $status = match (true) {
+                $row['booking_id'] !== null => 'occupied',
+                $row['reservation_id'] !== null => 'reserved',
+                (int) $row['bookable'] !== 1 || (string) $row['operating_status'] !== 'operational' => 'unavailable',
+                default => 'free',
+            };
+            $result[] = [
+                'locker_id' => (int) $row['locker_id'],
+                'short_name' => (string) $row['short_name'],
+                'long_name' => LockerNaming::longName(
+                    (string) $row['floor_code'],
+                    (string) $row['area_code'],
+                    (string) $row['group_code'],
+                    (int) $row['corpus_position'],
+                    (int) $row['locker_position'],
+                ),
+                'locker_position' => (int) $row['locker_position'],
+                'corpus_position' => (int) $row['corpus_position'],
+                'cabinet_group_id' => (int) $row['cabinet_group_id'],
+                'group_code' => (string) $row['group_code'],
+                'area_code' => (string) $row['area_code'],
+                'area_name' => (string) $row['area_name'],
+                'floor_code' => (string) $row['floor_code'],
+                'floor_name' => (string) $row['floor_name'],
+                'building_code' => (string) $row['building_code'],
+                'building_name' => (string) $row['building_name'],
+                'bookable' => (int) $row['bookable'] === 1,
+                'operating_status' => (string) $row['operating_status'],
+                'barrier_friendly' => (int) $row['barrier_friendly'] === 1,
+                'availability_status' => $status,
+                'booking_id' => $row['booking_id'] !== null ? (int) $row['booking_id'] : null,
+                'occupied_student_id' => $row['occupied_student_id'] !== null ? (int) $row['occupied_student_id'] : null,
+                'occupied_first_name' => $row['occupied_first_name'] !== null ? (string) $row['occupied_first_name'] : null,
+                'occupied_last_name' => $row['occupied_last_name'] !== null ? (string) $row['occupied_last_name'] : null,
+                'occupied_class_name' => $row['occupied_class_name'] !== null ? (string) $row['occupied_class_name'] : null,
+                'reservation_id' => $row['reservation_id'] !== null ? (int) $row['reservation_id'] : null,
+                'reserved_student_id' => $row['reserved_student_id'] !== null ? (int) $row['reserved_student_id'] : null,
+                'reservation_status' => $row['reservation_status'] !== null ? (string) $row['reservation_status'] : null,
+                'reservation_expires_at' => $row['reservation_expires_at'] !== null ? (string) $row['reservation_expires_at'] : null,
+                'payment_grace_expires_at' => $row['payment_grace_expires_at'] !== null ? (string) $row['payment_grace_expires_at'] : null,
+                'reserved_first_name' => $row['reserved_first_name'] !== null ? (string) $row['reserved_first_name'] : null,
+                'reserved_last_name' => $row['reserved_last_name'] !== null ? (string) $row['reserved_last_name'] : null,
+                'reserved_class_name' => $row['reserved_class_name'] !== null ? (string) $row['reserved_class_name'] : null,
+            ];
+        }
+
+        return $result;
+    }
+
     public function projectedGradeForStudent(int $studentId, int $schoolYearId): int
     {
         $student = $this->student($studentId);

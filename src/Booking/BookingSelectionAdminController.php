@@ -36,28 +36,30 @@ final class BookingSelectionAdminController
     {
         $router->get('/admin/booking-selection', fn (Request $request): Response => $this->index($request));
         $router->post('/admin/booking-selection/reserve', fn (Request $request): Response => $this->reserve($request));
+        $router->post('/admin/booking-selection/assign', fn (Request $request): Response => $this->assign($request));
         $router->post('/admin/booking-selection/cancel', fn (Request $request): Response => $this->cancel($request));
     }
 
     private function index(Request $request): Response
     {
-        $staff = $this->administrator();
+        $staff = $this->staffMember();
         if ($staff instanceof Response) {
             return $staff;
         }
 
-        $studentValue = $this->queryString($request, 'student_id');
-        $yearValue = $this->queryString($request, 'school_year_id');
-        if ($studentValue === '' && $yearValue === '') {
-            return $this->page($staff);
-        }
-
         try {
-            return $this->selectedPage(
-                $staff,
-                $this->positiveInt($studentValue, 'Schüler'),
-                $this->positiveInt($yearValue, 'Schuljahr'),
-            );
+            $yearValue = $this->queryString($request, 'school_year_id');
+            $studentValue = $this->queryString($request, 'student_id');
+            $schoolYearId = $yearValue !== ''
+                ? $this->positiveInt($yearValue, 'Schuljahr')
+                : $this->defaultSchoolYearId();
+            $studentId = $studentValue !== '' ? $this->positiveInt($studentValue, 'Schüler') : null;
+
+            if ($schoolYearId === null) {
+                return $this->page($staff);
+            }
+
+            return $this->managementPage($staff, $schoolYearId, $studentId);
         } catch (DomainException $exception) {
             return $this->page($staff, [$exception->getMessage()], 422);
         }
@@ -65,7 +67,7 @@ final class BookingSelectionAdminController
 
     private function reserve(Request $request): Response
     {
-        $staff = $this->administrator();
+        $staff = $this->staffMember();
         if ($staff instanceof Response) {
             return $staff;
         }
@@ -93,16 +95,53 @@ final class BookingSelectionAdminController
                 'school_year_id' => $schoolYearId,
                 'locker_id' => $lockerId,
                 'projected_grade' => $reservation['projected_grade'] ?? null,
+                'source' => 'admin_booking_selection',
             ]);
             $this->csrf->rotate();
 
-            return Response::redirect($this->selectionUrl($studentId, $schoolYearId));
+            return Response::redirect($this->selectionUrl($studentId, $schoolYearId, 'reserved'));
         } catch (DomainException $exception) {
-            if ($studentId > 0 && $schoolYearId > 0) {
-                return $this->selectedPage($staff, $studentId, $schoolYearId, [$exception->getMessage()], 422);
-            }
+            return $this->actionError($staff, $exception, $studentId, $schoolYearId);
+        } catch (Throwable $exception) {
+            return $this->failure($staff, $exception, $studentId, $schoolYearId);
+        }
+    }
 
-            return $this->page($staff, [$exception->getMessage()], 422);
+    private function assign(Request $request): Response
+    {
+        $staff = $this->staffMember();
+        if ($staff instanceof Response) {
+            return $staff;
+        }
+        if (!$this->csrf->verify($request->postString('_csrf'))) {
+            return Response::html('<h1>Ungültige Sitzung</h1>', 419);
+        }
+
+        $studentId = 0;
+        $schoolYearId = 0;
+        try {
+            $studentId = $this->positiveInt($request->postString('student_id'), 'Schüler');
+            $schoolYearId = $this->positiveInt($request->postString('school_year_id'), 'Schuljahr');
+            $lockerId = $this->positiveInt($request->postString('locker_id'), 'Schließfach');
+            $bookingId = $this->reservations->assignWithoutPayment(
+                $studentId,
+                $schoolYearId,
+                $lockerId,
+                $staff->id,
+            );
+
+            $this->audit->staff($staff, 'booking.admin_assigned', 'booking', $bookingId, [
+                'student_id' => $studentId,
+                'school_year_id' => $schoolYearId,
+                'locker_id' => $lockerId,
+                'charged_fee_cents' => 0,
+                'fee_exemption_type' => 'administrative_assignment',
+            ]);
+            $this->csrf->rotate();
+
+            return Response::redirect($this->selectionUrl($studentId, $schoolYearId, 'assigned'));
+        } catch (DomainException $exception) {
+            return $this->actionError($staff, $exception, $studentId, $schoolYearId);
         } catch (Throwable $exception) {
             return $this->failure($staff, $exception, $studentId, $schoolYearId);
         }
@@ -110,7 +149,7 @@ final class BookingSelectionAdminController
 
     private function cancel(Request $request): Response
     {
-        $staff = $this->administrator();
+        $staff = $this->staffMember();
         if ($staff instanceof Response) {
             return $staff;
         }
@@ -135,34 +174,85 @@ final class BookingSelectionAdminController
                 'student_id' => $studentId,
                 'school_year_id' => $schoolYearId,
                 'locker_id' => $active['locker_id'],
+                'source' => 'admin_booking_selection',
             ]);
             $this->csrf->rotate();
 
-            return Response::redirect($this->selectionUrl($studentId, $schoolYearId));
+            return Response::redirect($this->selectionUrl($studentId, $schoolYearId, 'cancelled'));
         } catch (DomainException $exception) {
-            if ($studentId > 0 && $schoolYearId > 0) {
-                return $this->selectedPage($staff, $studentId, $schoolYearId, [$exception->getMessage()], 422);
-            }
-
-            return $this->page($staff, [$exception->getMessage()], 422);
+            return $this->actionError($staff, $exception, $studentId, $schoolYearId);
         } catch (Throwable $exception) {
             return $this->failure($staff, $exception, $studentId, $schoolYearId);
         }
     }
 
     /** @param list<string> $errors */
-    private function selectedPage(
+    private function managementPage(
         AuthenticatedStaff $staff,
-        int $studentId,
         int $schoolYearId,
+        ?int $studentId = null,
         array $errors = [],
         int $status = 200,
     ): Response {
-        $student = $this->recommendations->student($studentId);
-        $projectedGrade = $this->recommendations->projectedGradeForStudent($studentId, $schoolYearId);
-        $activeReservation = $this->reservations->activeForStudent($studentId, $schoolYearId);
-        $available = $this->recommendations->availableForStudent($studentId, $schoolYearId, $projectedGrade, true);
-        $recommended = (new LockerRecommendationRanker())->recommend($available, $this->recommendationCount);
+        $this->reservations->expireStale();
+        $overview = $this->recommendations->lockerOverview($schoolYearId);
+        $student = null;
+        $projectedGrade = null;
+        $activeReservation = null;
+        $currentBooking = null;
+        $selectionBlockedReason = null;
+        $eligibleLockerIds = [];
+        $recommendedLockerIds = [];
+        $scores = [];
+
+        if ($studentId !== null) {
+            $student = $this->recommendations->student($studentId);
+            $projectedGrade = $this->recommendations->projectedGradeForStudent($studentId, $schoolYearId);
+            $activeReservation = $this->reservations->activeForStudent($studentId, $schoolYearId);
+            foreach ($overview as $locker) {
+                if ((int) ($locker['occupied_student_id'] ?? 0) === $studentId) {
+                    $currentBooking = $locker;
+                    break;
+                }
+            }
+
+            if ($currentBooking !== null) {
+                $selectionBlockedReason = 'Für diesen Schüler besteht in diesem Schuljahr bereits eine aktive Buchung.';
+            } elseif ($activeReservation !== null && (string) $activeReservation['status'] === 'payment_running') {
+                $selectionBlockedReason = 'Für diesen Schüler läuft bereits ein Zahlungsvorgang. Änderungen sind bis zum Abschluss nur in der Zahlungsverwaltung möglich.';
+            } else {
+                try {
+                    $available = $this->recommendations->availableForStudent(
+                        $studentId,
+                        $schoolYearId,
+                        $projectedGrade,
+                        true,
+                    );
+                    foreach ($available as $locker) {
+                        $lockerId = (int) $locker['locker_id'];
+                        $eligibleLockerIds[$lockerId] = true;
+                        $scores[$lockerId] = (int) $locker['score'];
+                    }
+                    $recommended = (new LockerRecommendationRanker())->recommend(
+                        $available,
+                        $this->recommendationCount,
+                    );
+                    foreach ($recommended as $locker) {
+                        $recommendedLockerIds[(int) $locker['locker_id']] = true;
+                    }
+                } catch (DomainException $exception) {
+                    $selectionBlockedReason = $exception->getMessage();
+                }
+            }
+        }
+
+        $counts = ['free' => 0, 'reserved' => 0, 'occupied' => 0, 'unavailable' => 0];
+        foreach ($overview as $locker) {
+            $availability = (string) ($locker['availability_status'] ?? 'unavailable');
+            if (isset($counts[$availability])) {
+                ++$counts[$availability];
+            }
+        }
 
         return $this->page(
             $staff,
@@ -173,8 +263,13 @@ final class BookingSelectionAdminController
             $student,
             $projectedGrade,
             $activeReservation,
-            $recommended,
-            $available,
+            $currentBooking,
+            $selectionBlockedReason,
+            $overview,
+            $eligibleLockerIds,
+            $recommendedLockerIds,
+            $scores,
+            $counts,
         );
     }
 
@@ -182,8 +277,12 @@ final class BookingSelectionAdminController
      * @param list<string> $errors
      * @param array<string, mixed>|null $student
      * @param array<string, mixed>|null $activeReservation
-     * @param list<array<string, mixed>> $recommended
-     * @param list<array<string, mixed>> $available
+     * @param array<string, mixed>|null $currentBooking
+     * @param list<array<string, mixed>> $lockerOverview
+     * @param array<int, bool> $eligibleLockerIds
+     * @param array<int, bool> $recommendedLockerIds
+     * @param array<int, int> $scores
+     * @param array{free:int,reserved:int,occupied:int,unavailable:int} $counts
      */
     private function page(
         AuthenticatedStaff $staff,
@@ -194,8 +293,13 @@ final class BookingSelectionAdminController
         ?array $student = null,
         ?int $projectedGrade = null,
         ?array $activeReservation = null,
-        array $recommended = [],
-        array $available = [],
+        ?array $currentBooking = null,
+        ?string $selectionBlockedReason = null,
+        array $lockerOverview = [],
+        array $eligibleLockerIds = [],
+        array $recommendedLockerIds = [],
+        array $scores = [],
+        array $counts = ['free' => 0, 'reserved' => 0, 'occupied' => 0, 'unavailable' => 0],
     ): Response {
         return Response::html($this->views->render('booking-selection.php', [
             'staff' => $staff,
@@ -208,22 +312,60 @@ final class BookingSelectionAdminController
             'selectedStudent' => $student,
             'projectedGrade' => $projectedGrade,
             'activeReservation' => $activeReservation,
-            'recommended' => $recommended,
-            'available' => $available,
+            'currentBooking' => $currentBooking,
+            'selectionBlockedReason' => $selectionBlockedReason,
+            'lockerOverview' => $lockerOverview,
+            'eligibleLockerIds' => $eligibleLockerIds,
+            'recommendedLockerIds' => $recommendedLockerIds,
+            'scores' => $scores,
+            'counts' => $counts,
         ]), $status);
     }
 
-    private function administrator(): AuthenticatedStaff|Response
+    private function staffMember(): AuthenticatedStaff|Response
     {
         $staff = $this->sessions->current();
         if ($staff === null) {
             return Response::redirect('/login');
         }
-        if (!$staff->isAdministrator()) {
-            return Response::html('<h1>403</h1><p>Diese Funktion ist nur für Administratoren verfügbar.</p>', 403);
-        }
 
         return $staff;
+    }
+
+    private function defaultSchoolYearId(): ?int
+    {
+        $years = $this->schoolYears->all();
+        foreach ($years as $year) {
+            if ((string) $year['status'] === 'current') {
+                return (int) $year['id'];
+            }
+        }
+        foreach ($years as $year) {
+            if ((string) $year['status'] !== 'closed') {
+                return (int) $year['id'];
+            }
+        }
+
+        return null;
+    }
+
+    private function actionError(
+        AuthenticatedStaff $staff,
+        DomainException $exception,
+        int $studentId,
+        int $schoolYearId,
+    ): Response {
+        if ($schoolYearId > 0) {
+            return $this->managementPage(
+                $staff,
+                $schoolYearId,
+                $studentId > 0 ? $studentId : null,
+                [$exception->getMessage()],
+                422,
+            );
+        }
+
+        return $this->page($staff, [$exception->getMessage()], 422);
     }
 
     private function failure(
@@ -242,9 +384,15 @@ final class BookingSelectionAdminController
         ]);
         $errors = ['Die Aktion konnte nicht abgeschlossen werden. Fehler-ID: ' . $errorId];
 
-        if ($studentId > 0 && $schoolYearId > 0) {
+        if ($schoolYearId > 0) {
             try {
-                return $this->selectedPage($staff, $studentId, $schoolYearId, $errors, 500);
+                return $this->managementPage(
+                    $staff,
+                    $schoolYearId,
+                    $studentId > 0 ? $studentId : null,
+                    $errors,
+                    500,
+                );
             } catch (Throwable) {
                 // Fall through to the generic page if the selected state can no longer be loaded.
             }
@@ -269,8 +417,13 @@ final class BookingSelectionAdminController
         return (int) $value;
     }
 
-    private function selectionUrl(int $studentId, int $schoolYearId): string
+    private function selectionUrl(int $studentId, int $schoolYearId, string $action = ''): string
     {
-        return '/admin/booking-selection?student_id=' . $studentId . '&school_year_id=' . $schoolYearId;
+        $url = '/admin/booking-selection?school_year_id=' . $schoolYearId . '&student_id=' . $studentId;
+        if ($action !== '') {
+            $url .= '&action=' . rawurlencode($action);
+        }
+
+        return $url;
     }
 }
