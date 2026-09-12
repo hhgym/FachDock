@@ -26,7 +26,7 @@ return new class () implements Migration {
             . 'ADD INDEX idx_students_account_lifecycle (active, inactive_since, account_deactivated_at, anonymized_at)'
         );
         $pdo->exec(
-            "UPDATE students SET anonymized_at = updated_at, inactive_since = COALESCE(updated_at, created_at) "
+            'UPDATE students SET anonymized_at = updated_at, inactive_since = COALESCE(updated_at, created_at) '
             . "WHERE first_name = 'Anonymisiert' AND active = 0"
         );
         $pdo->exec(
@@ -43,12 +43,12 @@ return new class () implements Migration {
             . 'ADD INDEX idx_parent_account_lifecycle (active, lifecycle_started_at, deactivated_at, anonymized_at)'
         );
         $pdo->exec(
-            "UPDATE parent_contacts SET anonymized_at = updated_at, deactivated_at = COALESCE(updated_at, created_at), "
+            'UPDATE parent_contacts SET anonymized_at = updated_at, deactivated_at = COALESCE(updated_at, created_at), '
             . "deactivation_source = 'lifecycle' WHERE status = 'anonymized'"
         );
         $pdo->exec(
-            "UPDATE parent_contacts pc SET lifecycle_started_at = COALESCE(NULLIF(GREATEST("
-            . "COALESCE((SELECT MAX(s.inactive_since) FROM parent_student_link_slots psls "
+            'UPDATE parent_contacts pc SET lifecycle_started_at = COALESCE(NULLIF(GREATEST('
+            . 'COALESCE((SELECT MAX(s.inactive_since) FROM parent_student_link_slots psls '
             . "INNER JOIN students s ON s.id = psls.student_id WHERE psls.parent_contact_id = pc.id), '1000-01-01 00:00:00'), "
             . "COALESCE((SELECT MAX(psl.ended_at) FROM parent_student_links psl WHERE psl.parent_contact_id = pc.id), '1000-01-01 00:00:00')"
             . "), '1000-01-01 00:00:00'), pc.updated_at, pc.created_at, CURRENT_TIMESTAMP) "
