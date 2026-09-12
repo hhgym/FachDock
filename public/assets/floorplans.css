@@ -67,6 +67,12 @@
 .floorplan-locker-status-free { background: #e3f6ea; color: #176238; }
 .floorplan-locker-status-occupied { background: #fde8e6; color: #8b2d27; }
 .floorplan-locker-status-unavailable { background: #fff3d8; color: #805b0d; }
+.floorplan-dialog .locker-grid-table { width: max-content; min-width: 100%; border-collapse: separate; }
+.floorplan-dialog .locker-grid-map-cell { min-width: 220px; padding: 0; vertical-align: top; border-bottom: 0; }
+.floorplan-dialog .locker-grid-map-cell .entity-row { height: 100%; padding: 12px; background: #fff; }
+.floorplan-dialog .locker-grid-map-cell .entity-row .school-year-heading { gap: 8px; }
+.floorplan-dialog .locker-grid-map-cell .entity-row .school-year-heading strong { overflow-wrap: anywhere; }
+.floorplan-dialog .locker-grid-map-cell form { margin: 0; }
 @media (max-width: 760px) {
     .floorplan-page { width: min(960px, calc(100% - 32px)); margin-top: 28px; }
     .floorplan-filter-form { grid-template-columns: 1fr; }
@@ -77,4 +83,5 @@
     .floorplan-placement-form > div, .floorplan-placement-form .button { grid-column: 1 / -1; }
     .floorplan-add-actions { display: grid; grid-template-columns: 1fr; }
     .floorplan-add-actions .button { width: 100%; justify-self: stretch; }
+    .floorplan-dialog .locker-grid-map-cell { min-width: 190px; }
 }
