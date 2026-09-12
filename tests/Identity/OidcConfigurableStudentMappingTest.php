@@ -22,6 +22,11 @@ final class OidcConfigurableStudentMappingTest extends TestCase
             'INSERT INTO students (id, matrikelnummer, first_name, last_name, class_name, grade, email, active, created_at, updated_at) '
             . "VALUES (1, '1001', 'Ada', 'Test', '7-1', 7, 'ada@school.test', 1, NOW(), NOW())"
         );
+        $pdo->exec(
+            'INSERT INTO students '
+            . '(id, matrikelnummer, first_name, last_name, class_name, grade, email, active, inactive_since, created_at, updated_at) '
+            . "VALUES (2, '1002', 'Grace', 'Abroad', '8-1', 8, 'grace@school.test', 0, NOW(), NOW(), NOW())"
+        );
 
         $root = $this->configRoot();
         $originalSession = $_SESSION ?? [];
@@ -54,6 +59,19 @@ final class OidcConfigurableStudentMappingTest extends TestCase
             self::assertSame('1', (string) $result['identity']['student_id']);
             self::assertSame('ada.test', $result['identity']['account_name']);
             self::assertSame('different@school.test', $result['identity']['email']);
+
+            $http->userinfo = [
+                'sub' => 'student-in-grace-period',
+                'preferred_username' => 'grace.abroad',
+                'email' => 'grace@school.test',
+                'untis_username' => '1002',
+                'iserv:roles' => [['displayName' => 'Schüler']],
+            ];
+            $authorization = $service->begin('student');
+            parse_str((string) parse_url($authorization, PHP_URL_QUERY), $query);
+            $gracePeriod = $service->finish('grace-code', (string) $query['state']);
+            self::assertSame('student', $gracePeriod['identity']['identity_type']);
+            self::assertSame('2', (string) $gracePeriod['identity']['student_id']);
 
             $http->userinfo = [
                 'sub' => 'no-student-role',
