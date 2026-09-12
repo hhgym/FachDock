@@ -89,9 +89,10 @@ final class StaffUserManagementIntegrationTest extends TestCase
             self::assertStringContainsString('eigene Konto', $exception->getMessage());
         }
 
+        $service->deactivate(2, 1);
         try {
-            $service->deactivate(2, 1);
-            self::fail('The last other administrator must remain active.');
+            $service->deactivate(1, 999);
+            self::fail('The last active administrator must remain active.');
         } catch (DomainException $exception) {
             self::assertStringContainsString('aktives Administratorkonto', $exception->getMessage());
         }
