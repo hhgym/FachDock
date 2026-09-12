@@ -9,6 +9,7 @@ use FachDock\Auth\AuthenticatedStaff;
 /** @var string $schoolName */
 /** @var AuthenticatedStaff $staff */
 /** @var array{active_bookings: int, exemption_reviews: int, payment_due: int, payment_manual_review: int, payment_processing: int, active_reservations: int, webhook_open: int} $dashboard */
+/** @var array{waiting:int,ready:int,failed:int,processing:int,sent_today:int} $mailQueue */
 /** @var string $stripeMode */
 /** @var bool $stripeCheckoutAvailable */
 /** @var list<string> $stripeProblems */
@@ -78,6 +79,13 @@ $chartMax = max(1, ...array_values($chartValues));
         </div>
     <?php endif; ?>
 
+    <?php if ($mailQueue['failed'] > 0): ?>
+        <div class="alert alert-error">
+            <strong>E-Mail-Versand prüfen.</strong> <?= $mailQueue['failed'] ?> Nachricht<?= $mailQueue['failed'] === 1 ? '' : 'en' ?> ist endgültig fehlgeschlagen.
+            <?php if ($staff->isAdministrator()): ?><div><a href="/admin/mail">E-Mail-Zentrale öffnen</a></div><?php endif; ?>
+        </div>
+    <?php endif; ?>
+
     <section class="dashboard-grid" aria-label="Kennzahlen">
         <a class="metric-card" href="/admin/bookings?status=active">
             <span class="metric-card-top"><span class="metric-label">Aktive Buchungen</span><span class="metric-marker" aria-hidden="true"></span></span>
@@ -111,6 +119,24 @@ $chartMax = max(1, ...array_values($chartValues));
         </div>
     </section>
 
+    <section class="card stack">
+        <div class="school-year-heading">
+            <div>
+                <span class="eyebrow">E-Mail</span>
+                <h2>Versandwarteschlange</h2>
+                <p class="form-hint">Magic Links haben Sofortpriorität; wartende Nachrichten werden zusätzlich durch den Mail-Worker verarbeitet.</p>
+            </div>
+            <?php if ($staff->isAdministrator()): ?><a class="button button-secondary" href="/admin/mail">Warteschlange öffnen</a><?php endif; ?>
+        </div>
+        <div class="settings-status-grid">
+            <div class="settings-status-item"><strong>Wartend</strong><span><?= $mailQueue['waiting'] ?></span></div>
+            <div class="settings-status-item"><strong>Jetzt versandbereit</strong><span><?= $mailQueue['ready'] ?></span></div>
+            <div class="settings-status-item"><strong>Fehlgeschlagen</strong><span><?= $mailQueue['failed'] ?></span></div>
+            <div class="settings-status-item"><strong>In Verarbeitung</strong><span><?= $mailQueue['processing'] ?></span></div>
+            <div class="settings-status-item"><strong>Heute versendet</strong><span><?= $mailQueue['sent_today'] ?></span></div>
+        </div>
+    </section>
+
     <section class="dashboard-lower-grid">
         <article class="card stack dashboard-chart">
             <div>
@@ -139,6 +165,7 @@ $chartMax = max(1, ...array_values($chartValues));
                 <a class="dashboard-action-link" href="/admin/bookings?status=active">Buchungen</a>
                 <a class="dashboard-action-link" href="/admin/but">BuT-Prüfung</a>
                 <?php if ($staff->isAdministrator()): ?>
+                    <a class="dashboard-action-link" href="/admin/mail">E-Mail-Warteschlange</a>
                     <a class="dashboard-action-link" href="/admin/system/status">Systemstatus</a>
                 <?php endif; ?>
             </div>
