@@ -33,6 +33,13 @@ final class OidcConfiguration
         return (string) $this->config->get('oidc.client_secret', '');
     }
 
+    public function loginLabel(): string
+    {
+        $value = trim((string) $this->config->get('oidc.login_label', 'Mit OpenID Connect anmelden'));
+
+        return $value !== '' ? mb_substr($value, 0, 80) : 'Mit OpenID Connect anmelden';
+    }
+
     public function callbackUrl(): string
     {
         $base = rtrim(trim((string) $this->config->get('app.base_url', '')), '/');
@@ -109,23 +116,23 @@ final class OidcConfiguration
     {
         $issuer = $this->issuer();
         if (!$this->validHttpsUrl($issuer)) {
-            throw new RuntimeException('Für IServ muss eine gültige HTTPS-Issuer-URL konfiguriert sein.');
+            throw new RuntimeException('Für OpenID Connect muss eine gültige HTTPS-Issuer-URL konfiguriert sein.');
         }
         if ($this->clientId() === '') {
-            throw new RuntimeException('Die OIDC-Client-ID fehlt.');
+            throw new RuntimeException('Die OpenID-Connect-Client-ID fehlt.');
         }
         if ($this->clientSecret() === '') {
-            throw new RuntimeException('Das OIDC-Client-Geheimnis fehlt.');
+            throw new RuntimeException('Das OpenID-Connect-Client-Geheimnis fehlt.');
         }
         if (!$this->validHttpsUrl($this->callbackUrl())) {
-            throw new RuntimeException('Die öffentliche FachDock-Basis-URL muss für OIDC als HTTPS-URL konfiguriert sein.');
+            throw new RuntimeException('Die öffentliche FachDock-Basis-URL muss für OpenID Connect als HTTPS-URL konfiguriert sein.');
         }
     }
 
     public function assertReady(): void
     {
         if (!$this->enabled()) {
-            throw new RuntimeException('Die IServ-Anmeldung ist nicht aktiviert.');
+            throw new RuntimeException('Die OpenID-Connect-Anmeldung ist nicht aktiviert.');
         }
         $this->assertConfigured();
     }
