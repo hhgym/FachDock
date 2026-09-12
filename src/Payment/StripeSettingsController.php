@@ -190,6 +190,7 @@ final class StripeSettingsController
                 'reservation_minutes' => $this->integer($request, 'reservation_minutes', 5, 120, 'Reservierungsdauer'),
                 'payment_grace_minutes' => $this->integer($request, 'payment_grace_minutes', 5, 180, 'Zahlungs-Gnadenfrist'),
                 'but_rejection_payment_days' => $this->integer($request, 'but_rejection_payment_days', 1, 90, 'Zahlungsfrist nach BuT-Ablehnung'),
+                'default_annual_fee_cents' => $this->moneyToCents($request->postString('default_annual_fee')),
             ];
 
             $this->writer->saveBookingSettings($settings);
@@ -423,6 +424,8 @@ final class StripeSettingsController
     /** @param list<string> $errors */
     private function bookingPage(AuthenticatedStaff $staff, array $errors, bool $success, int $status = 200): Response
     {
+        $defaultAnnualFeeCents = max(0, (int) $this->config->get('booking.default_annual_fee_cents', 0));
+
         return Response::html($this->views->render('config-booking.php', [
             'staff' => $staff,
             'csrfToken' => $this->csrf->token(),
@@ -432,6 +435,7 @@ final class StripeSettingsController
             'reservationMinutes' => (int) $this->config->get('booking.reservation_minutes', 15),
             'paymentGraceMinutes' => (int) $this->config->get('booking.payment_grace_minutes', 30),
             'butRejectionPaymentDays' => (int) $this->config->get('booking.but_rejection_payment_days', 14),
+            'defaultAnnualFee' => number_format($defaultAnnualFeeCents / 100, 2, ',', ''),
         ]), $status);
     }
 
@@ -558,6 +562,23 @@ final class StripeSettingsController
         sort($minutes, SORT_NUMERIC);
 
         return $minutes;
+    }
+
+    private function moneyToCents(string $value): int
+    {
+        $normalized = str_replace(',', '.', trim($value));
+        if (!preg_match('/^(\d+)(?:\.(\d{1,2}))?$/', $normalized, $matches)) {
+            throw new RuntimeException('Der Standard-Jahresbeitrag ist ungültig.');
+        }
+
+        $euros = (int) $matches[1];
+        $fraction = str_pad($matches[2] ?? '', 2, '0');
+        $cents = ($euros * 100) + (int) $fraction;
+        if ($cents > 100000000) {
+            throw new RuntimeException('Der Standard-Jahresbeitrag ist zu hoch.');
+        }
+
+        return $cents;
     }
 
     private function integer(Request $request, string $field, int $min, int $max, string $label): int
