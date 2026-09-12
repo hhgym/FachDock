@@ -121,7 +121,7 @@ final class StudentImportService
             $reactivateOidc = $this->pdo->prepare(
                 'UPDATE oidc_identities oi INNER JOIN students s ON s.id = oi.student_id '
                 . 'SET oi.active = 1, oi.updated_at = CURRENT_TIMESTAMP '
-                . "WHERE s.matrikelnummer = :matrikelnummer AND s.active = 1 AND s.account_deactivated_at IS NULL "
+                . 'WHERE s.matrikelnummer = :matrikelnummer AND s.active = 1 AND s.account_deactivated_at IS NULL '
                 . "AND s.anonymized_at IS NULL AND oi.identity_type = 'student'"
             );
 
