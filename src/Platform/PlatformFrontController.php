@@ -19,6 +19,7 @@ use FachDock\Logging\LoggerFactory;
 use FachDock\Mail\MailQueueService;
 use FachDock\Mail\MailTemplateRenderer;
 use FachDock\Parent\ParentSessionService;
+use FachDock\Privacy\AccountLifecycleService;
 use FachDock\Privacy\DataRetentionService;
 use FachDock\Privacy\PrivacyController;
 use FachDock\SchoolYear\SchoolYearTransitionController;
@@ -138,8 +139,10 @@ final class PlatformFrontController
                 return $transitions->apply($request);
             }
 
+            $accountLifecycle = new AccountLifecycleService($pdo);
             $privacy = new PrivacyController(
-                new DataRetentionService($pdo),
+                new DataRetentionService($pdo, $accountLifecycle),
+                $accountLifecycle,
                 new AdminExportService($pdo),
                 new ProductionReadinessService($pdo, $config, $root),
                 $staffSessions,

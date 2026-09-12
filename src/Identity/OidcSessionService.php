@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FachDock\Identity;
 
+use DomainException;
 use PDO;
 use RuntimeException;
 
@@ -22,7 +23,7 @@ final class OidcSessionService
     public function create(int $identityId, string $ipAddress, string $userAgent): AuthenticatedOidcIdentity
     {
         if (!$this->enabled) {
-            throw new RuntimeException('Die IServ-Anmeldung ist nicht aktiviert.');
+            throw new RuntimeException('Die OpenID-Connect-Anmeldung ist nicht aktiviert.');
         }
         $token = bin2hex(random_bytes(32));
         $lifetime = max(15, $this->maxLifetimeMinutes);
@@ -43,7 +44,7 @@ final class OidcSessionService
 
         $identity = $this->current();
         if ($identity === null) {
-            throw new RuntimeException('Die IServ-Sitzung konnte nicht erstellt werden.');
+            throw new RuntimeException('Die OpenID-Connect-Sitzung konnte nicht erstellt werden.');
         }
 
         return $identity;
@@ -71,7 +72,7 @@ final class OidcSessionService
             . 'AND s.last_seen_at >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL ' . $idle . ' MINUTE) '
             . 'AND i.active = 1 '
             . "AND i.identity_type IN ('student','teacher') "
-            . "AND (i.identity_type <> 'student' OR (st.id IS NOT NULL AND st.active = 1)) "
+            . "AND (i.identity_type <> 'student' OR (st.id IS NOT NULL AND st.account_deactivated_at IS NULL AND st.anonymized_at IS NULL)) "
             . 'LIMIT 1'
         );
         $statement->execute(['token_hash' => hash('sha256', $token)]);
@@ -95,6 +96,22 @@ final class OidcSessionService
             $row['email'] === null ? null : (string) $row['email'],
             (int) $row['session_id'],
         );
+    }
+
+    /** @return array<string,mixed> */
+    public function student(int $studentId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, matrikelnummer, first_name, last_name, class_name, grade, email '
+            . 'FROM students WHERE id = :id AND account_deactivated_at IS NULL AND anonymized_at IS NULL'
+        );
+        $statement->execute(['id' => $studentId]);
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($row)) {
+            throw new DomainException('Der Schülerzugang ist nicht mehr gültig.');
+        }
+
+        return $row;
     }
 
     public function logout(): void
