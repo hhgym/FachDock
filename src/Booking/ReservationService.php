@@ -28,6 +28,46 @@ final class ReservationService
     }
 
     /** @throws JsonException */
+    public function assignWithoutPayment(
+        int $studentId,
+        int $schoolYearId,
+        int $lockerId,
+        int $staffUserId,
+    ): int {
+        if ($staffUserId < 1) {
+            throw new DomainException('Der ausführende Benutzer ist ungültig.');
+        }
+
+        $annualFeeCents = $this->annualFeeCents($schoolYearId);
+        $reservationId = $this->reserve($studentId, $schoolYearId, $lockerId, null, true);
+
+        try {
+            return (new BookingService($this->pdo))->convertReservation(
+                $reservationId,
+                new BookingCreationData(
+                    BookingStatus::Active,
+                    'staff',
+                    $staffUserId,
+                    $annualFeeCents,
+                    0,
+                    null,
+                    'administrative_assignment',
+                    null,
+                    'administrative_assignment',
+                ),
+            );
+        } catch (Throwable $exception) {
+            try {
+                $this->cancel($reservationId, $studentId);
+            } catch (Throwable) {
+                // The reservation may already have been converted; keep the original failure.
+            }
+
+            throw $exception;
+        }
+    }
+
+    /** @throws JsonException */
     public function reserve(
         int $studentId,
         int $schoolYearId,
@@ -43,6 +83,7 @@ final class ReservationService
         try {
             $this->expireStaleWithinTransaction();
             $currentGrade = $this->activeStudentGrade($studentId);
+            $this->assertStudentHasNoBooking($studentId, $schoolYearId);
             $schoolYearStartsOn = $this->assertBookableSchoolYear($schoolYearId, $allowBeforeOpening);
             $targetGrade = $projectedGrade ?? $this->gradeResolver->resolve($currentGrade, $schoolYearStartsOn);
             if ($targetGrade < 5 || $targetGrade > 12) {
@@ -291,6 +332,33 @@ final class ReservationService
         }
 
         return (int) $grade;
+    }
+
+    private function assertStudentHasNoBooking(int $studentId, int $schoolYearId): void
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT booking_id FROM booking_slots '
+            . 'WHERE student_id = :student_id AND school_year_id = :school_year_id FOR UPDATE'
+        );
+        $statement->execute([
+            'student_id' => $studentId,
+            'school_year_id' => $schoolYearId,
+        ]);
+        if ($statement->fetchColumn() !== false) {
+            throw new DomainException('Für den Schüler besteht in diesem Schuljahr bereits eine aktive Buchung.');
+        }
+    }
+
+    private function annualFeeCents(int $schoolYearId): int
+    {
+        $statement = $this->pdo->prepare('SELECT annual_fee_cents FROM school_years WHERE id = :id');
+        $statement->execute(['id' => $schoolYearId]);
+        $fee = $statement->fetchColumn();
+        if ($fee === false) {
+            throw new DomainException('Das Schuljahr existiert nicht.');
+        }
+
+        return max(0, (int) $fee);
     }
 
     private function assertBookableSchoolYear(int $schoolYearId, bool $allowBeforeOpening): string
