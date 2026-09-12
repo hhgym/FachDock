@@ -14,23 +14,31 @@ $e = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_Q
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Schülerdaten · FachDock</title>
     <link rel="stylesheet" href="/assets/app.css">
+    <link rel="stylesheet" href="/assets/platform.css">
 </head>
 <body>
 <header class="topbar"><div class="topbar-inner"><strong>FachDock</strong></div></header>
 <main class="page-shell platform-page">
     <div class="page-heading">
-        <div><p class="eyebrow">Personen</p><h1>Schülerdaten</h1><p>Vorhandene Stammdaten unabhängig vom jeweiligen Benutzerkonto.</p></div>
-        <a class="button button-secondary" href="/admin/students">Schülerimport</a>
+        <div>
+            <p class="eyebrow">Personen</p>
+            <h1>Schülerdaten</h1>
+            <p>Stammdaten, Status und vorhandene Zugänge zentral überblicken.</p>
+        </div>
+        <div class="button-row page-heading-actions">
+            <a class="button button-secondary" href="/admin/students">Schülerimport</a>
+            <a class="button button-secondary" href="/admin/accounts?type=students">Schülerkonten</a>
+        </div>
     </div>
 
-    <section class="dashboard-grid">
-        <article class="card metric-card"><span>Gesamt</span><strong><?= (int) $counts['students'] ?></strong></article>
-        <article class="card metric-card"><span>Aktiv</span><strong><?= (int) $counts['active_students'] ?></strong></article>
-        <article class="card metric-card"><span>Inaktiv</span><strong><?= (int) $counts['inactive_students'] ?></strong></article>
-        <article class="card metric-card"><span>Mit Benutzerkonto</span><strong><?= (int) $counts['student_accounts'] ?></strong></article>
+    <section class="compact-metrics compact-metrics-four student-data-metrics" aria-label="Kennzahlen">
+        <div class="compact-metric"><span>Gesamt</span><strong><?= (int) $counts['students'] ?></strong></div>
+        <div class="compact-metric"><span>Aktiv</span><strong><?= (int) $counts['active_students'] ?></strong></div>
+        <div class="compact-metric"><span>Inaktiv</span><strong><?= (int) $counts['inactive_students'] ?></strong></div>
+        <div class="compact-metric"><span>Mit Benutzerkonto</span><strong><?= (int) $counts['student_accounts'] ?></strong></div>
     </section>
 
-    <section class="card platform-section">
+    <section class="card platform-section filter-card">
         <form method="get" action="/admin/student-data" class="toolbar-form">
             <label>Suche
                 <input type="search" name="search" value="<?= $e($search) ?>" placeholder="Name, Matrikelnummer, Klasse oder E-Mail">
@@ -49,7 +57,12 @@ $e = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_Q
     </section>
 
     <section class="card platform-section">
-        <div class="school-year-heading"><div><h2>Gespeicherte Schülerdaten</h2><p><?= count($students) ?> Datensätze in der aktuellen Auswahl.</p></div></div>
+        <div class="school-year-heading">
+            <div>
+                <h2>Gespeicherte Schülerdaten</h2>
+                <p class="form-hint"><?= count($students) ?> Datensätze in der aktuellen Auswahl.</p>
+            </div>
+        </div>
         <?php if ($students === []): ?>
             <p class="muted">Keine passenden Schülerdaten gefunden.</p>
         <?php else: ?>

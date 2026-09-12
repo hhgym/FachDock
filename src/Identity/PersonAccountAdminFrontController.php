@@ -6,6 +6,7 @@ namespace FachDock\Identity;
 
 use FachDock\Audit\AuditLogger;
 use FachDock\Auth\StaffSessionService;
+use FachDock\Auth\StaffUserManagementService;
 use FachDock\Config\Config;
 use FachDock\Database\ConnectionFactory;
 use FachDock\Http\Request;
@@ -58,6 +59,11 @@ final class PersonAccountAdminFrontController
         $router = new Router();
         (new PersonAccountAdminController(
             new PersonAccountAdminService($pdo, $lifecycle),
+            new StaffUserManagementService(
+                $pdo,
+                $sessions,
+                self::configInt($config, 'auth.password_min_length', 12),
+            ),
             $lifecycle,
             $sessions,
             new AuditLogger($pdo),

@@ -14,8 +14,11 @@ use Throwable;
 
 final class SchoolYearService
 {
-    public function __construct(private readonly PDO $pdo)
-    {
+    public function __construct(
+        private readonly PDO $pdo,
+        private readonly int $defaultAnnualFeeCents = 0,
+    ) {
+        $this->assertBusinessSettings($defaultAnnualFeeCents, 2);
     }
 
     /** @return list<int> */
@@ -290,7 +293,7 @@ final class SchoolYearService
             return null;
         }
 
-        return $this->create($startYear);
+        return $this->create($startYear, $this->defaultAnnualFeeCents);
     }
 
     /**
