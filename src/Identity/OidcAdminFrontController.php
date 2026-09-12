@@ -184,7 +184,7 @@ final class OidcAdminFrontController
             $logger->error('OIDC administration failed', ['error_id' => $errorId, 'exception' => $exception]);
 
             return Response::html(
-                '<h1>Technischer Fehler</h1><p>Die OIDC-Konfiguration konnte nicht verarbeitet werden. Fehler-ID: '
+                '<h1>Technischer Fehler</h1><p>Die OpenID-Connect-Konfiguration konnte nicht verarbeitet werden. Fehler-ID: '
                 . htmlspecialchars($errorId, ENT_QUOTES, 'UTF-8') . '</p>',
                 500,
             );
@@ -208,6 +208,7 @@ final class OidcAdminFrontController
         $issuer = rtrim(trim($request->postString('issuer')), '/');
         $clientId = trim($request->postString('client_id'));
         $secret = trim($request->postString('client_secret'));
+        $loginLabel = trim($request->postString('login_label'));
         $scopes = preg_replace('/\s+/', ' ', trim($request->postString('scopes'))) ?: '';
         $studentRoles = trim($request->postString('student_role_names'));
         $studentMatchClaim = trim($request->postString('student_match_claim'));
@@ -220,30 +221,36 @@ final class OidcAdminFrontController
             'Sitzungsdauer',
         );
 
+        if ($loginLabel === '') {
+            $loginLabel = 'Mit OpenID Connect anmelden';
+        }
+        if (mb_strlen($loginLabel) > 80) {
+            throw new RuntimeException('Der Text für die OpenID-Connect-Anmeldung darf höchstens 80 Zeichen lang sein.');
+        }
         if (!in_array($studentMatchField, ['none', 'email', 'matrikelnummer'], true)) {
             throw new RuntimeException('Das FachDock-Zielfeld für die Schülerzuordnung ist ungültig.');
         }
         if ($studentMatchField !== 'none'
             && preg_match('/^[A-Za-z0-9_.:-]{1,128}$/', $studentMatchClaim) !== 1) {
-            throw new RuntimeException('Der OIDC-Claim für die Schülerzuordnung ist ungültig.');
+            throw new RuntimeException('Der OpenID-Connect-Claim für die Schülerzuordnung ist ungültig.');
         }
         if ($enabled) {
             if (filter_var($issuer, FILTER_VALIDATE_URL) === false || !str_starts_with(strtolower($issuer), 'https://')) {
-                throw new RuntimeException('Der IServ-Issuer muss eine gültige HTTPS-URL sein.');
+                throw new RuntimeException('Der OpenID-Connect-Issuer muss eine gültige HTTPS-URL sein.');
             }
             if ($clientId === '') {
-                throw new RuntimeException('Die Client-ID darf bei aktivierter IServ-Anmeldung nicht leer sein.');
+                throw new RuntimeException('Die Client-ID darf bei aktivierter OpenID-Connect-Anmeldung nicht leer sein.');
             }
             if ($secret === '' && $configuration->clientSecret() === '') {
-                throw new RuntimeException('Das Client-Geheimnis darf bei aktivierter IServ-Anmeldung nicht leer sein.');
+                throw new RuntimeException('Das Client-Geheimnis darf bei aktivierter OpenID-Connect-Anmeldung nicht leer sein.');
             }
             if (!in_array('openid', preg_split('/\s+/', $scopes) ?: [], true)) {
-                throw new RuntimeException('Die OIDC-Scopes müssen mindestens openid enthalten.');
+                throw new RuntimeException('Die OpenID-Connect-Scopes müssen mindestens openid enthalten.');
             }
             $baseUrl = trim((string) $config->get('app.base_url', ''));
             if (!str_starts_with(strtolower($baseUrl), 'https://')) {
                 throw new RuntimeException(
-                    'Vor Aktivierung von OIDC muss unter Allgemein eine öffentliche HTTPS-Basis-URL gesetzt sein.',
+                    'Vor Aktivierung von OpenID Connect muss unter Allgemein eine öffentliche HTTPS-Basis-URL gesetzt sein.',
                 );
             }
         }
@@ -257,6 +264,7 @@ final class OidcAdminFrontController
             'enabled' => $enabled,
             'issuer' => $issuer,
             'client_id' => $clientId,
+            'login_label' => $loginLabel,
             'scopes' => $scopes !== ''
                 ? $scopes
                 : 'openid profile email iserv:uuid iserv:groups iserv:roles iserv:untis',
@@ -273,6 +281,7 @@ final class OidcAdminFrontController
             'enabled' => $enabled,
             'issuer' => $issuer,
             'client_id' => $clientId,
+            'login_label' => $loginLabel,
             'scopes' => $settings['scopes'],
             'student_role_names' => $studentRoles,
             'student_match_claim' => $studentMatchClaim,
@@ -351,6 +360,7 @@ final class OidcAdminFrontController
                 'issuer' => $configuration->issuer(),
                 'client_id' => $configuration->clientId(),
                 'secret_present' => $configuration->clientSecret() !== '',
+                'login_label' => $configuration->loginLabel(),
                 'scopes' => $configuration->scopes(),
                 'student_role_names' => (string) $config->get('oidc.student_role_names', ''),
                 'student_match_claim' => $configuration->studentMatchClaim(),
