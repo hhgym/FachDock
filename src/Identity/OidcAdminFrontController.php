@@ -155,7 +155,7 @@ final class OidcAdminFrontController
                 self::assertCsrf($request, $csrf);
                 self::storeLoginTestRedirect($loginTest->begin());
 
-                return Response::redirect('/admin/config/oidc/login-test?continue=1');
+                return self::loginTestHandoffPage();
             }
 
             if ($path === '/admin/config/oidc/identity' && $request->method() === 'POST') {
@@ -337,6 +337,22 @@ final class OidcAdminFrontController
         $csrf->rotate();
 
         return Response::redirect('/admin/config/oidc');
+    }
+
+    private static function loginTestHandoffPage(): Response
+    {
+        $continueUrl = '/admin/config/oidc/login-test?continue=1';
+
+        return Response::html(
+            '<!doctype html><html lang="de"><head><meta charset="utf-8">'
+            . '<meta name="viewport" content="width=device-width, initial-scale=1">'
+            . '<meta http-equiv="refresh" content="0;url=' . $continueUrl . '">'
+            . '<title>OpenID Connect · FachDock</title></head><body>'
+            . '<main><h1>OpenID-Connect-Testanmeldung</h1>'
+            . '<p>Die Anmeldung wird gestartet.</p>'
+            . '<p><a href="' . $continueUrl . '">Weiter zur Anmeldung</a></p>'
+            . '</main></body></html>',
+        );
     }
 
     /**
