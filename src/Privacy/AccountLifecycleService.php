@@ -255,9 +255,11 @@ final class AccountLifecycleService
             }
             if ($parent['lifecycle_started_at'] === null) {
                 $this->pdo->prepare(
-                    'UPDATE parent_contacts SET lifecycle_started_at = COALESCE(updated_at, created_at, CURRENT_TIMESTAMP), '
-                    . 'updated_at = CURRENT_TIMESTAMP WHERE id = :id'
-                )->execute(['id' => $parentId]);
+                    'UPDATE parent_contacts SET lifecycle_started_at = :started_at, updated_at = CURRENT_TIMESTAMP WHERE id = :id'
+                )->execute([
+                    'id' => $parentId,
+                    'started_at' => $this->parentLifecycleStartAt($parentId),
+                ]);
             }
         }
     }
@@ -424,6 +426,27 @@ final class AccountLifecycleService
         $statement->execute(['id' => $parentId]);
 
         return $statement->fetchColumn() !== false;
+    }
+
+    private function parentLifecycleStartAt(int $parentId): string
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT COALESCE('
+            . '(SELECT MAX(s.inactive_since) FROM parent_student_link_slots psls '
+            . 'INNER JOIN students s ON s.id = psls.student_id WHERE psls.parent_contact_id = :slot_parent), '
+            . '(SELECT MAX(psl.ended_at) FROM parent_student_links psl WHERE psl.parent_contact_id = :history_parent), '
+            . 'CURRENT_TIMESTAMP)'
+        );
+        $statement->execute([
+            'slot_parent' => $parentId,
+            'history_parent' => $parentId,
+        ]);
+        $value = $statement->fetchColumn();
+        if (!is_string($value) || $value === '') {
+            return date('Y-m-d H:i:s');
+        }
+
+        return $value;
     }
 
     /** @return list<int> */
