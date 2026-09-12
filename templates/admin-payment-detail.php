@@ -25,6 +25,11 @@ $events = is_array($payment['webhook_events'] ?? null) ? $payment['webhook_event
 $recoverable = (string) $payment['status'] === 'manual_review'
     && in_array((string) ($payment['failure_code'] ?? ''), ['paid_booking_failed', 'paid_booking_activation_failed'], true)
     && $payment['paid_at'] !== null;
+$terminable = in_array((string) $payment['status'], ['creating', 'checkout_open'], true);
+$terminated = isset($_GET['terminated']) && $_GET['terminated'] === '1';
+$terminateError = isset($_GET['terminate_error']) && is_scalar($_GET['terminate_error'])
+    ? (string) $_GET['terminate_error']
+    : '';
 ?>
 <!doctype html>
 <html lang="de">
@@ -47,6 +52,11 @@ $recoverable = (string) $payment['status'] === 'manual_review'
         <div class="alert alert-error" role="alert">
             <ul><?php foreach ($errors as $error): ?><li><?= $e($error) ?></li><?php endforeach; ?></ul>
         </div>
+    <?php endif; ?>
+    <?php if ($terminated): ?>
+        <div class="alert alert-success"><strong>Zahlungsvorgang beendet.</strong> Ein noch offener Checkout wurde geschlossen und die zugehörige Reservierung entsprechend zurückgesetzt.</div>
+    <?php elseif ($terminateError !== ''): ?>
+        <div class="alert alert-error"><strong>Zahlungsvorgang konnte nicht beendet werden.</strong> <?= $terminateError === 'technical' ? 'Es ist ein technischer Fehler aufgetreten.' : $e($terminateError) ?></div>
     <?php endif; ?>
 
     <?php if ($recovered): ?>
@@ -75,6 +85,24 @@ $recoverable = (string) $payment['status'] === 'manual_review'
                 <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
                 <input type="hidden" name="payment_id" value="<?= (int) $payment['id'] ?>">
                 <button class="button" type="submit">Bezahlte Buchung wiederherstellen</button>
+            </form>
+        </section>
+    <?php endif; ?>
+
+    <?php if ($terminable): ?>
+        <section class="card stack">
+            <div>
+                <span class="eyebrow">Offener Checkout</span>
+                <h2>Zahlungsvorgang beenden</h2>
+                <p class="form-hint">Nur noch nicht bestätigte Vorgänge können beendet werden. Die Reservierung wird wieder aktiv, sofern ihre ursprüngliche Reservierungszeit noch läuft; andernfalls wird sie freigegeben.</p>
+            </div>
+            <form class="stack" method="post" action="/admin/payments/terminate">
+                <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+                <input type="hidden" name="payment_id" value="<?= (int) $payment['id'] ?>">
+                <label>Grund
+                    <textarea name="reason" rows="2" minlength="3" maxlength="500" required placeholder="z. B. Checkout abgebrochen, falscher Zahlungsvorgang"></textarea>
+                </label>
+                <button class="button button-secondary" type="submit">Offenen Zahlungsvorgang beenden</button>
             </form>
         </section>
     <?php endif; ?>
