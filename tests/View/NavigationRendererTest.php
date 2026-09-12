@@ -40,6 +40,8 @@ final class NavigationRendererTest extends TestCase
         self::assertStringContainsString('href="/admin/payments"', $html);
         self::assertStringContainsString('href="/admin/system/status"', $html);
         self::assertStringContainsString('href="/admin/system/update"', $html);
+        self::assertStringContainsString('href="/admin/accounts"', $html);
+        self::assertStringNotContainsString('href="/admin/users"', $html);
         self::assertStringContainsString('Einstellungen', $html);
         self::assertStringContainsString('href="/admin/config" aria-current="page"', $html);
         self::assertStringContainsString('E-Mail-Vorlagen &amp; Warteschlange', $html);
