@@ -181,10 +181,13 @@ final class BookingLifecycleAdminService
             . 'LEFT JOIN lockers old_l ON old_l.id = e.old_locker_id '
             . 'LEFT JOIN lockers new_l ON new_l.id = e.new_locker_id '
             . "LEFT JOIN staff_users su ON e.actor_type = 'staff' AND su.id = e.actor_id "
-            . 'WHERE e.booking_id = :booking_id OR e.related_booking_id = :booking_id '
+            . 'WHERE e.booking_id = :booking_id OR e.related_booking_id = :related_booking_id '
             . 'ORDER BY e.created_at DESC, e.id DESC'
         );
-        $statement->execute(['booking_id' => $bookingId]);
+        $statement->execute([
+            'booking_id' => $bookingId,
+            'related_booking_id' => $bookingId,
+        ]);
 
         return array_values($statement->fetchAll(PDO::FETCH_ASSOC));
     }
