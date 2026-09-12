@@ -27,6 +27,7 @@ return [
         'enabled' => false,
         'issuer' => '',
         'client_id' => '',
+        'login_label' => 'Mit OpenID Connect anmelden',
         'scopes' => 'openid profile email iserv:uuid iserv:groups iserv:roles',
         'student_auto_match' => 'email',
         'student_role_names' => '',

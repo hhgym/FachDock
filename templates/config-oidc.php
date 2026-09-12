@@ -38,19 +38,19 @@ $claimValue = static function (mixed $value): string {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>IServ / OpenID Connect · FachDock</title>
+    <title>OpenID Connect · FachDock</title>
     <link rel="stylesheet" href="/assets/app.css">
 </head>
 <body>
-<header class="topbar"><div><strong>FachDock</strong> · IServ / OpenID Connect</div></header>
+<header class="topbar"><div><strong>FachDock</strong> · OpenID Connect</div></header>
 <main class="shell stack">
     <header class="hero">
         <span class="eyebrow">Konfiguration</span>
-        <h1>IServ / OpenID Connect</h1>
-        <p>Schüler und Lehrkräfte können sich über den schulischen IServ anmelden. Administration und Schließfachverwaltung bleiben lokale FachDock-Konten.</p>
+        <h1>OpenID Connect</h1>
+        <p>Schüler und Lehrkräfte können sich über einen schulischen OpenID-Connect-Anbieter anmelden. Administration und Schließfachverwaltung bleiben lokale FachDock-Konten.</p>
     </header>
 
-    <?php if ($saved): ?><div class="alert alert-success">OIDC-Konfiguration gespeichert.</div><?php endif; ?>
+    <?php if ($saved): ?><div class="alert alert-success">OpenID-Connect-Konfiguration gespeichert.</div><?php endif; ?>
     <?php if ($errors !== []): ?><div class="alert alert-error" role="alert"><ul><?php foreach ($errors as $error): ?><li><?= $e($error) ?></li><?php endforeach; ?></ul></div><?php endif; ?>
     <?php if ($testResult !== null): ?>
         <div class="alert alert-success">
@@ -64,10 +64,10 @@ $claimValue = static function (mixed $value): string {
 
     <form class="card stack" method="post" action="/admin/config/oidc">
         <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
-        <label><input type="checkbox" name="enabled" value="1" <?= !empty($settings['enabled']) ? 'checked' : '' ?>> IServ-Anmeldung produktiv aktivieren</label>
+        <label><input type="checkbox" name="enabled" value="1" <?= !empty($settings['enabled']) ? 'checked' : '' ?>> OpenID-Connect-Anmeldung produktiv aktivieren</label>
         <div class="grid">
-            <label>Issuer / IServ-Adresse
-                <input name="issuer" type="url" value="<?= $e((string) $settings['issuer']) ?>" placeholder="https://iserv.example.schule">
+            <label>Issuer / Anbieteradresse
+                <input name="issuer" type="url" value="<?= $e((string) $settings['issuer']) ?>" placeholder="https://login.example.schule">
             </label>
             <label>Client-ID
                 <input name="client_id" value="<?= $e((string) $settings['client_id']) ?>" autocomplete="off">
@@ -79,10 +79,14 @@ $claimValue = static function (mixed $value): string {
             <label>Sitzungsdauer (Minuten)
                 <input name="session_lifetime_minutes" type="number" min="15" max="10080" value="<?= (int) $settings['session_lifetime_minutes'] ?>">
             </label>
+            <label class="wide">Text auf der Anmeldeseite
+                <input name="login_label" maxlength="80" value="<?= $e((string) ($settings['login_label'] ?? 'Mit OpenID Connect anmelden')) ?>" placeholder="Mit OpenID Connect anmelden">
+                <small>Beschriftung der OpenID-Connect-Schaltfläche auf der öffentlichen Anmeldeseite. Damit kann der lokale Name des Anmeldedienstes verwendet werden.</small>
+            </label>
         </div>
         <label>Scopes
             <input name="scopes" value="<?= $e((string) $settings['scopes']) ?>">
-            <small>Grundlage: <code>openid profile email iserv:uuid iserv:groups iserv:roles</code>. Für den IServ-Claim <code>untis_username</code> zusätzlich <code>iserv:untis</code> anfordern und im IServ-Client freigeben.</small>
+            <small>Grundlage: <code>openid profile email iserv:uuid iserv:groups iserv:roles</code>. Wird <code>untis_username</code> benötigt, muss zusätzlich <code>iserv:untis</code> beim Anbieter freigegeben und angefordert werden.</small>
         </label>
 
         <div class="card stack">
@@ -90,14 +94,14 @@ $claimValue = static function (mixed $value): string {
                 <span class="eyebrow">Automatische Zuordnung</span>
                 <h2>Schüler</h2>
             </div>
-            <label>IServ-Rollen für Schüler
+            <label>Rollen für Schüler
                 <input name="student_role_names" value="<?= $e((string) ($settings['student_role_names'] ?? '')) ?>" placeholder="z. B. Schüler">
                 <small>Kommagetrennte Werte aus <code>iserv:roles</code>. Ist das Feld leer, wird die Rolle nicht als zusätzliche Bedingung geprüft.</small>
             </label>
             <div class="grid">
-                <label>OIDC-Claim zur Zuordnung
+                <label>OpenID-Connect-Claim zur Zuordnung
                     <input name="student_match_claim" value="<?= $e((string) ($settings['student_match_claim'] ?? 'email')) ?>" placeholder="z. B. untis_username">
-                    <small>Beispiel: <code>untis_username</code>. Welche Claims IServ tatsächlich liefert, zeigt die Testanmeldung unten.</small>
+                    <small>Beispiel: <code>untis_username</code>. Welche Claims tatsächlich geliefert werden, zeigt die Testanmeldung unten.</small>
                 </label>
                 <label>FachDock-Zielfeld
                     <select name="student_match_field">
@@ -105,18 +109,18 @@ $claimValue = static function (mixed $value): string {
                         <option value="email" <?= ($settings['student_match_field'] ?? 'email') === 'email' ? 'selected' : '' ?>>Schüler-E-Mail</option>
                         <option value="matrikelnummer" <?= ($settings['student_match_field'] ?? 'email') === 'matrikelnummer' ? 'selected' : '' ?>>Matrikelnummer</option>
                     </select>
-                    <small>Für IServ/Untis kann z. B. <code>untis_username → Matrikelnummer</code> verwendet werden. Bitte über die Testanmeldung prüfen, ob der übertragene Wert tatsächlich der Matrikelnummer entspricht.</small>
+                    <small>Beispielsweise kann <code>untis_username → Matrikelnummer</code> verwendet werden. Über die Testanmeldung sollte geprüft werden, ob der übertragene Wert tatsächlich der Matrikelnummer entspricht.</small>
                 </label>
             </div>
         </div>
 
-        <label>IServ-Rollen für Lehrkräfte
+        <label>Rollen für Lehrkräfte
             <input name="teacher_role_names" value="<?= $e((string) $settings['teacher_role_names']) ?>" placeholder="Lehrer, Lehrkräfte">
             <small>Kommagetrennte Werte aus dem Claim <code>iserv:roles</code>.</small>
         </label>
         <label>Callback-URL
             <input value="<?= $e((string) $settings['callback_url']) ?>" readonly>
-            <small>Diese URL muss im IServ-SSO-Client als Redirect-URI eingetragen werden.</small>
+            <small>Diese URL muss beim OpenID-Connect-Anbieter als Redirect-URI eingetragen werden.</small>
         </label>
         <div class="cluster">
             <button class="button" type="submit">Speichern</button>
@@ -128,16 +132,16 @@ $claimValue = static function (mixed $value): string {
         <form class="card stack" method="post" action="/admin/config/oidc/test">
             <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
             <h2>Verbindung testen</h2>
-            <p>Prüft Discovery-Dokument, Issuer und die sicherheitsrelevanten HTTPS-Endpunkte der gespeicherten Konfiguration. Die produktive IServ-Anmeldung muss dafür noch nicht aktiviert sein.</p>
-            <button class="button button-secondary" type="submit">OIDC-Discovery testen</button>
+            <p>Prüft Discovery-Dokument, Issuer und die sicherheitsrelevanten HTTPS-Endpunkte der gespeicherten Konfiguration. Die produktive OpenID-Connect-Anmeldung muss dafür noch nicht aktiviert sein.</p>
+            <button class="button button-secondary" type="submit">Discovery testen</button>
         </form>
 
         <form class="card stack" method="post" action="/admin/config/oidc/login-test">
             <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
             <h2>Anmeldung testen</h2>
-            <p>Startet eine echte OIDC-Anmeldung mit den gespeicherten Scopes. Danach zeigt FachDock die vom UserInfo-Endpunkt übertragenen Claims an.</p>
-            <p class="form-hint">Der Test legt keine OIDC-Identität an, erzeugt keine FachDock-Benutzersitzung und verändert keine Schülerzuordnung.</p>
-            <button class="button button-secondary" type="submit">Testanmeldung mit IServ starten</button>
+            <p>Startet eine echte OpenID-Connect-Anmeldung mit den gespeicherten Scopes. Danach zeigt FachDock die vom UserInfo-Endpunkt übertragenen Claims an.</p>
+            <p class="form-hint">Der Test legt keine OpenID-Connect-Identität an, erzeugt keine FachDock-Benutzersitzung und verändert keine Schülerzuordnung.</p>
+            <button class="button button-secondary" type="submit">OpenID-Connect-Testanmeldung starten</button>
         </form>
     </section>
 
@@ -145,7 +149,7 @@ $claimValue = static function (mixed $value): string {
         <section class="card stack">
             <div>
                 <span class="eyebrow">Testanmeldung erfolgreich</span>
-                <h2>Von IServ übertragene Daten</h2>
+                <h2>Übertragene Daten</h2>
                 <p class="form-hint">Angezeigt werden die Claims, die der konfigurierte UserInfo-Endpunkt für diese Testanmeldung tatsächlich zurückgegeben hat. Access- und ID-Tokens werden nicht angezeigt oder gespeichert.</p>
             </div>
             <div class="table-scroll">
@@ -158,7 +162,7 @@ $claimValue = static function (mixed $value): string {
                             <td><code><?= nl2br($e($claimValue($value))) ?></code></td>
                         </tr>
                     <?php endforeach; ?>
-                    <?php if ($loginTestResult === []): ?><tr><td colspan="2">IServ hat keine Claims zurückgegeben.</td></tr><?php endif; ?>
+                    <?php if ($loginTestResult === []): ?><tr><td colspan="2">Der Anbieter hat keine Claims zurückgegeben.</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -166,15 +170,15 @@ $claimValue = static function (mixed $value): string {
     <?php endif; ?>
 
     <section class="card stack">
-        <h2>Bekannte IServ-Identitäten</h2>
-        <p class="form-hint">Automatische Zuordnungen werden bei jeder IServ-Anmeldung erneut geprüft. Manuelle Zuordnungen bleiben bestehen, bis wieder auf Automatik umgestellt wird.</p>
+        <h2>Bekannte OpenID-Connect-Identitäten</h2>
+        <p class="form-hint">Automatische Zuordnungen werden bei jeder OpenID-Connect-Anmeldung erneut geprüft. Manuelle Zuordnungen bleiben bestehen, bis wieder auf Automatik umgestellt wird.</p>
         <div class="table-scroll"><table class="data-table">
-            <thead><tr><th>IServ-Konto</th><th>Typ</th><th>Zuordnung</th><th>Letzte Anmeldung</th><th>Aktionen</th></tr></thead>
+            <thead><tr><th>OpenID-Connect-Konto</th><th>Typ</th><th>Zuordnung</th><th>Letzte Anmeldung</th><th>Aktionen</th></tr></thead>
             <tbody>
             <?php foreach ($identities as $identity): ?>
                 <tr>
                     <td>
-                        <strong><?= $e((string) ($identity['display_name'] ?? $identity['account_name'] ?? 'IServ-Konto')) ?></strong><br>
+                        <strong><?= $e((string) ($identity['display_name'] ?? $identity['account_name'] ?? 'OpenID-Connect-Konto')) ?></strong><br>
                         <small><?= $e((string) ($identity['account_name'] ?? '')) ?><?= !empty($identity['email']) ? ' · ' . $e((string) $identity['email']) : '' ?></small>
                     </td>
                     <td><?= $e(match ((string) $identity['identity_type']) {
@@ -215,14 +219,14 @@ $claimValue = static function (mixed $value): string {
                     </div></td>
                 </tr>
             <?php endforeach; ?>
-            <?php if ($identities === []): ?><tr><td colspan="5">Noch keine IServ-Anmeldung protokolliert.</td></tr><?php endif; ?>
+            <?php if ($identities === []): ?><tr><td colspan="5">Noch keine OpenID-Connect-Anmeldung protokolliert.</td></tr><?php endif; ?>
             </tbody>
         </table></div>
     </section>
 
     <section class="card stack">
         <h2>Spätere Erweiterung: Eltern</h2>
-        <p>Eine OIDC-Anmeldung für Eltern ist bewusst noch nicht Bestandteil der aktuellen Umsetzung. Sie ist als mögliche Weiterentwicklung vorgemerkt; bis dahin bleibt der bestehende Magic-Link-Zugang für Eltern unverändert.</p>
+        <p>Eine OpenID-Connect-Anmeldung für Eltern ist bewusst noch nicht Bestandteil der aktuellen Umsetzung. Sie ist als mögliche Weiterentwicklung vorgemerkt; bis dahin bleibt der bestehende Magic-Link-Zugang für Eltern unverändert.</p>
     </section>
 </main>
 </body>
