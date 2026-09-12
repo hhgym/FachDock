@@ -7,7 +7,9 @@ namespace FachDock\Identity;
 use DomainException;
 use FachDock\Audit\AuditLogger;
 use FachDock\Auth\AuthenticatedStaff;
+use FachDock\Auth\StaffRole;
 use FachDock\Auth\StaffSessionService;
+use FachDock\Auth\StaffUserManagementService;
 use FachDock\Http\Request;
 use FachDock\Http\Response;
 use FachDock\Http\Router;
@@ -21,6 +23,7 @@ final class PersonAccountAdminController
 {
     public function __construct(
         private readonly PersonAccountAdminService $accounts,
+        private readonly StaffUserManagementService $localUsers,
         private readonly AccountLifecycleService $lifecycle,
         private readonly StaffSessionService $sessions,
         private readonly AuditLogger $audit,
@@ -69,7 +72,12 @@ final class PersonAccountAdminController
         if ($staff instanceof Response) {
             return $staff;
         }
-        $type = $this->queryString($request, 'type') === 'parents' ? 'parents' : 'students';
+        $requestedType = $this->queryString($request, 'type');
+        $type = match ($requestedType) {
+            'parents' => 'parents',
+            'local' => 'local',
+            default => 'students',
+        };
         $search = $this->queryString($request, 'search');
         $status = $this->allowedStatus(
             $this->queryString($request, 'status'),
@@ -82,6 +90,7 @@ final class PersonAccountAdminController
             $type = 'students';
         }
         $saved = $this->queryString($request, 'saved');
+        $personAccounts = $type !== 'local';
 
         return Response::html($this->views->render('person-accounts.php', [
             'staff' => $staff,
@@ -92,9 +101,12 @@ final class PersonAccountAdminController
             'studentId' => $studentId,
             'students' => $type === 'students' ? $this->accounts->studentAccounts($search, $status, $studentId) : [],
             'parents' => $type === 'parents' ? $this->accounts->parentAccounts($search, $status) : [],
-            'counts' => $this->accounts->counts(),
-            'settings' => $this->lifecycle->settings(),
-            'preview' => $this->lifecycle->preview(),
+            'localUsers' => $type === 'local' ? $this->localUsers->all() : [],
+            'localRoles' => StaffRole::cases(),
+            'localForm' => [],
+            'counts' => $personAccounts ? $this->accounts->counts() : [],
+            'settings' => $personAccounts ? $this->lifecycle->settings() : [],
+            'preview' => $personAccounts ? $this->lifecycle->preview() : [],
             'errors' => $errors,
             'saved' => $saved,
         ]), $statusCode);
