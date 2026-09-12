@@ -67,7 +67,7 @@ final class DashboardFrontController
     private static function mailQueueStatistics(PDO $pdo): array
     {
         $statement = $pdo->query(
-            "SELECT "
+            'SELECT '
             . "SUM(status = 'waiting') AS waiting, "
             . "SUM(status = 'waiting' AND available_at <= CURRENT_TIMESTAMP) AS ready, "
             . "SUM(status = 'failed') AS failed, "
