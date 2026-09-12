@@ -125,6 +125,30 @@ final class StripePhpGateway implements BookingPaymentGateway
         );
     }
 
+    public function expireCheckoutSession(string $sessionId): void
+    {
+        $sessionId = trim($sessionId);
+        if ($sessionId === '') {
+            throw new DomainException('Die Stripe-Checkout-Session fehlt.');
+        }
+
+        $session = $this->client->checkout->sessions->retrieve($sessionId, []);
+        $status = is_string($session->status) ? $session->status : '';
+        if ($status === 'expired') {
+            return;
+        }
+        if ($status === 'complete') {
+            throw new DomainException(
+                'Der Stripe-Checkout wurde bereits abgeschlossen und kann nicht als offen beendet werden.'
+            );
+        }
+        if ($status !== 'open') {
+            throw new DomainException('Der Stripe-Checkout befindet sich nicht mehr in einem beendbaren Zustand.');
+        }
+
+        $this->client->checkout->sessions->expire($sessionId, []);
+    }
+
     public function verifyWebhook(string $payload, string $signature): StripeWebhookEvent
     {
         if (trim($this->webhookSecret) === '') {
