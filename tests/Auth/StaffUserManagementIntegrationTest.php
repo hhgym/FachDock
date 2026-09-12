@@ -37,8 +37,8 @@ final class StaffUserManagementIntegrationTest extends TestCase
         self::assertSame('1', (string) $created['active']);
 
         $pdo->exec(
-            "INSERT INTO staff_sessions (staff_user_id, token_hash, created_at, last_seen_at, expires_at) "
-            . "VALUES (" . $createdId . ", REPEAT('a', 64), NOW(), NOW(), DATE_ADD(NOW(), INTERVAL 1 HOUR))"
+            'INSERT INTO staff_sessions (staff_user_id, token_hash, created_at, last_seen_at, expires_at) '
+            . 'VALUES (' . $createdId . ", REPEAT('a', 64), NOW(), NOW(), DATE_ADD(NOW(), INTERVAL 1 HOUR))"
         );
         $service->deactivate($createdId, 1);
         self::assertSame('0', (string) $pdo->query('SELECT active FROM staff_users WHERE id = ' . $createdId)->fetchColumn());
@@ -101,13 +101,13 @@ final class StaffUserManagementIntegrationTest extends TestCase
     private function fixtures(PDO $pdo): void
     {
         $pdo->exec(
-            "INSERT INTO staff_users (id, username, display_name, email, password_hash, role, active, last_login_at, created_at, updated_at) VALUES "
+            'INSERT INTO staff_users (id, username, display_name, email, password_hash, role, active, last_login_at, created_at, updated_at) VALUES '
             . "(1, 'admin1', 'Admin Eins', 'admin1@example.test', 'hash', 'administrator', 1, NOW(), NOW(), NOW()),"
             . "(2, 'admin2', 'Admin Zwei', 'admin2@example.test', 'hash', 'administrator', 1, NOW(), NOW(), NOW()),"
             . "(3, 'alt.manager', 'Alte Verwaltung', 'old@example.test', 'hash', 'locker_manager', 1, NOW(), NOW(), NOW())"
         );
         $pdo->exec(
-            "INSERT INTO audit_log (actor_type, staff_user_id, action, entity_type, entity_id, created_at) "
+            'INSERT INTO audit_log (actor_type, staff_user_id, action, entity_type, entity_id, created_at) '
             . "VALUES ('staff', 3, 'historic.action', 'system', 'test', NOW())"
         );
     }
