@@ -44,9 +44,13 @@ final class StaffUserAdminController
         }
 
         $query = $request->query();
-        $success = isset($query['saved']) && is_scalar($query['saved']) ? (string) $query['saved'] : '';
+        $saved = isset($query['saved']) && is_scalar($query['saved']) ? trim((string) $query['saved']) : '';
+        $target = '/admin/accounts?type=local';
+        if ($saved !== '') {
+            $target .= '&saved=' . rawurlencode($saved);
+        }
 
-        return $this->page($staff, [], [], $success);
+        return Response::redirect($target);
     }
 
     private function create(Request $request): Response
@@ -73,7 +77,7 @@ final class StaffUserAdminController
             ]);
             $this->csrf->rotate();
 
-            return Response::redirect('/admin/users?saved=created');
+            return Response::redirect('/admin/accounts?type=local&saved=created');
         } catch (DomainException $exception) {
             return $this->page($staff, [$exception->getMessage()], $this->safeForm($request), '', 422);
         } catch (Throwable $exception) {
@@ -137,7 +141,7 @@ final class StaffUserAdminController
             $operation($staff, $userId);
             $this->csrf->rotate();
 
-            return Response::redirect('/admin/users?saved=' . rawurlencode($success));
+            return Response::redirect('/admin/accounts?type=local&saved=' . rawurlencode($success));
         } catch (DomainException $exception) {
             return $this->page($staff, [$exception->getMessage()], [], '', 422);
         } catch (Throwable $exception) {
@@ -182,14 +186,23 @@ final class StaffUserAdminController
         string $success = '',
         int $status = 200,
     ): Response {
-        return Response::html($this->views->render('admin-users.php', [
+        return Response::html($this->views->render('person-accounts.php', [
             'staff' => $staff,
             'csrfToken' => $this->csrf->token(),
+            'type' => 'local',
+            'search' => '',
+            'statusFilter' => '',
+            'studentId' => null,
+            'students' => [],
+            'parents' => [],
+            'localUsers' => $this->users->all(),
+            'localRoles' => StaffRole::cases(),
+            'localForm' => $form,
+            'counts' => [],
+            'settings' => [],
+            'preview' => [],
             'errors' => $errors,
-            'form' => $form,
-            'success' => $success,
-            'users' => $this->users->all(),
-            'roles' => StaffRole::cases(),
+            'saved' => $success,
         ]), $status);
     }
 
