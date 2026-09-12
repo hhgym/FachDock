@@ -71,7 +71,7 @@ final class AccountLifecycleIntegrationTest extends TestCase
         );
         self::assertSame('1', (string) $pdo->query('SELECT active FROM parent_contacts WHERE id = 1')->fetchColumn());
 
-        $pdo->exec("UPDATE students SET active = 1, inactive_since = NULL WHERE id = 1");
+        $pdo->exec('UPDATE students SET active = 1, inactive_since = NULL WHERE id = 1');
         $service->synchronizeLifecycleStarts();
         self::assertNull($pdo->query('SELECT lifecycle_started_at FROM parent_contacts WHERE id = 1')->fetchColumn());
         self::assertSame('1', (string) $pdo->query('SELECT active FROM parent_contacts WHERE id = 1')->fetchColumn());
@@ -149,7 +149,7 @@ final class AccountLifecycleIntegrationTest extends TestCase
             'INSERT INTO students '
             . '(id, matrikelnummer, first_name, last_name, class_name, grade, email, active, inactive_since, access_code_hash, '
             . 'access_code_generated_at, created_at, updated_at) '
-            . "VALUES (:id, :matrikel, :first, :last, '9-1', 9, :email, :active, :inactive_since, REPEAT('d', 64), NOW(), NOW(), NOW())"
+            . "VALUES (:id, :matrikel, :first, :last, '9-1', 9, :email, :active, :inactive_since, :access_hash, NOW(), NOW(), NOW())"
         );
         $statement->execute([
             'id' => $id,
@@ -159,6 +159,7 @@ final class AccountLifecycleIntegrationTest extends TestCase
             'email' => 'student' . $id . '@example.test',
             'active' => $active,
             'inactive_since' => $inactiveSince,
+            'access_hash' => hash('sha256', 'student-code-' . $id),
         ]);
     }
 
