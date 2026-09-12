@@ -96,12 +96,20 @@ final class StudentImportService
             );
             $upsert = $this->pdo->prepare(
                 'INSERT INTO students '
-                . '(matrikelnummer, first_name, last_name, class_name, grade, email, active, access_code_hash, '
+                . '(matrikelnummer, first_name, last_name, class_name, grade, email, active, inactive_since, access_code_hash, '
                 . 'access_code_generated_at, last_import_run_id, created_at, updated_at) '
-                . 'VALUES (:matrikelnummer, :first_name, :last_name, :class_name, :grade, :email, :active, '
+                . 'VALUES (:matrikelnummer, :first_name, :last_name, :class_name, :grade, :email, :active, :inactive_since, '
                 . ':access_code_hash, :access_code_generated_at, :run_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) '
                 . 'ON DUPLICATE KEY UPDATE first_name = VALUES(first_name), last_name = VALUES(last_name), '
                 . 'class_name = VALUES(class_name), grade = VALUES(grade), email = VALUES(email), '
+                . 'inactive_since = CASE '
+                . 'WHEN VALUES(active) = 1 THEN NULL '
+                . 'WHEN active = 1 AND VALUES(active) = 0 THEN CURRENT_TIMESTAMP '
+                . 'ELSE COALESCE(inactive_since, CURRENT_TIMESTAMP) END, '
+                . "account_deactivated_at = CASE WHEN VALUES(active) = 1 AND account_deactivation_source = 'lifecycle' "
+                . 'THEN NULL ELSE account_deactivated_at END, '
+                . "account_deactivation_source = CASE WHEN VALUES(active) = 1 AND account_deactivation_source = 'lifecycle' "
+                . 'THEN NULL ELSE account_deactivation_source END, '
                 . 'active = VALUES(active), '
                 . 'access_code_hash = COALESCE(access_code_hash, VALUES(access_code_hash)), '
                 . 'access_code_generated_at = COALESCE(access_code_generated_at, VALUES(access_code_generated_at)), '
@@ -109,6 +117,12 @@ final class StudentImportService
             );
             $lookupCode = $this->pdo->prepare(
                 'SELECT access_code_hash FROM students WHERE matrikelnummer = :matrikelnummer LIMIT 1'
+            );
+            $reactivateOidc = $this->pdo->prepare(
+                'UPDATE oidc_identities oi INNER JOIN students s ON s.id = oi.student_id '
+                . 'SET oi.active = 1, oi.updated_at = CURRENT_TIMESTAMP '
+                . "WHERE s.matrikelnummer = :matrikelnummer AND s.active = 1 AND s.account_deactivated_at IS NULL "
+                . "AND s.anonymized_at IS NULL AND oi.identity_type = 'student'"
             );
 
             $imported = 0;
@@ -139,10 +153,14 @@ final class StudentImportService
                     'grade' => $row['grade'],
                     'email' => $row['email'],
                     'active' => $row['active'] ? 1 : 0,
+                    'inactive_since' => $row['active'] ? null : date('Y-m-d H:i:s'),
                     'access_code_hash' => $hash,
                     'access_code_generated_at' => $generatedAt,
                     'run_id' => $runId,
                 ]);
+                if ($row['active']) {
+                    $reactivateOidc->execute(['matrikelnummer' => $row['matrikelnummer']]);
+                }
 
                 if ($plainCode !== null) {
                     $generatedCodes[] = [
@@ -293,7 +311,8 @@ final class StudentImportService
         }
 
         $statement = $this->pdo->prepare(
-            'UPDATE students SET active = 0, last_import_run_id = :run_id, updated_at = CURRENT_TIMESTAMP '
+            'UPDATE students SET active = 0, inactive_since = COALESCE(inactive_since, CURRENT_TIMESTAMP), '
+            . 'last_import_run_id = :run_id, updated_at = CURRENT_TIMESTAMP '
             . 'WHERE active = 1 AND matrikelnummer NOT IN (' . implode(', ', $placeholders) . ')'
         );
         $statement->execute($params);
