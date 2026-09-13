@@ -35,7 +35,6 @@ final class StripeReturnReconciler
         if (in_array($payment['status'], [
             PaymentStatus::Paid->value,
             PaymentStatus::ManualReview->value,
-            PaymentStatus::ProcessingPaid->value,
         ], true)) {
             return;
         }
