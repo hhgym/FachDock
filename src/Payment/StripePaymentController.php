@@ -58,7 +58,6 @@ final class StripePaymentController
             if ($bookingValue !== '') {
                 $bookingId = $this->positiveInt($bookingValue, 'Buchung');
                 $result = $this->bookingPayments->start($parent, $bookingId);
-                $this->csrf->rotate();
                 $this->audit->parent($parent, 'payment.stripe_booking_checkout.started', 'payment', $result->paymentId, [
                     'booking_id' => $bookingId,
                 ]);
@@ -68,7 +67,6 @@ final class StripePaymentController
 
             $reservationId = $this->positiveInt($request->postString('reservation_id'), 'Reservierung');
             $result = $this->payments->start($parent, $reservationId);
-            $this->csrf->rotate();
 
             if ($result->bookingId !== null) {
                 $this->audit->parent($parent, 'payment.no_fee_booking.created', 'booking', $result->bookingId, [
