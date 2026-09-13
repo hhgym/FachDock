@@ -153,7 +153,7 @@ final class LockerGridRenderer
 
     /**
      * @param list<array<string, mixed>> $lockers
-     * @param callable(array<string, mixed>, string, string): string|null $actions
+     * @param callable(array<string, mixed>, string, string): string $actions
      * @param array<int, bool> $recommendedLockerIds
      * @param array<int, int> $scores
      */
@@ -240,7 +240,7 @@ final class LockerGridRenderer
                 $lockerId = (int) $locker['_grid_id'];
                 $person = self::personHtml($locker, false);
                 $detail = self::statusDetail($locker, $status);
-                $actionHtml = (string) ($actions($locker, 'list', $status) ?? '');
+                $actionHtml = (string) $actions($locker, 'list', $status);
                 $features = [];
                 if (!empty($locker['barrier_friendly'])) {
                     $features[] = 'barrierearm';
@@ -274,7 +274,7 @@ final class LockerGridRenderer
 
     /**
      * @param array<string, mixed> $locker
-     * @param callable(array<string, mixed>, string, string): string|null $actions
+     * @param callable(array<string, mixed>, string, string): string $actions
      * @param array<int, bool> $recommendedLockerIds
      * @param array<int, int> $scores
      */
@@ -288,7 +288,7 @@ final class LockerGridRenderer
         $lockerId = (int) $locker['_grid_id'];
         $person = self::personHtml($locker, true);
         $detail = self::statusDetail($locker, $status);
-        $actionHtml = (string) ($actions($locker, 'grid', $status) ?? '');
+        $actionHtml = (string) $actions($locker, 'grid', $status);
 
         $html = '<div class="locker-status-cell ' . self::statusClass($status) . '">'
             . '<div class="locker-status-cell-heading"><code>'
