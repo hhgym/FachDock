@@ -67,7 +67,7 @@ final class BookingSelectionAdminController
             $studentValue = $this->queryString($request, 'student_id');
             $schoolYearId = $yearValue !== ''
                 ? $this->positiveInt($yearValue, 'Schuljahr')
-                : $this->schoolYears->defaultSelectionId();
+                : $this->defaultSchoolYearId();
             $studentId = $studentValue !== '' ? $this->positiveInt($studentValue, 'Schüler') : null;
 
             if ($schoolYearId === null) {
@@ -316,7 +316,7 @@ final class BookingSelectionAdminController
         array $scores = [],
         array $counts = ['free' => 0, 'reserved' => 0, 'occupied' => 0, 'issue' => 0, 'unavailable' => 0],
     ): Response {
-        return Response::html($this->views->render('booking-selection.php', [
+        return Response::html($this->views->render('locker-management.php', [
             'staff' => $staff,
             'csrfToken' => $this->csrf->token(),
             'errors' => $errors,
@@ -345,6 +345,23 @@ final class BookingSelectionAdminController
         }
 
         return $staff;
+    }
+
+    private function defaultSchoolYearId(): ?int
+    {
+        $years = $this->schoolYears->all();
+        foreach ($years as $year) {
+            if ((string) $year['status'] === 'current') {
+                return (int) $year['id'];
+            }
+        }
+        foreach ($years as $year) {
+            if ((string) $year['status'] !== 'closed') {
+                return (int) $year['id'];
+            }
+        }
+
+        return null;
     }
 
     private function actionError(
