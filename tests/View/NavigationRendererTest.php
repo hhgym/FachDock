@@ -35,12 +35,15 @@ final class NavigationRendererTest extends TestCase
         self::assertStringContainsString('Personen', $html);
         self::assertStringContainsString('Konfiguration', $html);
         self::assertStringContainsString('System', $html);
+        self::assertStringContainsString('href="/admin/lockers"', $html);
+        self::assertStringContainsString('Belegung &amp; Zuweisung', $html);
         self::assertStringContainsString('href="/admin/operations"', $html);
         self::assertStringContainsString('href="/admin/bookings"', $html);
         self::assertStringContainsString('href="/admin/payments"', $html);
         self::assertStringContainsString('href="/admin/system/status"', $html);
         self::assertStringContainsString('href="/admin/system/update"', $html);
         self::assertStringContainsString('href="/admin/accounts"', $html);
+        self::assertStringNotContainsString('href="/admin/booking-selection"', $html);
         self::assertStringNotContainsString('href="/admin/users"', $html);
         self::assertStringContainsString('Einstellungen', $html);
         self::assertStringContainsString('href="/admin/config" aria-current="page"', $html);
@@ -68,6 +71,7 @@ final class NavigationRendererTest extends TestCase
             'csrfToken' => 'csrf-locker',
         ], '/admin/operations');
 
+        self::assertStringContainsString('href="/admin/lockers"', $html);
         self::assertStringContainsString('href="/admin/locations"', $html);
         self::assertStringContainsString('href="/admin/operations" aria-current="page"', $html);
         self::assertStringContainsString('href="/admin/bookings"', $html);
