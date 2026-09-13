@@ -8,12 +8,17 @@ use FachDock\Parent\AuthenticatedParent;
 /** @var array{id:int,first_name:string,last_name:string,class_name:string,grade:int} $child */
 /** @var array{id:int,label:string,starts_on:string,ends_on:string,annual_fee_cents:int} $schoolYear */
 /** @var array<string,mixed> $reservation */
+/** @var array{months:int,charged_cents:int} $feeQuote */
+/** @var bool $paymentCancelled */
 /** @var bool $stripeCheckoutAvailable */
 /** @var string $stripeMode */
 /** @var string $csrfToken */
 $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 $money = static fn (int $cents): string => number_format($cents / 100, 2, ',', '.') . ' €';
 $paymentRunning = (string) ($reservation['status'] ?? '') === 'payment_running';
+$reservationDeadline = $paymentRunning && trim((string) ($reservation['payment_grace_expires_at'] ?? '')) !== ''
+    ? (string) $reservation['payment_grace_expires_at']
+    : (string) $reservation['expires_at'];
 ?>
 <!doctype html>
 <html lang="de">
@@ -43,6 +48,13 @@ $paymentRunning = (string) ($reservation['status'] ?? '') === 'payment_running';
         <p>Prüfen Sie die Auswahl. Das Schließfach ist für kurze Zeit reserviert und wird erst mit dem Abschluss der Buchung verbindlich zugeordnet.</p>
     </header>
 
+    <?php if ($paymentCancelled): ?>
+        <div class="alert alert-neutral" role="status">
+            <strong>Die Zahlung wurde noch nicht abgeschlossen.</strong>
+            <p>Ihre Reservierung besteht weiter. Sie können die bereits gestartete Stripe-Zahlung unten fortsetzen.</p>
+        </div>
+    <?php endif; ?>
+
     <section class="card stack">
         <div class="school-year-heading">
             <div>
@@ -50,7 +62,7 @@ $paymentRunning = (string) ($reservation['status'] ?? '') === 'payment_running';
                 <h2><?= $e((string) $reservation['short_name']) ?></h2>
                 <p class="form-hint"><?= $e((string) $reservation['long_name']) ?></p>
             </div>
-            <span class="badge">reserviert</span>
+            <span class="badge"><?= $paymentRunning ? 'Zahlung gestartet' : 'reserviert' ?></span>
         </div>
 
         <div class="entity-list">
@@ -67,21 +79,38 @@ $paymentRunning = (string) ($reservation['status'] ?? '') === 'payment_running';
                 <strong><?= $e($money((int) $schoolYear['annual_fee_cents'])) ?></strong>
             </div>
             <div class="entity-row school-year-heading">
-                <span>Reserviert bis</span>
-                <strong><?= $e((string) $reservation['expires_at']) ?></strong>
+                <span>Heute fällig</span>
+                <strong><?= $e($money((int) $feeQuote['charged_cents'])) ?></strong>
+            </div>
+            <div class="entity-row school-year-heading">
+                <span>Berechnungszeitraum</span>
+                <strong><?= (int) $feeQuote['months'] ?> von 12 Monaten</strong>
+            </div>
+            <div class="entity-row school-year-heading">
+                <span><?= $paymentRunning ? 'Zahlung möglich bis' : 'Reserviert bis' ?></span>
+                <strong><?= $e($reservationDeadline) ?></strong>
             </div>
         </div>
-        <?php if ((int) $schoolYear['annual_fee_cents'] > 0): ?>
-            <p class="form-hint">Bei einer Buchung nach Beginn des Schuljahres kann der tatsächlich fällige Betrag anteilig niedriger sein.</p>
+        <?php if ((int) $feeQuote['charged_cents'] < (int) $schoolYear['annual_fee_cents']): ?>
+            <p class="form-hint">Da die Buchung nach Beginn des Schuljahres erfolgt, wird die Jahresgebühr anteilig für die verbleibenden Schulmonate berechnet.</p>
         <?php endif; ?>
     </section>
 
     <?php if ($paymentRunning): ?>
         <section class="card stack">
-            <div class="alert alert-neutral">
-                <strong>Zahlungsvorgang bereits gestartet.</strong>
-                <p>Für diese Reservierung läuft bereits ein Zahlungsvorgang. Die Auswahl bleibt währenddessen gesperrt.</p>
+            <div>
+                <span class="eyebrow">Zahlung</span>
+                <h2>Zahlung fortsetzen</h2>
             </div>
+            <div class="alert alert-neutral">
+                <strong>Der Stripe-Checkout ist bereits geöffnet.</strong>
+                <p>Es wird kein neuer Zahlungsvorgang angelegt. Mit dem folgenden Button öffnen Sie denselben noch laufenden Checkout erneut.</p>
+            </div>
+            <form method="post" action="/parent/payment/start">
+                <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+                <input type="hidden" name="reservation_id" value="<?= (int) $reservation['reservation_id'] ?>">
+                <button class="button" type="submit">Zahlung fortsetzen · <?= $e($money((int) $feeQuote['charged_cents'])) ?></button>
+            </form>
             <a class="button button-secondary" href="/parent">Zur Übersicht</a>
         </section>
     <?php else: ?>
@@ -115,7 +144,7 @@ $paymentRunning = (string) ($reservation['status'] ?? '') === 'payment_running';
                             <form method="post" action="/parent/payment/start">
                                 <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
                                 <input type="hidden" name="reservation_id" value="<?= (int) $reservation['reservation_id'] ?>">
-                                <button class="button" type="submit">Buchung abschließen</button>
+                                <button class="button" type="submit">Buchung abschließen · <?= $e($money((int) $feeQuote['charged_cents'])) ?></button>
                             </form>
                         <?php else: ?>
                             <div class="alert alert-neutral">Die Online-Zahlung ist derzeit nicht vollständig eingerichtet.</div>

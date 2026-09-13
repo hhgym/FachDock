@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FachDock\Booking;
 
+use DateTimeImmutable;
 use DomainException;
 use FachDock\Audit\AuditLogger;
 use FachDock\Http\Request;
@@ -61,11 +62,13 @@ final class ParentBookingController
         }
 
         try {
-            return $this->selectedPage(
-                $parent,
-                $this->positiveInt($studentValue, 'Schüler'),
-                $this->positiveInt($yearValue, 'Schuljahr'),
-            );
+            $studentId = $this->positiveInt($studentValue, 'Schüler');
+            $schoolYearId = $this->positiveInt($yearValue, 'Schuljahr');
+            if ($this->queryString($request, 'payment_cancelled') === '1') {
+                return Response::redirect($this->summaryUrl($studentId, $schoolYearId) . '&payment_cancelled=1');
+            }
+
+            return $this->selectedPage($parent, $studentId, $schoolYearId);
         } catch (DomainException $exception) {
             return $this->page($parent, [$exception->getMessage()], 422);
         }
@@ -93,12 +96,15 @@ final class ParentBookingController
             if (!is_array($active)) {
                 throw new DomainException('Für diese Buchung besteht keine aktive Reservierung mehr. Bitte wählen Sie erneut ein Schließfach aus.');
             }
+            $schoolYear = $selection['school_year'];
 
             return Response::html($this->views->render('parent-booking-summary.php', [
                 'parent' => $parent,
                 'child' => $selection['child'],
-                'schoolYear' => $selection['school_year'],
+                'schoolYear' => $schoolYear,
                 'reservation' => $active,
+                'feeQuote' => $this->feeQuote($schoolYear),
+                'paymentCancelled' => $this->queryString($request, 'payment_cancelled') === '1',
                 'stripeCheckoutAvailable' => $this->stripe->checkoutAvailable(),
                 'stripeMode' => $this->stripe->mode,
                 'csrfToken' => $this->csrf->token(),
@@ -282,6 +288,22 @@ final class ParentBookingController
             'Die Aktion konnte nicht abgeschlossen werden. Fehler-ID: ' . $errorId,
             500,
         );
+    }
+
+    /**
+     * @param array{starts_on:string,annual_fee_cents:int} $schoolYear
+     * @return array{months:int,charged_cents:int}
+     */
+    private function feeQuote(array $schoolYear): array
+    {
+        $annualFeeCents = (int) $schoolYear['annual_fee_cents'];
+        $period = SchoolYearPeriod::fromStartYear((int) substr((string) $schoolYear['starts_on'], 0, 4));
+        $today = new DateTimeImmutable('today');
+        if ($today < $period->startsOn) {
+            return ['months' => 12, 'charged_cents' => $annualFeeCents];
+        }
+
+        return (new FeeCalculator())->prorate($annualFeeCents, $today, $period);
     }
 
     private function queryString(Request $request, string $key): string
