@@ -97,6 +97,58 @@ final class ParentPortalAccessService
     }
 
     /**
+     * @return list<array{
+     *     payment_id:int,
+     *     status:string,
+     *     amount_cents:int,
+     *     currency:string,
+     *     updated_at:string,
+     *     student_name:string,
+     *     school_year_label:string,
+     *     locker_short_name:string
+     * }>
+     */
+    public function openPayments(int $parentContactId): array
+    {
+        if ($parentContactId < 1) {
+            return [];
+        }
+
+        $statement = $this->pdo->prepare(
+            'SELECT p.id AS payment_id, p.status, p.amount_cents, p.currency, p.updated_at, '
+            . 's.first_name, s.last_name, sy.label AS school_year_label, l.short_name AS locker_short_name '
+            . 'FROM payments p '
+            . 'INNER JOIN locker_reservations lr ON lr.id = p.reservation_id '
+            . 'INNER JOIN students s ON s.id = lr.student_id '
+            . 'INNER JOIN school_years sy ON sy.id = lr.school_year_id '
+            . 'INNER JOIN lockers l ON l.id = lr.locker_id '
+            . 'WHERE p.parent_contact_id = :parent_contact_id '
+            . "AND p.status IN ('creating', 'checkout_open', 'processing_paid', 'manual_review') "
+            . 'ORDER BY p.created_at DESC'
+        );
+        $statement->execute(['parent_contact_id' => $parentContactId]);
+
+        $result = [];
+        foreach ($statement->fetchAll() as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $result[] = [
+                'payment_id' => (int) $row['payment_id'],
+                'status' => (string) $row['status'],
+                'amount_cents' => (int) $row['amount_cents'],
+                'currency' => (string) $row['currency'],
+                'updated_at' => (string) $row['updated_at'],
+                'student_name' => trim((string) $row['first_name'] . ' ' . (string) $row['last_name']),
+                'school_year_label' => (string) $row['school_year_label'],
+                'locker_short_name' => (string) $row['locker_short_name'],
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
      * @param array{id: int, email: string, first_name: string|null, last_name: string|null, active: bool, verified: bool} $parent
      */
     private function queueMagicLink(
