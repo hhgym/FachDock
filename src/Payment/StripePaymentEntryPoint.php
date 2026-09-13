@@ -47,20 +47,23 @@ final class StripePaymentEntryPoint
             $allocationEvaluator,
             new ProjectedGradeResolver(),
         );
+        $stripe = new StripePhpGateway(
+            (string) $config->get('stripe.secret_key', ''),
+            (string) $config->get('stripe.webhook_secret', ''),
+            (string) $config->get('stripe.mode', 'test'),
+        );
+        $bookingService = new BookingService($pdo);
         $payments = new StripePaymentService(
             $pdo,
-            new StripePhpGateway(
-                (string) $config->get('stripe.secret_key', ''),
-                (string) $config->get('stripe.webhook_secret', ''),
-                (string) $config->get('stripe.mode', 'test'),
-            ),
+            $stripe,
             $reservations,
-            new BookingService($pdo),
+            $bookingService,
             new FeeCalculator(),
             (string) $config->get('app.base_url', ''),
             (string) $config->get('stripe.currency', 'EUR'),
             self::configInt($config, 'stripe.checkout_minutes', 30),
         );
+        $returns = new StripeReturnReconciler($pdo, $stripe, $bookingService);
         $sessions = new ParentSessionService(
             $pdo,
             self::configInt($config, 'auth.parent_session_lifetime_minutes', 1440),
@@ -68,6 +71,7 @@ final class StripePaymentEntryPoint
         $router = new Router();
         (new StripePaymentController(
             $payments,
+            $returns,
             $sessions,
             new AuditLogger($pdo),
             $logger,
