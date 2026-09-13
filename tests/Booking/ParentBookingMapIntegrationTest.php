@@ -59,6 +59,26 @@ final class ParentBookingMapIntegrationTest extends TestCase
         }
     }
 
+    public function testMapWaitsForExplicitFloorSelection(): void
+    {
+        $selection = $this->maps->selection($this->parent, 1, 1, null, null, 3);
+
+        self::assertCount(1, $selection['floors']);
+        self::assertNull($selection['selected_floor_id']);
+        self::assertNull($selection['selected_plan_id']);
+        self::assertNull($selection['plan']);
+        self::assertSame([], $selection['floor_plans']);
+    }
+
+    public function testSelectingFloorLoadsItsDefaultPlan(): void
+    {
+        $selection = $this->maps->selection($this->parent, 1, 1, 1, null, 3);
+
+        self::assertSame(1, $selection['selected_floor_id']);
+        self::assertSame($this->planId, $selection['selected_plan_id']);
+        self::assertIsArray($selection['plan']);
+    }
+
     public function testMapUsesAuthoritativeRulesAndAvailability(): void
     {
         $selection = $this->maps->selection($this->parent, 1, 1, null, $this->planId, 3);
