@@ -27,4 +27,29 @@ final class ParentBookingMapTemplateTest extends TestCase
         self::assertStringContainsString('.locker-parent-availability-cell.is-unavailable', $css);
         self::assertStringContainsString('background: #fff0ef;', $css);
     }
+
+    public function testBookingFlowRequiresFloorBeforePlanAndGroupSelection(): void
+    {
+        $template = (string) file_get_contents(dirname(__DIR__, 2) . '/templates/parent-booking-map.php');
+
+        self::assertStringContainsString('Schritt 1', $template);
+        self::assertStringContainsString('Etage auswählen', $template);
+        self::assertStringContainsString('<option value="" <?= $selectedFloorId === null ? \'selected\' : \'\' ?>>Bitte Etage auswählen</option>', $template);
+        self::assertStringContainsString('<?php if ($selectedFloorId === null): ?>', $template);
+        self::assertStringContainsString('Bitte zuerst eine Etage auswählen', $template);
+        self::assertStringContainsString('Schritt 2', $template);
+        self::assertStringContainsString('Schrankgruppe auswählen', $template);
+        self::assertStringContainsString('Schritt 3 · Schrankgruppe', $template);
+        self::assertStringContainsString('Schließfach auswählen', $template);
+    }
+
+    public function testLockerListViewKeepsHorizontalScrollContainer(): void
+    {
+        $css = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/locker-grid.css');
+
+        self::assertStringContainsString('.locker-group-view-body.table-scroll', $css);
+        self::assertStringContainsString('overflow-x: auto;', $css);
+        self::assertStringContainsString('.locker-group-view-body.table-scroll > .locker-status-list', $css);
+        self::assertStringContainsString('width: max-content;', $css);
+    }
 }
