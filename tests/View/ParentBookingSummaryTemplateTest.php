@@ -22,7 +22,7 @@ final class ParentBookingSummaryTemplateTest extends TestCase
         self::assertStringContainsString('Anderes Schließfach auswählen', $template);
         self::assertStringContainsString('/parent/booking/map?student_id=', $template);
 
-        self::assertStringContainsString("$router->get('/parent/booking/summary'", $controller);
+        self::assertStringContainsString("\$router->get('/parent/booking/summary'", $controller);
         self::assertStringContainsString('return Response::redirect($this->summaryUrl($studentId, $schoolYearId));', $controller);
     }
 }
