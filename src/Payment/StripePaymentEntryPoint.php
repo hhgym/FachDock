@@ -13,6 +13,7 @@ use FachDock\Booking\ReservationService;
 use FachDock\Config\Config;
 use FachDock\Database\ConnectionFactory;
 use FachDock\Http\Request;
+use FachDock\Http\Response;
 use FachDock\Http\Router;
 use FachDock\Logging\LoggerFactory;
 use FachDock\Parent\ParentSessionService;
@@ -24,6 +25,7 @@ final class StripePaymentEntryPoint
     private const ROUTES = [
         'POST /parent/payment/start',
         'GET /parent/payment/return',
+        'GET /webhooks/stripe',
         'POST /webhooks/stripe',
     ];
 
@@ -34,6 +36,14 @@ final class StripePaymentEntryPoint
 
     public static function run(string $root, Request $request): void
     {
+        if ($request->method() === 'GET' && $request->path() === '/webhooks/stripe') {
+            Response::text(
+                "FachDock Stripe webhook endpoint is reachable. Stripe events must be sent via POST with a valid Stripe-Signature header.\n",
+            )->send();
+
+            return;
+        }
+
         $config = Config::load($root);
         $pdo = ConnectionFactory::fromConfig($config);
         $logger = LoggerFactory::create($root);
@@ -47,10 +57,11 @@ final class StripePaymentEntryPoint
             $allocationEvaluator,
             new ProjectedGradeResolver(),
         );
+        $stripeConfig = StripeConfiguration::fromConfig($config);
         $stripe = new StripePhpGateway(
-            (string) $config->get('stripe.secret_key', ''),
-            (string) $config->get('stripe.webhook_secret', ''),
-            (string) $config->get('stripe.mode', 'test'),
+            $stripeConfig->secretKey,
+            $stripeConfig->webhookSecret,
+            $stripeConfig->mode,
         );
         $bookingService = new BookingService($pdo);
         $payments = new StripePaymentService(
