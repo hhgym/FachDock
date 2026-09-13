@@ -97,9 +97,6 @@ final class ParentBookingController
                 throw new DomainException('Für diese Buchung besteht keine aktive Reservierung mehr. Bitte wählen Sie erneut ein Schließfach aus.');
             }
             $schoolYear = $selection['school_year'];
-            if (!is_array($schoolYear)) {
-                throw new DomainException('Das ausgewählte Schuljahr konnte nicht geladen werden.');
-            }
 
             return Response::html($this->views->render('parent-booking-summary.php', [
                 'parent' => $parent,
