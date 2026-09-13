@@ -53,7 +53,7 @@ final class LocalConfigWriterTest extends TestCase
         self::assertSame('smtp-existing', $secrets['smtp']['password']);
     }
 
-    public function testNewStripeSecretsReplaceOnlyStripeSecrets(): void
+    public function testNewStripeSecretsAreStoredForSelectedModeWithoutReplacingLegacyPair(): void
     {
         (new LocalConfigWriter($this->root))->saveStripeSettings(
             'live',
@@ -72,8 +72,10 @@ final class LocalConfigWriterTest extends TestCase
         self::assertSame('USD', $app['stripe']['currency']);
         self::assertSame(60, $app['stripe']['checkout_minutes']);
         self::assertSame('db-secret', $secrets['database']['password']);
-        self::assertSame('sk_live_replacement', $secrets['stripe']['secret_key']);
-        self::assertSame('whsec_replacement', $secrets['stripe']['webhook_secret']);
+        self::assertSame('sk_test_existing', $secrets['stripe']['secret_key']);
+        self::assertSame('whsec_existing', $secrets['stripe']['webhook_secret']);
+        self::assertSame('sk_live_replacement', $secrets['stripe']['live']['secret_key']);
+        self::assertSame('whsec_replacement', $secrets['stripe']['live']['webhook_secret']);
     }
 
     public function testStripeSettingsCanPersistPublicBaseUrlWithoutOverwritingAppSettings(): void
