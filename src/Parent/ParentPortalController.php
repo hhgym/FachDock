@@ -122,6 +122,7 @@ final class ParentPortalController
         return Response::html($this->views->render('parent-home.php', [
             'parent' => $parent,
             'children' => $this->access->children($parent->id),
+            'openPayments' => $this->access->openPayments($parent->id),
             'csrfToken' => $this->csrf->token(),
         ]));
     }
