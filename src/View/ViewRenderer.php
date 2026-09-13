@@ -88,6 +88,18 @@ final class ViewRenderer
             }
         }
 
+        $lockerGridVersion = $this->assetVersion($root . '/public/assets/locker-grid.css');
+        if ($lockerGridVersion !== null) {
+            $updated = preg_replace(
+                '~href="/assets/locker-grid\.css(?:\?[^\"]*)?"~',
+                'href="/assets/locker-grid.css?v=' . $lockerGridVersion . '"',
+                $content,
+            );
+            if (is_string($updated)) {
+                $content = $updated;
+            }
+        }
+
         $navigationVersion = $this->assetVersion($root . '/public/assets/navigation.css');
         if ($navigationVersion !== null && !str_contains($content, '/assets/navigation.css')) {
             $content = $this->injectStylesheet($content, 'navigation.css', $navigationVersion);
