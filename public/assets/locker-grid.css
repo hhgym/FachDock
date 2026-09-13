@@ -129,6 +129,50 @@
 .locker-overview-stat { padding: 12px 14px; border: 1px solid #e1e5eb; border-radius: 11px; background: #fafbfc; }
 .locker-overview-stat strong { display: block; font-size: 1.35rem; }
 
+.locker-parent-grid-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    color: #526078;
+    font-size: .86rem;
+}
+.locker-parent-grid-legend > span { display: inline-flex; align-items: center; gap: 7px; }
+.locker-parent-grid-dot {
+    width: 11px;
+    height: 11px;
+    display: inline-block;
+    flex: 0 0 auto;
+    border: 1px solid rgba(23, 32, 51, .16);
+    border-radius: 50%;
+}
+.locker-parent-grid-dot.is-available { background: #1f9d55; }
+.locker-parent-grid-dot.is-unavailable { background: #c2413b; }
+.locker-parent-availability-grid td { min-width: 112px; width: 112px; height: 72px; padding: 4px; }
+.locker-parent-availability-grid th { min-width: 78px; }
+.locker-parent-availability-form { height: 100%; margin: 0; }
+.locker-parent-availability-cell {
+    width: 100%;
+    min-height: 64px;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 3px;
+    padding: 8px;
+    border: 1px solid;
+    border-radius: 9px;
+    font: inherit;
+    line-height: 1.2;
+    text-align: center;
+}
+button.locker-parent-availability-cell { cursor: pointer; }
+button.locker-parent-availability-cell:hover { filter: brightness(.97); }
+button.locker-parent-availability-cell:focus-visible { outline: 3px solid rgba(56, 84, 165, .2); outline-offset: 2px; }
+.locker-parent-availability-cell strong { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .8rem; }
+.locker-parent-availability-cell small { font-size: .68rem; font-weight: 700; }
+.locker-parent-availability-cell.is-available { background: #e8f7ed; border-color: #8fd0a8; color: #176238; }
+.locker-parent-availability-cell.is-unavailable { background: #fff0ef; border-color: #e7aaa5; color: #7e211c; }
+
 @media (max-width: 760px) {
     .locker-overview-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .locker-group-view-body { padding: 10px; }
@@ -136,4 +180,6 @@
     .locker-status-cell { min-height: 80px; padding: 6px; }
     .locker-status-cell code { font-size: .73rem; }
     .locker-admin-actions .button { padding: 4px 6px; font-size: .64rem; }
+    .locker-parent-availability-grid td { min-width: 96px; width: 96px; }
+    .locker-parent-availability-cell { min-height: 58px; padding: 6px; }
 }
