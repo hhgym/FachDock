@@ -7,8 +7,14 @@ return [
         'password' => '',
     ],
     'stripe' => [
-        'secret_key' => '',
-        'webhook_secret' => '',
+        'test' => [
+            'secret_key' => '',
+            'webhook_secret' => '',
+        ],
+        'live' => [
+            'secret_key' => '',
+            'webhook_secret' => '',
+        ],
     ],
     'smtp' => [
         'password' => '',

@@ -15,6 +15,7 @@ use FachDock\Mail\MailImmediateAdminFrontController;
 use FachDock\Operations\OperationsFrontController;
 use FachDock\Payment\PaymentAdminActionFrontController;
 use FachDock\Payment\StripePaymentResumeFrontController;
+use FachDock\Payment\StripeReturnFrontController;
 use FachDock\Platform\PlatformFrontController;
 
 $root = dirname(__DIR__);
@@ -44,6 +45,12 @@ if ($mailImmediateResponse !== null) {
 $paymentAdminActionResponse = PaymentAdminActionFrontController::handle($root);
 if ($paymentAdminActionResponse !== null) {
     $paymentAdminActionResponse->send();
+    exit;
+}
+
+$stripeReturnResponse = StripeReturnFrontController::handle($root);
+if ($stripeReturnResponse !== null) {
+    $stripeReturnResponse->send();
     exit;
 }
 

@@ -83,10 +83,10 @@ final class LocalConfigWriter
 
         $secretChanges = [];
         if ($secretKey !== null) {
-            $secretChanges['stripe']['secret_key'] = $secretKey;
+            $secretChanges['stripe'][$mode]['secret_key'] = $secretKey;
         }
         if ($webhookSecret !== null) {
-            $secretChanges['stripe']['webhook_secret'] = $webhookSecret;
+            $secretChanges['stripe'][$mode]['webhook_secret'] = $webhookSecret;
         }
 
         $this->save($appChanges, $secretChanges);

@@ -6,6 +6,7 @@ use FachDock\Parent\AuthenticatedParent;
 
 /** @var AuthenticatedParent $parent */
 /** @var list<array{id: int, first_name: string, last_name: string, class_name: string, grade: int}> $children */
+/** @var list<array{payment_id:int,status:string,amount_cents:int,currency:string,updated_at:string,student_name:string,school_year_label:string,locker_short_name:string}> $openPayments */
 /** @var string $csrfToken */
 $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 ?>
@@ -34,11 +35,40 @@ $e = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, '
 <main class="shell stack">
     <header class="hero">
         <span class="eyebrow">Elternportal</span>
-        <h1>Ihre Kinder</h1>
+        <h1>Übersicht</h1>
         <p>Für verknüpfte Kinder können Sie regelkonforme freie Schließfächer über den Lageplan oder die Listenansicht auswählen, bestehende Buchungen verwalten und Probleme direkt an die Schließfachverwaltung melden.</p>
     </header>
 
+    <?php if ($openPayments !== []): ?>
+        <section class="card stack">
+            <div>
+                <h2>Aktuelle Zahlungsvorgänge</h2>
+                <p class="muted">Eine Buchung wird erst nach bestätigter Zahlung angelegt. Bis dahin bleibt das ausgewählte Schließfach dem laufenden Zahlungsvorgang zugeordnet.</p>
+            </div>
+            <div class="entity-list">
+                <?php foreach ($openPayments as $payment): ?>
+                    <?php
+                    $label = match ($payment['status']) {
+                        'processing_paid' => 'Zahlung wird verbucht',
+                        'manual_review' => 'Zahlung eingegangen – Prüfung erforderlich',
+                        default => 'Zahlung wird bearbeitet',
+                    };
+                    ?>
+                    <div class="entity-row compact-form">
+                        <strong><?= $e($payment['student_name']) ?> · Schließfach <?= $e($payment['locker_short_name']) ?></strong>
+                        <div class="muted"><?= $e($payment['school_year_label']) ?> · <?= number_format($payment['amount_cents'] / 100, 2, ',', '.') ?> <?= $e(strtoupper($payment['currency'])) ?></div>
+                        <div><span class="badge"><?= $e($label) ?></span></div>
+                        <div class="compact-actions">
+                            <a class="button button-secondary" href="/parent/payment/return?payment_id=<?= (int) $payment['payment_id'] ?>">Zahlungsstatus ansehen</a>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </section>
+    <?php endif; ?>
+
     <section class="card stack">
+        <h2>Ihre Kinder</h2>
         <?php if ($children === []): ?>
             <p>Mit diesem Elternkontakt ist derzeit kein aktiver Schüler verknüpft.</p>
         <?php else: ?>

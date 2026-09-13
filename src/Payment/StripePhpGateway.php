@@ -11,7 +11,7 @@ use Stripe\PaymentIntent;
 use Stripe\StripeClient;
 use Stripe\Webhook;
 
-final class StripePhpGateway implements BookingPaymentGateway
+final class StripePhpGateway implements BookingPaymentGateway, StripeCheckoutReader
 {
     private readonly StripeClient $client;
 
@@ -147,6 +147,34 @@ final class StripePhpGateway implements BookingPaymentGateway
         }
 
         $this->client->checkout->sessions->expire($sessionId, []);
+    }
+
+    public function retrieveCheckoutState(string $sessionId): StripeCheckoutState
+    {
+        $sessionId = trim($sessionId);
+        if ($sessionId === '') {
+            throw new DomainException('Die Stripe Checkout Session ist ungültig.');
+        }
+
+        $session = $this->client->checkout->sessions->retrieve($sessionId, [
+            'expand' => ['payment_intent'],
+        ]);
+        if ($session->id === '') {
+            throw new RuntimeException('Stripe hat keine gültige Checkout Session zurückgegeben.');
+        }
+
+        $paymentIntent = $session->payment_intent;
+        $paymentIntentId = match (true) {
+            is_string($paymentIntent) && $paymentIntent !== '' => $paymentIntent,
+            $paymentIntent instanceof PaymentIntent => $paymentIntent->id,
+            default => null,
+        };
+
+        return new StripeCheckoutState(
+            $session->id,
+            (string) $session->payment_status,
+            $paymentIntentId,
+        );
     }
 
     public function verifyWebhook(string $payload, string $signature): StripeWebhookEvent
