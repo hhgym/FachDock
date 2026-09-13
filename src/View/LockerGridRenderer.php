@@ -140,6 +140,273 @@ final class LockerGridRenderer
         });
     }
 
+    public static function statusLegend(): string
+    {
+        $html = '<div class="locker-status-legend" aria-label="Legende">';
+        foreach (['free', 'reserved', 'occupied', 'issue', 'unavailable'] as $status) {
+            $html .= '<span class="locker-status-key"><span class="locker-status-dot '
+                . self::statusClass($status) . '"></span>' . self::e(self::statusLabel($status)) . '</span>';
+        }
+
+        return $html . '</div>';
+    }
+
+    /**
+     * @param list<array<string, mixed>> $lockers
+     * @param callable(array<string, mixed>, string, string): string|null $actions
+     * @param array<int, bool> $recommendedLockerIds
+     * @param array<int, int> $scores
+     */
+    public static function statusViews(
+        array $lockers,
+        callable $actions,
+        array $recommendedLockerIds = [],
+        array $scores = [],
+        string $idKey = 'locker_id',
+    ): string {
+        $groups = self::groups($lockers, $idKey);
+        if ($groups === []) {
+            return '<p class="form-hint">Für diese Auswahl kann kein Raster dargestellt werden.</p>';
+        }
+
+        $html = '<div class="locker-status-module">';
+        foreach ($groups as $group) {
+            $groupLockers = [];
+            $counts = ['free' => 0, 'reserved' => 0, 'occupied' => 0, 'issue' => 0, 'unavailable' => 0];
+            foreach ($group['corpuses'] as $corpus) {
+                foreach ($corpus as $locker) {
+                    $groupLockers[] = $locker;
+                    $status = self::normalizedStatus((string) ($locker['availability_status'] ?? 'unavailable'));
+                    ++$counts[$status];
+                }
+            }
+            usort($groupLockers, static function (array $left, array $right): int {
+                return [(int) $left['_grid_corpus_position'], (int) $left['_grid_locker_position']]
+                    <=> [(int) $right['_grid_corpus_position'], (int) $right['_grid_locker_position']];
+            });
+
+            $location = array_values(array_filter([
+                (string) $group['building_name'],
+                (string) $group['floor_name'],
+                (string) $group['area_name'],
+            ], static fn (string $value): bool => $value !== ''));
+
+            $html .= '<section class="locker-management-group">'
+                . '<header><div><span class="eyebrow">Schrankgruppe</span><h2>'
+                . self::e((string) $group['group_code']) . '</h2><p class="form-hint">'
+                . self::e(implode(' · ', $location)) . '</p></div><div class="locker-group-meta">';
+            foreach (['free', 'reserved', 'occupied', 'issue', 'unavailable'] as $status) {
+                if ($counts[$status] === 0 && $status === 'unavailable') {
+                    continue;
+                }
+                $html .= '<span class="locker-status-pill ' . self::statusClass($status) . '">'
+                    . $counts[$status] . ' ' . self::e(mb_strtolower(self::statusLabel($status))) . '</span>';
+            }
+            $html .= '</div></header><div class="locker-group-views">';
+
+            $html .= '<details open><summary>Rasteransicht</summary><div class="locker-group-view-body">'
+                . '<div class="locker-grid-scroll"><table class="locker-grid-table locker-status-grid"><thead><tr>'
+                . '<th>Fach</th>';
+            foreach (array_keys($group['corpuses']) as $corpusPosition) {
+                $html .= '<th>Korpus ' . str_pad((string) $corpusPosition, 2, '0', STR_PAD_LEFT) . '</th>';
+            }
+            $html .= '</tr></thead><tbody>';
+            for ($position = 1; $position <= (int) $group['max_locker_position']; ++$position) {
+                $html .= '<tr><th>Position ' . $position . '</th>';
+                foreach ($group['corpuses'] as $corpus) {
+                    $locker = $corpus[$position] ?? null;
+                    $html .= '<td>';
+                    if (is_array($locker)) {
+                        $html .= self::statusGridCell(
+                            $locker,
+                            $actions,
+                            $recommendedLockerIds,
+                            $scores,
+                        );
+                    } else {
+                        $html .= '<span class="locker-grid-empty" aria-label="kein Schließfach">–</span>';
+                    }
+                    $html .= '</td>';
+                }
+                $html .= '</tr>';
+            }
+            $html .= '</tbody></table></div></div></details>';
+
+            $html .= '<details><summary>Listenansicht</summary><div class="locker-group-view-body table-scroll">'
+                . '<table class="data-table locker-status-list"><thead><tr><th>Fach</th><th>Status</th>'
+                . '<th>Schüler</th><th>Merkmale</th><th>Aktionen</th></tr></thead><tbody>';
+            foreach ($groupLockers as $locker) {
+                $status = self::normalizedStatus((string) ($locker['availability_status'] ?? 'unavailable'));
+                $lockerId = (int) $locker['_grid_id'];
+                $person = self::personHtml($locker, false);
+                $detail = self::statusDetail($locker, $status);
+                $actionHtml = (string) ($actions($locker, 'list', $status) ?? '');
+                $features = [];
+                if (!empty($locker['barrier_friendly'])) {
+                    $features[] = 'barrierearm';
+                }
+                if (isset($scores[$lockerId])) {
+                    $features[] = 'Score ' . (int) $scores[$lockerId];
+                }
+                if ($detail !== '') {
+                    $features[] = $detail;
+                }
+
+                $html .= '<tr><td><code>' . self::e((string) $locker['_grid_short_name']) . '</code>';
+                if (isset($locker['long_name'])) {
+                    $html .= '<br><small>' . self::e((string) $locker['long_name']) . '</small>';
+                }
+                $html .= '</td><td class="locker-list-status"><span class="locker-list-state">'
+                    . '<span class="locker-status-dot ' . self::statusClass($status) . '"></span>'
+                    . self::e(self::statusLabel($status)) . '</span>';
+                if (isset($recommendedLockerIds[$lockerId])) {
+                    $html .= ' <span class="badge locker-recommendation-badge">Empfohlen</span>';
+                }
+                $html .= '</td><td class="locker-list-person">' . ($person !== '' ? $person : '—') . '</td>'
+                    . '<td>' . ($features !== [] ? self::e(implode(' · ', $features)) : '–') . '</td>'
+                    . '<td class="locker-list-actions">' . ($actionHtml !== '' ? $actionHtml : '—') . '</td></tr>';
+            }
+            $html .= '</tbody></table></div></details></div></section>';
+        }
+
+        return $html . '</div>';
+    }
+
+    /**
+     * @param array<string, mixed> $locker
+     * @param callable(array<string, mixed>, string, string): string|null $actions
+     * @param array<int, bool> $recommendedLockerIds
+     * @param array<int, int> $scores
+     */
+    private static function statusGridCell(
+        array $locker,
+        callable $actions,
+        array $recommendedLockerIds,
+        array $scores,
+    ): string {
+        $status = self::normalizedStatus((string) ($locker['availability_status'] ?? 'unavailable'));
+        $lockerId = (int) $locker['_grid_id'];
+        $person = self::personHtml($locker, true);
+        $detail = self::statusDetail($locker, $status);
+        $actionHtml = (string) ($actions($locker, 'grid', $status) ?? '');
+
+        $html = '<div class="locker-status-cell ' . self::statusClass($status) . '">'
+            . '<div class="locker-status-cell-heading"><code>'
+            . self::e((string) $locker['_grid_short_name']) . '</code>';
+        if (isset($recommendedLockerIds[$lockerId])) {
+            $html .= '<span class="badge locker-recommendation-badge">Empfohlen</span>';
+        }
+        $html .= '</div><span class="locker-status-pill ' . self::statusClass($status) . '">'
+            . self::e(self::statusLabel($status)) . '</span>';
+        if ($person !== '') {
+            $html .= $person;
+        }
+        if ($detail !== '') {
+            $html .= '<small class="locker-status-detail">' . self::e($detail) . '</small>';
+        } elseif (isset($scores[$lockerId]) && $status === 'free') {
+            $html .= '<small class="locker-status-detail">Score ' . (int) $scores[$lockerId] . '</small>';
+        }
+        if ($actionHtml !== '') {
+            $html .= '<div class="locker-admin-actions">' . $actionHtml . '</div>';
+        }
+
+        return $html . '</div>';
+    }
+
+    /** @param array<string, mixed> $locker */
+    private static function personHtml(array $locker, bool $compact): string
+    {
+        if ((int) ($locker['occupied_student_id'] ?? 0) > 0) {
+            return self::person(
+                (string) ($locker['occupied_last_name'] ?? ''),
+                (string) ($locker['occupied_first_name'] ?? ''),
+                (string) ($locker['occupied_class_name'] ?? ''),
+                $compact,
+            );
+        }
+        if ((int) ($locker['reserved_student_id'] ?? 0) > 0) {
+            return self::person(
+                (string) ($locker['reserved_last_name'] ?? ''),
+                (string) ($locker['reserved_first_name'] ?? ''),
+                (string) ($locker['reserved_class_name'] ?? ''),
+                $compact,
+            );
+        }
+
+        return '';
+    }
+
+    private static function person(string $lastName, string $firstName, string $className, bool $compact): string
+    {
+        $name = trim($lastName . ($lastName !== '' && $firstName !== '' ? ', ' : '') . $firstName);
+        if (!$compact) {
+            return self::e($name) . ($className !== '' ? '<br><small>' . self::e($className) . '</small>' : '');
+        }
+
+        return '<small class="locker-status-person"><strong>' . self::e($name) . '</strong>'
+            . ($className !== '' ? '<br>' . self::e($className) : '') . '</small>';
+    }
+
+    /** @param array<string, mixed> $locker */
+    private static function statusDetail(array $locker, string $status): string
+    {
+        if ($status === 'issue') {
+            $count = (int) ($locker['open_issue_count'] ?? 0);
+            if ($count > 0) {
+                return $count === 1 ? '1 offene Schadensmeldung' : $count . ' offene Schadensmeldungen';
+            }
+
+            return 'Defekt';
+        }
+        if ($status === 'reserved') {
+            if ((string) ($locker['reservation_status'] ?? '') === 'payment_running') {
+                return 'Zahlung läuft';
+            }
+            $expiresAt = trim((string) ($locker['reservation_expires_at'] ?? ''));
+
+            return $expiresAt !== '' ? 'bis ' . $expiresAt : '';
+        }
+        if ($status === 'unavailable') {
+            return self::operatingStatusLabel((string) ($locker['operating_status'] ?? ''));
+        }
+
+        return '';
+    }
+
+    private static function normalizedStatus(string $status): string
+    {
+        return in_array($status, ['free', 'reserved', 'occupied', 'issue', 'unavailable'], true)
+            ? $status
+            : 'unavailable';
+    }
+
+    private static function statusLabel(string $status): string
+    {
+        return match ($status) {
+            'free' => 'Frei',
+            'reserved' => 'Reserviert',
+            'occupied' => 'Belegt',
+            'issue' => 'Defekt / Meldung',
+            default => 'Nicht buchbar',
+        };
+    }
+
+    private static function statusClass(string $status): string
+    {
+        return 'is-' . self::normalizedStatus($status);
+    }
+
+    private static function operatingStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'blocked' => 'Gesperrt',
+            'defective' => 'Defekt',
+            'maintenance' => 'Wartung',
+            'out_of_service' => 'Außer Betrieb',
+            default => 'Nicht buchbar',
+        };
+    }
+
     /**
      * @param list<array<string, mixed>> $lockers
      * @param callable(array<string, mixed>): string $cell
