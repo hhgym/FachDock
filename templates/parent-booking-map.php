@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use FachDock\Parent\AuthenticatedParent;
+use FachDock\View\LockerGridRenderer;
 
 /** @var string $appName */
 /** @var AuthenticatedParent $parent */
@@ -34,6 +35,7 @@ $selectedPlanId = $selection !== null && is_int($selection['selected_plan_id'] ?
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Schließfach auf Lageplan auswählen · <?= $e($appName) ?></title>
     <link rel="stylesheet" href="/assets/app.css">
+    <link rel="stylesheet" href="/assets/locker-grid.css">
 </head>
 <body>
 <header class="topbar">
@@ -217,45 +219,70 @@ $selectedPlanId = $selection !== null && is_int($selection['selected_plan_id'] ?
                                 <h2><?= $e($group['name']) ?></h2>
                                 <p><?= $e($group['area_name']) ?> · <?= (int) $group['selectable_count'] ?> auswählbare Fächer</p>
                             </div>
-                            <div class="entity-list">
-                                <?php foreach ($group['lockers'] as $locker): ?>
-                                    <div class="entity-row stack">
-                                        <div class="school-year-heading">
-                                            <div>
-                                                <strong><?= $e($locker['short_name']) ?></strong>
-                                                <div class="muted">Korpus <?= (int) $locker['corpus_position'] ?> · Fachposition <?= (int) $locker['locker_position'] ?></div>
-                                            </div>
-                                            <div class="compact-actions">
-                                                <?php if ((bool) $locker['recommended']): ?><span class="badge">Empfehlung</span><?php endif; ?>
-                                                <?php if ((bool) $locker['barrier_friendly']): ?><span class="badge">barrierearm</span><?php endif; ?>
-                                            </div>
-                                        </div>
-
-                                        <?php if ((string) $locker['booking_status'] === 'selected'): ?>
-                                            <div class="alert alert-neutral"><strong>Aktuell reserviert</strong></div>
-                                        <?php elseif ((string) $locker['booking_status'] === 'selectable'): ?>
-                                            <div class="muted">Frei und für Zielklassenstufe <?= (int) $selection['projected_grade'] ?> zulässig.</div>
-                                            <?php if ((bool) $locker['can_select']): ?>
-                                                <form method="post" action="/parent/booking/reserve">
-                                                    <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
-                                                    <input type="hidden" name="student_id" value="<?= (int) $child['id'] ?>">
-                                                    <input type="hidden" name="school_year_id" value="<?= (int) $selectedSchoolYearId ?>">
-                                                    <input type="hidden" name="locker_id" value="<?= (int) $locker['id'] ?>">
-                                                    <button class="button" type="submit">Dieses Schließfach reservieren</button>
-                                                </form>
-                                            <?php elseif ($paymentRunning): ?>
-                                                <div class="muted">Auswahl gesperrt, da bereits eine Zahlung läuft.</div>
-                                            <?php endif; ?>
-                                        <?php elseif ((string) $locker['booking_status'] === 'restricted'): ?>
-                                            <div class="muted">Für die Zielklassenstufe nach den Zuteilungsregeln nicht freigegeben.</div>
-                                        <?php elseif ((string) $locker['booking_status'] === 'unavailable'): ?>
-                                            <div class="muted">Technisch derzeit nicht buchbar.</div>
-                                        <?php else: ?>
-                                            <div class="muted">Bereits belegt oder reserviert.</div>
-                                        <?php endif; ?>
-                                    </div>
-                                <?php endforeach; ?>
+                            <div class="locker-parent-grid-legend" aria-label="Verfügbarkeit">
+                                <span><i class="locker-parent-grid-dot is-available"></i> verfügbar</span>
+                                <span><i class="locker-parent-grid-dot is-unavailable"></i> nicht verfügbar</span>
                             </div>
+                            <?php $gridGroups = LockerGridRenderer::groups($group['lockers'], 'id'); ?>
+                            <?php foreach ($gridGroups as $gridGroup): ?>
+                                <div class="locker-grid-scroll">
+                                    <table class="locker-grid-table locker-parent-availability-grid">
+                                        <thead>
+                                        <tr>
+                                            <th>Fach</th>
+                                            <?php foreach (array_keys($gridGroup['corpuses']) as $corpusPosition): ?>
+                                                <th>Korpus <?= str_pad((string) $corpusPosition, 2, '0', STR_PAD_LEFT) ?></th>
+                                            <?php endforeach; ?>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <?php for ($position = 1; $position <= (int) $gridGroup['max_locker_position']; ++$position): ?>
+                                            <tr>
+                                                <th>Position <?= $position ?></th>
+                                                <?php foreach ($gridGroup['corpuses'] as $corpus): ?>
+                                                    <?php $locker = $corpus[$position] ?? null; ?>
+                                                    <td>
+                                                        <?php if (!is_array($locker)): ?>
+                                                            <span class="locker-grid-empty" aria-label="kein Schließfach">–</span>
+                                                        <?php else: ?>
+                                                            <?php
+                                                            $bookingStatus = (string) ($locker['booking_status'] ?? 'unavailable');
+                                                            $selected = $bookingStatus === 'selected';
+                                                            $available = $selected || $bookingStatus === 'selectable';
+                                                            $availabilityClass = $available ? 'is-available' : 'is-unavailable';
+                                                            $availabilityLabel = $selected
+                                                                ? 'Ausgewählt'
+                                                                : ($available ? 'Verfügbar' : 'Nicht verfügbar');
+                                                            ?>
+                                                            <?php if ($available && !$selected && (bool) ($locker['can_select'] ?? false)): ?>
+                                                                <form class="locker-parent-availability-form" method="post" action="/parent/booking/reserve">
+                                                                    <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
+                                                                    <input type="hidden" name="student_id" value="<?= (int) $child['id'] ?>">
+                                                                    <input type="hidden" name="school_year_id" value="<?= (int) $selectedSchoolYearId ?>">
+                                                                    <input type="hidden" name="locker_id" value="<?= (int) $locker['_grid_id'] ?>">
+                                                                    <button class="locker-parent-availability-cell <?= $e($availabilityClass) ?>" type="submit" aria-label="<?= $e($locker['_grid_short_name']) ?>, verfügbar, auswählen">
+                                                                        <strong><?= $e($locker['_grid_short_name']) ?></strong>
+                                                                        <small><?= $e($availabilityLabel) ?></small>
+                                                                    </button>
+                                                                </form>
+                                                            <?php else: ?>
+                                                                <div class="locker-parent-availability-cell <?= $e($availabilityClass) ?>" aria-label="<?= $e($locker['_grid_short_name']) ?>, <?= $e(mb_strtolower($availabilityLabel)) ?>">
+                                                                    <strong><?= $selected ? '✓ ' : '' ?><?= $e($locker['_grid_short_name']) ?></strong>
+                                                                    <small><?= $e($availabilityLabel) ?></small>
+                                                                </div>
+                                                            <?php endif; ?>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                <?php endforeach; ?>
+                                            </tr>
+                                        <?php endfor; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <?php endforeach; ?>
+                            <?php if ($paymentRunning): ?>
+                                <p class="form-hint">Die verfügbaren Fächer bleiben sichtbar. Eine neue Auswahl ist während des laufenden Zahlungsvorgangs jedoch gesperrt.</p>
+                            <?php endif; ?>
                         </div>
                     </template>
                 <?php endforeach; ?>
