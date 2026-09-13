@@ -25,6 +25,7 @@ final class ParentBookingMapIntegrationTest extends TestCase
     private ParentBookingMapService $maps;
     private AuthenticatedParent $parent;
     private int $planId;
+    private int $secondPlanId;
 
     protected function setUp(): void
     {
@@ -38,9 +39,11 @@ final class ParentBookingMapIntegrationTest extends TestCase
         self::assertNotFalse(file_put_contents($source, 'trusted-fixture'));
 
         $floorPlans = new FloorPlanService($this->pdo, $this->root);
-        $this->planId = $floorPlans->createFromFile(1, 'Buchungsplan', $source, 'plan.png', 'image/png', 1);
+        $this->planId = $floorPlans->createFromFile(1, 'Buchungsplan EG', $source, 'plan-eg.png', 'image/png', 1);
         $floorPlans->setPlacement($this->planId, 1, 10, 10, 10, 8, 1);
         $floorPlans->setPlacement($this->planId, 2, 30, 10, 10, 8, 1);
+        $this->secondPlanId = $floorPlans->createFromFile(2, 'Buchungsplan OG', $source, 'plan-og.png', 'image/png', 1);
+        $floorPlans->setPlacement($this->secondPlanId, 3, 10, 10, 10, 8, 1);
 
         $evaluator = new AllocationRuleEvaluator($this->pdo);
         $ranker = new LockerRecommendationRanker();
@@ -59,52 +62,109 @@ final class ParentBookingMapIntegrationTest extends TestCase
         }
     }
 
-    public function testMapWaitsForExplicitFloorSelection(): void
+    public function testUniqueRecommendedFloorAndAreaAreSelectedAutomatically(): void
     {
-        $selection = $this->maps->selection($this->parent, 1, 1, null, null, 3);
+        $selection = $this->maps->selection($this->parent, 1, 1, null, null, null, 3);
 
-        self::assertCount(1, $selection['floors']);
-        self::assertNull($selection['selected_floor_id']);
-        self::assertNull($selection['selected_plan_id']);
-        self::assertNull($selection['plan']);
-        self::assertSame([], $selection['floor_plans']);
-    }
-
-    public function testSelectingFloorLoadsItsDefaultPlan(): void
-    {
-        $selection = $this->maps->selection($this->parent, 1, 1, 1, null, 3);
-
+        self::assertCount(2, $selection['floors']);
+        self::assertSame([1], $selection['recommended_floor_ids']);
         self::assertSame(1, $selection['selected_floor_id']);
+        self::assertTrue($selection['floor_auto_selected']);
+        self::assertSame(['A'], $selection['recommended_area_codes']);
+        self::assertSame('A', $selection['selected_area_code']);
+        self::assertTrue($selection['area_auto_selected']);
         self::assertSame($this->planId, $selection['selected_plan_id']);
         self::assertIsArray($selection['plan']);
     }
 
+    public function testSelectingFloorLoadsItsDefaultPlanAndRecommendedArea(): void
+    {
+        $selection = $this->maps->selection($this->parent, 1, 1, 1, null, null, 3);
+
+        self::assertSame(1, $selection['selected_floor_id']);
+        self::assertFalse($selection['floor_auto_selected']);
+        self::assertSame('A', $selection['selected_area_code']);
+        self::assertTrue($selection['area_auto_selected']);
+        self::assertSame($this->planId, $selection['selected_plan_id']);
+        self::assertIsArray($selection['plan']);
+    }
+
+    public function testEqualRecommendationsAcrossFloorsRequireExplicitFloorSelection(): void
+    {
+        $this->pdo->exec('DELETE FROM allocation_rules');
+
+        $selection = $this->maps->selection($this->parent, 1, 1, null, null, null, 3);
+
+        self::assertSame([1, 2], $selection['recommended_floor_ids']);
+        self::assertNull($selection['selected_floor_id']);
+        self::assertFalse($selection['floor_auto_selected']);
+        self::assertNull($selection['selected_area_code']);
+        self::assertNull($selection['plan']);
+    }
+
+    public function testEqualRecommendationsAcrossAreasRequireExplicitAreaSelection(): void
+    {
+        $this->pdo->exec('DELETE FROM allocation_rules');
+
+        $selection = $this->maps->selection($this->parent, 1, 1, 1, null, null, 3);
+
+        self::assertSame(1, $selection['selected_floor_id']);
+        self::assertSame(['A', 'B'], $selection['recommended_area_codes']);
+        self::assertNull($selection['selected_area_code']);
+        self::assertFalse($selection['area_auto_selected']);
+        self::assertSame($this->planId, $selection['selected_plan_id']);
+    }
+
+    public function testSoftPreferenceSelectsBestFloorAreaAndMarksBestLocker(): void
+    {
+        $this->pdo->exec('DELETE FROM allocation_rules');
+        $this->pdo->exec(
+            'INSERT INTO allocation_rules '
+            . '(name, version, rule_kind, min_grade, max_grade, building_id, floor_id, area_id, cabinet_group_id, weight, priority, active, created_at, updated_at) '
+            . "VALUES ('Klasse 7 bevorzugt Bereich B', 1, 'soft_prefer', 7, 7, NULL, NULL, 2, NULL, 20, 10, 1, NOW(), NOW())"
+        );
+
+        $selection = $this->maps->selection($this->parent, 1, 1, null, null, null, 3);
+
+        self::assertSame([1], $selection['recommended_floor_ids']);
+        self::assertSame(1, $selection['selected_floor_id']);
+        self::assertSame(['B'], $selection['recommended_area_codes']);
+        self::assertSame('B', $selection['selected_area_code']);
+
+        $lockers = $this->lockersById($selection);
+        self::assertFalse($lockers[1]['recommended']);
+        self::assertTrue($lockers[2]['recommended']);
+        self::assertSame(20, $lockers[2]['score']);
+    }
+
     public function testMapUsesAuthoritativeRulesAndAvailability(): void
     {
-        $selection = $this->maps->selection($this->parent, 1, 1, null, $this->planId, 3);
+        $selection = $this->maps->selection($this->parent, 1, 1, null, null, $this->planId, 3);
         self::assertSame(7, $selection['projected_grade']);
         self::assertSame($this->planId, $selection['selected_plan_id']);
+        self::assertSame('A', $selection['selected_area_code']);
 
         $lockers = $this->lockersById($selection);
         self::assertSame('selectable', $lockers[1]['booking_status']);
         self::assertTrue($lockers[1]['can_select']);
-        self::assertTrue($lockers[1]['recommended']);
+        self::assertFalse($lockers[1]['recommended']);
         self::assertSame('restricted', $lockers[2]['booking_status']);
         self::assertFalse($lockers[2]['can_select']);
         self::assertSame('occupied', $lockers[3]['booking_status']);
         self::assertSame('unavailable', $lockers[4]['booking_status']);
     }
 
-    public function testActiveReservationIsMarkedSelectedAndCanBeChanged(): void
+    public function testActiveReservationIsMarkedSelectedWithoutForcedRecommendationNavigation(): void
     {
         $reservationId = $this->bookings->reserve($this->parent, 1, 1, 1);
         self::assertGreaterThan(0, $reservationId);
 
-        $selection = $this->maps->selection($this->parent, 1, 1, null, $this->planId, 3);
+        $selection = $this->maps->selection($this->parent, 1, 1, null, null, $this->planId, 3);
         $lockers = $this->lockersById($selection);
         self::assertSame('selected', $lockers[1]['booking_status']);
         self::assertFalse($lockers[1]['can_select']);
         self::assertSame(1, $selection['active_reservation']['locker_id']);
+        self::assertFalse($selection['area_auto_selected']);
     }
 
     /**
@@ -131,26 +191,33 @@ final class ParentBookingMapIntegrationTest extends TestCase
             . "VALUES (1, 'admin', 'Admin Test', 'admin@example.test', 'hash', 'administrator', 1, NOW(), NOW())"
         );
         $this->pdo->exec("INSERT INTO buildings (id, code, name, active, created_at, updated_at) VALUES (1, 'H', 'Hauptgebäude', 1, NOW(), NOW())");
-        $this->pdo->exec("INSERT INTO floors (id, building_id, code, name, sort_order, active, created_at, updated_at) VALUES (1, 1, 'EG', 'Erdgeschoss', 0, 1, NOW(), NOW())");
+        $this->pdo->exec(
+            'INSERT INTO floors (id, building_id, code, name, sort_order, active, created_at, updated_at) VALUES '
+            . "(1, 1, 'EG', 'Erdgeschoss', 0, 1, NOW(), NOW()), (2, 1, 'OG1', '1. Obergeschoss', 1, 1, NOW(), NOW())"
+        );
         $this->pdo->exec(
             'INSERT INTO areas (id, floor_id, code, name, active, created_at, updated_at) VALUES '
-            . "(1, 1, 'A', 'Bereich A', 1, NOW(), NOW()), (2, 1, 'B', 'Bereich B', 1, NOW(), NOW())"
+            . "(1, 1, 'A', 'Bereich A', 1, NOW(), NOW()), (2, 1, 'B', 'Bereich B', 1, NOW(), NOW()), "
+            . "(3, 2, 'C', 'Bereich C', 1, NOW(), NOW())"
         );
         $this->pdo->exec("INSERT INTO corpus_types (id, code, name, compartment_count, active, created_at, updated_at) VALUES (1, 'STD2', 'Standard 2', 2, 1, NOW(), NOW())");
         $this->pdo->exec(
             'INSERT INTO cabinet_groups (id, area_id, code, name, active, structure_locked_at, created_at, updated_at) VALUES '
-            . "(1, 1, 'A', 'Gruppe A', 1, NOW(), NOW(), NOW()), (2, 2, 'B', 'Gruppe B', 1, NOW(), NOW(), NOW())"
+            . "(1, 1, 'A', 'Gruppe A', 1, NOW(), NOW(), NOW()), (2, 2, 'B', 'Gruppe B', 1, NOW(), NOW(), NOW()), "
+            . "(3, 3, 'C', 'Gruppe C', 1, NOW(), NOW(), NOW())"
         );
         $this->pdo->exec(
             'INSERT INTO corpuses (id, cabinet_group_id, corpus_type_id, position_no, active, created_at, updated_at) VALUES '
-            . '(1, 1, 1, 1, 1, NOW(), NOW()), (2, 1, 1, 2, 1, NOW(), NOW()), (3, 2, 1, 1, 1, NOW(), NOW())'
+            . '(1, 1, 1, 1, 1, NOW(), NOW()), (2, 1, 1, 2, 1, NOW(), NOW()), '
+            . '(3, 2, 1, 1, 1, NOW(), NOW()), (4, 3, 1, 1, 1, NOW(), NOW())'
         );
         $this->pdo->exec(
             'INSERT INTO lockers (id, corpus_id, position_no, short_name, barrier_friendly, bookable, active, operating_status, created_at, updated_at) VALUES '
             . "(1, 1, 1, 'A-01-1', 1, 1, 1, 'operational', NOW(), NOW()), "
             . "(2, 3, 1, 'B-01-1', 0, 1, 1, 'operational', NOW(), NOW()), "
             . "(3, 2, 1, 'A-02-1', 0, 1, 1, 'operational', NOW(), NOW()), "
-            . "(4, 2, 2, 'A-02-2', 0, 0, 1, 'defective', NOW(), NOW())"
+            . "(4, 2, 2, 'A-02-2', 0, 0, 1, 'defective', NOW(), NOW()), "
+            . "(5, 4, 1, 'C-01-1', 0, 1, 1, 'operational', NOW(), NOW())"
         );
         $this->pdo->exec(
             'INSERT INTO students (id, matrikelnummer, first_name, last_name, class_name, grade, active, created_at, updated_at) VALUES '

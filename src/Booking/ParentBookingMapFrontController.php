@@ -59,6 +59,7 @@ final class ParentBookingMapFrontController
             $studentId = self::positiveInt(self::queryString($request, 'student_id'), 'Schüler');
             $schoolYearId = self::optionalPositiveInt(self::queryString($request, 'school_year_id'));
             $floorId = self::optionalPositiveInt(self::queryString($request, 'floor_id'));
+            $areaCode = self::optionalString(self::queryString($request, 'area_code'));
             $planId = self::optionalPositiveInt(self::queryString($request, 'plan_id'));
 
             $evaluator = new AllocationRuleEvaluator($pdo);
@@ -84,6 +85,7 @@ final class ParentBookingMapFrontController
                     $studentId,
                     $schoolYearId,
                     $floorId,
+                    $areaCode,
                     $planId,
                     self::configInt($config, 'booking.recommendation_count', 3),
                 );
@@ -175,6 +177,13 @@ final class ParentBookingMapFrontController
     private static function optionalPositiveInt(string $value): ?int
     {
         return preg_match('/^\d+$/', trim($value)) === 1 && (int) $value > 0 ? (int) $value : null;
+    }
+
+    private static function optionalString(string $value): ?string
+    {
+        $value = trim($value);
+
+        return $value === '' ? null : $value;
     }
 
     private static function queryString(Request $request, string $key): string
