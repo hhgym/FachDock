@@ -43,6 +43,16 @@
     overflow: hidden;
     border-top: 1px solid #e5e8ee;
 }
+.locker-group-view-body.table-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+}
+.locker-group-view-body.table-scroll > .locker-status-list {
+    width: max-content;
+    min-width: 100%;
+}
 
 .locker-grid-scroll {
     width: 100%;
