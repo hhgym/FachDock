@@ -50,17 +50,23 @@ final class AllocationRuleAdminController
 
         $yearValue = $this->queryString($request, 'school_year_id');
         $gradeValue = $this->queryString($request, 'grade');
-        if ($yearValue === '' && $gradeValue === '') {
-            return $this->page($staff);
+        $defaultSchoolYearId = $this->defaultSchoolYearId();
+        if ($gradeValue === '') {
+            $yearId = $yearValue !== '' ? $this->positiveInt($yearValue, 'Schuljahr') : $defaultSchoolYearId;
+
+            return $this->page($staff, [], 200, $yearId);
         }
 
         try {
-            $yearId = $this->positiveInt($yearValue, 'Schuljahr');
+            $yearId = $yearValue !== '' ? $this->positiveInt($yearValue, 'Schuljahr') : $defaultSchoolYearId;
+            if ($yearId === null) {
+                throw new DomainException('Es ist kein auswählbares Schuljahr vorhanden.');
+            }
             $grade = $this->int($gradeValue, 'Klassenstufe', 5, 12);
 
             return $this->page($staff, [], 200, $yearId, $grade, $this->ruleTest->test($yearId, $grade));
         } catch (DomainException $exception) {
-            return $this->page($staff, [$exception->getMessage()], 422);
+            return $this->page($staff, [$exception->getMessage()], 422, $defaultSchoolYearId);
         }
     }
 
@@ -205,6 +211,23 @@ final class AllocationRuleAdminController
             'testGrade' => $testGrade,
             'testResults' => $testResults,
         ]), $status);
+    }
+
+    private function defaultSchoolYearId(): ?int
+    {
+        $years = $this->schoolYears->all();
+        foreach ($years as $year) {
+            if ((string) $year['status'] === 'current') {
+                return (int) $year['id'];
+            }
+        }
+        foreach ($years as $year) {
+            if ((string) $year['status'] !== 'closed') {
+                return (int) $year['id'];
+            }
+        }
+
+        return null;
     }
 
     private function kind(string $value): AllocationRuleKind

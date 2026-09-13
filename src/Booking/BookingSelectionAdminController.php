@@ -19,6 +19,8 @@ use Throwable;
 
 final class BookingSelectionAdminController
 {
+    private const BASE_PATH = '/admin/lockers';
+
     public function __construct(
         private readonly LockerRecommendationService $recommendations,
         private readonly ReservationService $reservations,
@@ -34,10 +36,23 @@ final class BookingSelectionAdminController
 
     public function register(Router $router): void
     {
-        $router->get('/admin/booking-selection', fn (Request $request): Response => $this->index($request));
+        $router->get(self::BASE_PATH, fn (Request $request): Response => $this->index($request));
+        $router->post(self::BASE_PATH . '/reserve', fn (Request $request): Response => $this->reserve($request));
+        $router->post(self::BASE_PATH . '/assign', fn (Request $request): Response => $this->assign($request));
+        $router->post(self::BASE_PATH . '/reservation/cancel', fn (Request $request): Response => $this->cancel($request));
+
+        $router->get('/admin/booking-selection', fn (Request $request): Response => $this->legacyRedirect($request));
         $router->post('/admin/booking-selection/reserve', fn (Request $request): Response => $this->reserve($request));
         $router->post('/admin/booking-selection/assign', fn (Request $request): Response => $this->assign($request));
         $router->post('/admin/booking-selection/cancel', fn (Request $request): Response => $this->cancel($request));
+    }
+
+    private function legacyRedirect(Request $request): Response
+    {
+        $query = $request->query();
+        $suffix = $query === [] ? '' : '?' . http_build_query($query);
+
+        return Response::redirect(self::BASE_PATH . $suffix);
     }
 
     private function index(Request $request): Response
@@ -95,7 +110,7 @@ final class BookingSelectionAdminController
                 'school_year_id' => $schoolYearId,
                 'locker_id' => $lockerId,
                 'projected_grade' => $reservation['projected_grade'] ?? null,
-                'source' => 'admin_booking_selection',
+                'source' => 'admin_locker_management',
             ]);
             $this->csrf->rotate();
 
@@ -174,7 +189,7 @@ final class BookingSelectionAdminController
                 'student_id' => $studentId,
                 'school_year_id' => $schoolYearId,
                 'locker_id' => $active['locker_id'],
-                'source' => 'admin_booking_selection',
+                'source' => 'admin_locker_management',
             ]);
             $this->csrf->rotate();
 
@@ -246,7 +261,7 @@ final class BookingSelectionAdminController
             }
         }
 
-        $counts = ['free' => 0, 'reserved' => 0, 'occupied' => 0, 'unavailable' => 0];
+        $counts = ['free' => 0, 'reserved' => 0, 'occupied' => 0, 'issue' => 0, 'unavailable' => 0];
         foreach ($overview as $locker) {
             $availability = (string) ($locker['availability_status'] ?? 'unavailable');
             if (isset($counts[$availability])) {
@@ -282,7 +297,7 @@ final class BookingSelectionAdminController
      * @param array<int, bool> $eligibleLockerIds
      * @param array<int, bool> $recommendedLockerIds
      * @param array<int, int> $scores
-     * @param array{free:int,reserved:int,occupied:int,unavailable:int} $counts
+     * @param array{free:int,reserved:int,occupied:int,issue:int,unavailable:int} $counts
      */
     private function page(
         AuthenticatedStaff $staff,
@@ -299,9 +314,9 @@ final class BookingSelectionAdminController
         array $eligibleLockerIds = [],
         array $recommendedLockerIds = [],
         array $scores = [],
-        array $counts = ['free' => 0, 'reserved' => 0, 'occupied' => 0, 'unavailable' => 0],
+        array $counts = ['free' => 0, 'reserved' => 0, 'occupied' => 0, 'issue' => 0, 'unavailable' => 0],
     ): Response {
-        return Response::html($this->views->render('booking-selection.php', [
+        return Response::html($this->views->render('locker-management.php', [
             'staff' => $staff,
             'csrfToken' => $this->csrf->token(),
             'errors' => $errors,
@@ -375,7 +390,7 @@ final class BookingSelectionAdminController
         int $schoolYearId,
     ): Response {
         $errorId = bin2hex(random_bytes(6));
-        $this->logger->error('Booking selection administration failed', [
+        $this->logger->error('Locker management administration failed', [
             'error_id' => $errorId,
             'staff_user_id' => $staff->id,
             'student_id' => $studentId > 0 ? $studentId : null,
@@ -419,7 +434,7 @@ final class BookingSelectionAdminController
 
     private function selectionUrl(int $studentId, int $schoolYearId, string $action = ''): string
     {
-        $url = '/admin/booking-selection?school_year_id=' . $schoolYearId . '&student_id=' . $studentId;
+        $url = self::BASE_PATH . '?school_year_id=' . $schoolYearId . '&student_id=' . $studentId;
         if ($action !== '') {
             $url .= '&action=' . rawurlencode($action);
         }

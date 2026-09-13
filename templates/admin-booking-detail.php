@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use FachDock\Auth\AuthenticatedStaff;
+use FachDock\View\LockerGridRenderer;
 
 /** @var AuthenticatedStaff $staff */
 /** @var array<string, mixed> $booking */
@@ -52,6 +53,7 @@ $activeLifecycle = in_array((string) $booking['status'], ['active', 'exemption_r
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Buchung #<?= (int) $booking['id'] ?> · FachDock</title>
     <link rel="stylesheet" href="/assets/app.css">
+    <link rel="stylesheet" href="/assets/locker-grid.css">
 </head>
 <body>
 <header class="topbar"><strong>FachDock</strong></header>
@@ -99,13 +101,14 @@ $activeLifecycle = in_array((string) $booking['status'], ['active', 'exemption_r
                     <input type="hidden" name="_csrf" value="<?= $e($csrfToken) ?>">
                     <input type="hidden" name="booking_id" value="<?= (int) $booking['id'] ?>">
                     <label>Neues Schließfach
-                        <select name="locker_id" required>
+                        <select id="booking-locker-id" name="locker_id" required>
                             <option value="">Bitte auswählen</option>
                             <?php foreach ($lockerOptions as $locker): ?>
                                 <option value="<?= (int) $locker['id'] ?>"><?= $e($locker['short_name'] . ' · ' . $locker['building_name'] . ' · ' . $locker['floor_name'] . ' · ' . $locker['area_name']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </label>
+                    <?= LockerGridRenderer::pickerGrid($lockerOptions, 'booking-locker-id') ?>
                     <label>Begründung
                         <textarea name="reason" rows="3" maxlength="1000" required placeholder="z. B. Defekt, Barrierefreiheit oder organisatorischer Wechsel"></textarea>
                     </label>
