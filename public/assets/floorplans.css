@@ -17,6 +17,7 @@
 .floorplan-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .floorplan-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; flex: 0 0 auto; background: #98a2b3; }
 .floorplan-dot-free { background: #1f9d55; }
+.floorplan-dot-recommended { background: #3854a5; }
 .floorplan-dot-full { background: #c2413b; }
 .floorplan-dot-warning { background: #d99318; }
 .floorplan-scroll { width: 100% !important; max-width: 100%; min-height: 0 !important; max-height: 74vh; overflow: auto; border: 1px solid #dfe4ec; border-radius: 12px; background: #eef1f5; }
@@ -27,6 +28,7 @@
 .floorplan-marker-free { background: rgba(31,157,85,.9); }
 .floorplan-marker-full { background: rgba(194,65,59,.92); }
 .floorplan-marker-warning { background: rgba(217,147,24,.94); }
+.floorplan-marker-recommended { box-shadow: 0 0 0 3px rgba(255,255,255,.94), 0 0 0 6px rgba(56,84,165,.72), 0 3px 12px rgba(0,0,0,.22); }
 .floorplan-canvas[data-editable="1"] .floorplan-marker { cursor: grab; }
 .floorplan-canvas[data-editable="1"] .floorplan-marker:active { cursor: grabbing; }
 .floorplan-resize-handle { position: absolute; right: 0; bottom: 0; z-index: 4; width: 20px; height: 20px; cursor: nwse-resize; touch-action: none; }
@@ -40,6 +42,8 @@
 .floorplan-group-summary { display: grid; gap: 5px; }
 .floorplan-group-row { width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 9px; border: 0; border-radius: 9px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .floorplan-group-row:hover { background: #f5f7fa; }
+.floorplan-group-row-recommended { background: #f2f5ff; }
+.floorplan-group-row-recommended:hover { background: #e9efff; }
 .floorplan-group-row > span:nth-child(2) { display: grid; min-width: 0; }
 .floorplan-group-row small { color: #667085; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .floorplan-group-row > span:last-child { color: #667085; font-size: .82rem; white-space: nowrap; }
@@ -73,6 +77,9 @@
 .floorplan-dialog .locker-grid-map-cell .entity-row .school-year-heading { gap: 8px; }
 .floorplan-dialog .locker-grid-map-cell .entity-row .school-year-heading strong { overflow-wrap: anywhere; }
 .floorplan-dialog .locker-grid-map-cell form { margin: 0; }
+.booking-recommendation-note p { margin: 4px 0 0; }
+.locker-parent-grid-dot.is-recommended { background: #3854a5; }
+.locker-parent-availability-cell.is-recommended { background: #eef2ff; border-color: #8fa2dc; color: #1f397e; box-shadow: inset 0 0 0 1px rgba(56,84,165,.08); }
 @media (max-width: 760px) {
     .floorplan-page { width: min(960px, calc(100% - 32px)); margin-top: 28px; }
     .floorplan-filter-form { grid-template-columns: 1fr; }
