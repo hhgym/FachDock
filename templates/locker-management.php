@@ -98,6 +98,7 @@ $lockerActions = static function (array $locker, string $view, string $status) u
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Schließfächer · FachDock</title>
     <link rel="stylesheet" href="/assets/app.css">
+    <link rel="stylesheet" href="/assets/locker-grid.css">
 </head>
 <body>
 <header class="topbar"><strong>FachDock</strong> · Schließfächer</header>
