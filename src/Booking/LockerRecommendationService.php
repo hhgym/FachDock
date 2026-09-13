@@ -168,7 +168,8 @@ final class LockerRecommendationService
             . 'rs.reservation_id, lr.student_id AS reserved_student_id, lr.status AS reservation_status, '
             . 'lr.expires_at AS reservation_expires_at, lr.payment_grace_expires_at, '
             . 'rstudent.first_name AS reserved_first_name, rstudent.last_name AS reserved_last_name, '
-            . 'rstudent.class_name AS reserved_class_name '
+            . 'rstudent.class_name AS reserved_class_name, '
+            . 'COALESCE(problem.open_issue_count, 0) AS open_issue_count, problem.latest_issue_id '
             . 'FROM lockers l '
             . 'INNER JOIN corpuses c ON c.id = l.corpus_id '
             . 'INNER JOIN cabinet_groups cg ON cg.id = c.cabinet_group_id '
@@ -183,6 +184,12 @@ final class LockerRecommendationService
             . 'ON rs.locker_id = l.id AND rs.school_year_id = :reservation_school_year_id '
             . 'LEFT JOIN locker_reservations lr ON lr.id = rs.reservation_id '
             . 'LEFT JOIN students rstudent ON rstudent.id = lr.student_id '
+            . 'LEFT JOIN ('
+            . 'SELECT locker_id, COUNT(*) AS open_issue_count, MAX(id) AS latest_issue_id '
+            . 'FROM locker_incidents '
+            . "WHERE status IN ('open', 'in_progress', 'waiting') "
+            . "AND category IN ('defect', 'lock_problem', 'door_problem', 'damage') GROUP BY locker_id"
+            . ') problem ON problem.locker_id = l.id '
             . 'WHERE l.active = 1 AND c.active = 1 AND cg.active = 1 '
             . 'AND a.active = 1 AND f.active = 1 AND b.active = 1 '
             . 'ORDER BY f.sort_order, a.code, cg.code, c.position_no, l.position_no'
@@ -199,6 +206,7 @@ final class LockerRecommendationService
             }
 
             $status = match (true) {
+                (string) $row['operating_status'] === 'defective' || (int) $row['open_issue_count'] > 0 => 'issue',
                 $row['booking_id'] !== null => 'occupied',
                 $row['reservation_id'] !== null => 'reserved',
                 (int) $row['bookable'] !== 1 || (string) $row['operating_status'] !== 'operational' => 'unavailable',
@@ -228,6 +236,8 @@ final class LockerRecommendationService
                 'operating_status' => (string) $row['operating_status'],
                 'barrier_friendly' => (int) $row['barrier_friendly'] === 1,
                 'availability_status' => $status,
+                'open_issue_count' => (int) $row['open_issue_count'],
+                'latest_issue_id' => $row['latest_issue_id'] !== null ? (int) $row['latest_issue_id'] : null,
                 'booking_id' => $row['booking_id'] !== null ? (int) $row['booking_id'] : null,
                 'occupied_student_id' => $row['occupied_student_id'] !== null ? (int) $row['occupied_student_id'] : null,
                 'occupied_first_name' => $row['occupied_first_name'] !== null ? (string) $row['occupied_first_name'] : null,
