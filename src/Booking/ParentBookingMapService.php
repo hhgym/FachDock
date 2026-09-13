@@ -63,11 +63,12 @@ final class ParentBookingMapService
             if (!isset($floorIds[$candidateFloorId])) {
                 throw new DomainException('Der ausgewählte Lageplan gehört zu keiner aktiven Etage mit Buchungszugang.');
             }
-            if ($selectedFloorId !== null && $selectedFloorId !== $candidateFloorId) {
-                throw new DomainException('Der ausgewählte Lageplan gehört nicht zur ausgewählten Etage.');
+            if ($selectedFloorId === null) {
+                $selectedFloorId = $candidateFloorId;
+                $plan = $candidate;
+            } elseif ($selectedFloorId === $candidateFloorId) {
+                $plan = $candidate;
             }
-            $selectedFloorId = $candidateFloorId;
-            $plan = $candidate;
         }
 
         if ($selectedFloorId === null) {
