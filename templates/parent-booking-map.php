@@ -52,7 +52,7 @@ $selectedPlanId = $selection !== null && is_int($selection['selected_plan_id'] ?
     <header class="hero">
         <span class="eyebrow">Buchung per Lageplan</span>
         <h1><?= $e($child['first_name'] . ' ' . $child['last_name']) ?></h1>
-        <p>Klasse <?= $e($child['class_name']) ?>. Wählen Sie ein Schuljahr und anschließend ein freies, für die Zielklassenstufe zulässiges Schließfach direkt auf dem Etagenplan.</p>
+        <p>Klasse <?= $e($child['class_name']) ?>. Wählen Sie zuerst Schuljahr und Etage. Anschließend wählen Sie im Lageplan eine Schrankgruppe und danach das gewünschte Schließfach.</p>
     </header>
 
     <section class="card stack">
@@ -72,7 +72,7 @@ $selectedPlanId = $selection !== null && is_int($selection['selected_plan_id'] ?
                         <?php endforeach; ?>
                     </select>
                 </label>
-                <noscript><button class="button" type="submit">Lageplan anzeigen</button></noscript>
+                <noscript><button class="button" type="submit">Weiter</button></noscript>
             </form>
         <?php endif; ?>
     </section>
@@ -108,12 +108,18 @@ $selectedPlanId = $selection !== null && is_int($selection['selected_plan_id'] ?
                 <a class="button" href="/parent/booking?student_id=<?= (int) $child['id'] ?>&amp;school_year_id=<?= (int) $selectedSchoolYearId ?>">Zur Listenansicht</a>
             </section>
         <?php else: ?>
-            <section class="card floorplan-filters">
+            <section class="card floorplan-filters stack">
+                <div>
+                    <span class="eyebrow">Schritt 1</span>
+                    <h2>Etage auswählen</h2>
+                    <p class="form-hint">Erst nach der Auswahl einer Etage wird der zugehörige Lageplan angezeigt.</p>
+                </div>
                 <form method="get" action="/parent/booking/map" class="form-grid floorplan-filter-form">
                     <input type="hidden" name="student_id" value="<?= (int) $child['id'] ?>">
                     <input type="hidden" name="school_year_id" value="<?= (int) $selectedSchoolYearId ?>">
                     <label>Gebäude / Etage
-                        <select name="floor_id" onchange="this.form.submit()">
+                        <select name="floor_id" required onchange="this.form.submit()">
+                            <option value="" <?= $selectedFloorId === null ? 'selected' : '' ?>>Bitte Etage auswählen</option>
                             <?php foreach ($floors as $floor): ?>
                                 <option value="<?= (int) $floor['id'] ?>" <?= (int) $floor['id'] === $selectedFloorId ? 'selected' : '' ?>>
                                     <?= $e($floor['building_name']) ?> · <?= $e($floor['name']) ?>
@@ -121,7 +127,7 @@ $selectedPlanId = $selection !== null && is_int($selection['selected_plan_id'] ?
                             <?php endforeach; ?>
                         </select>
                     </label>
-                    <?php if ($floorPlans !== []): ?>
+                    <?php if ($selectedFloorId !== null && $floorPlans !== []): ?>
                         <label>Plan
                             <select name="plan_id" onchange="this.form.submit()">
                                 <?php foreach ($floorPlans as $item): ?>
@@ -130,11 +136,16 @@ $selectedPlanId = $selection !== null && is_int($selection['selected_plan_id'] ?
                             </select>
                         </label>
                     <?php endif; ?>
-                    <noscript><button class="button" type="submit">Plan öffnen</button></noscript>
+                    <noscript><button class="button" type="submit">Lageplan anzeigen</button></noscript>
                 </form>
             </section>
 
-            <?php if ($plan === null): ?>
+            <?php if ($selectedFloorId === null): ?>
+                <section class="card empty-state">
+                    <h2>Bitte zuerst eine Etage auswählen</h2>
+                    <p>Danach erscheint der Lageplan. Wählen Sie dort eine Schrankgruppe aus, um deren Schließfächer im Raster zu sehen.</p>
+                </section>
+            <?php elseif ($plan === null): ?>
                 <section class="card empty-state"><h2>Kein Lageplan vorhanden</h2><p>Für diese Etage ist kein aktiver Lageplan verfügbar.</p></section>
             <?php else: ?>
                 <?php
@@ -143,6 +154,14 @@ $selectedPlanId = $selection !== null && is_int($selection['selected_plan_id'] ?
                     static fn (array $group): bool => (bool) $group['placed'],
                 ));
                 ?>
+                <section class="card stack">
+                    <div>
+                        <span class="eyebrow">Schritt 2</span>
+                        <h2>Schrankgruppe auswählen</h2>
+                        <p class="form-hint">Wählen Sie eine Schrankgruppe direkt im Lageplan oder über die Gruppenliste. Erst danach wird das Fachraster geöffnet.</p>
+                    </div>
+                </section>
+
                 <section class="floorplan-layout">
                     <div class="card floorplan-stage-card">
                         <div class="floorplan-toolbar">
@@ -215,9 +234,9 @@ $selectedPlanId = $selection !== null && is_int($selection['selected_plan_id'] ?
                     <template data-booking-map-template="<?= (int) $group['id'] ?>">
                         <div class="stack">
                             <div>
-                                <span class="eyebrow">Schrankgruppe <?= $e($group['code']) ?></span>
-                                <h2><?= $e($group['name']) ?></h2>
-                                <p><?= $e($group['area_name']) ?> · <?= (int) $group['selectable_count'] ?> auswählbare Fächer</p>
+                                <span class="eyebrow">Schritt 3 · Schrankgruppe <?= $e($group['code']) ?></span>
+                                <h2>Schließfach auswählen</h2>
+                                <p><?= $e($group['name']) ?> · <?= $e($group['area_name']) ?> · <?= (int) $group['selectable_count'] ?> auswählbare Fächer</p>
                             </div>
                             <div class="locker-parent-grid-legend" aria-label="Verfügbarkeit">
                                 <span><i class="locker-parent-grid-dot is-available"></i> verfügbar</span>
