@@ -57,8 +57,8 @@ final class LocalConfigRuntimeFreshnessTest extends TestCase
 
         /** @var array<string, mixed> $after */
         $after = require $this->root . '/config/secrets.local.php';
-        self::assertSame('sk_test_current', $after['stripe']['secret_key']);
-        self::assertSame('whsec_current', $after['stripe']['webhook_secret']);
+        self::assertSame('sk_test_current', $after['stripe']['test']['secret_key']);
+        self::assertSame('whsec_current', $after['stripe']['test']['webhook_secret']);
     }
 
     public function testSmtpSettingsAreReadableImmediatelyAfterSave(): void

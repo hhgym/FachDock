@@ -351,16 +351,22 @@ final class StripeSettingsController
             $secretKey = trim($request->postString('secret_key'));
             $webhookSecret = trim($request->postString('webhook_secret'));
             $expectedPrefix = $mode === 'live' ? 'sk_live_' : 'sk_test_';
-            $effectiveSecret = $secretKey !== ''
-                ? $secretKey
-                : trim((string) $this->config->get('stripe.secret_key', ''));
+            $storedSecret = trim((string) $this->config->get('stripe.' . $mode . '.secret_key', ''));
+            $storedWebhook = trim((string) $this->config->get('stripe.' . $mode . '.webhook_secret', ''));
+            $configuredMode = strtolower(trim((string) $this->config->get('stripe.mode', 'test')));
+            if ($storedSecret === '' && $storedWebhook === '' && $mode === $configuredMode) {
+                $storedSecret = trim((string) $this->config->get('stripe.secret_key', ''));
+                $storedWebhook = trim((string) $this->config->get('stripe.webhook_secret', ''));
+            }
+            $effectiveSecret = $secretKey !== '' ? $secretKey : $storedSecret;
+            $effectiveWebhook = $webhookSecret !== '' ? $webhookSecret : $storedWebhook;
 
             if ($effectiveSecret !== '' && !str_starts_with($effectiveSecret, $expectedPrefix)) {
                 throw new RuntimeException(
                     'Der Secret Key passt nicht zum gewählten Stripe-Modus. Erwartet wird ein Schlüssel mit ' . $expectedPrefix . '.',
                 );
             }
-            if ($webhookSecret !== '' && !str_starts_with($webhookSecret, 'whsec_')) {
+            if ($effectiveWebhook !== '' && !str_starts_with($effectiveWebhook, 'whsec_')) {
                 throw new RuntimeException('Das Webhook-Secret muss mit whsec_ beginnen.');
             }
 
