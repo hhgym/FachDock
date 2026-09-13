@@ -22,6 +22,7 @@ final class StripePaymentController
 {
     public function __construct(
         private readonly StripePaymentService $payments,
+        private readonly StripeReturnReconciler $returns,
         private readonly ParentSessionService $sessions,
         private readonly AuditLogger $audit,
         private readonly LoggerInterface $logger,
@@ -92,6 +93,10 @@ final class StripePaymentController
 
         try {
             $paymentId = $this->positiveInt($this->queryString($request, 'payment_id'), 'Zahlung');
+            $sessionId = $this->queryString($request, 'session_id');
+            if ($sessionId !== '') {
+                $this->returns->reconcile($parent, $paymentId, $sessionId);
+            }
             $payment = $this->payments->paymentForParent($parent, $paymentId);
 
             return Response::html($this->views->render('parent-payment.php', [
