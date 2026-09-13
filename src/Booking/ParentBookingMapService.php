@@ -51,19 +51,34 @@ final class ParentBookingMapService
             $floorIds[(int) $floor['id']] = true;
         }
 
-        $plan = null;
-        $selectedFloorId = $floorId !== null && isset($floorIds[$floorId])
-            ? $floorId
-            : (int) $floors[0]['id'];
+        if ($floorId !== null && !isset($floorIds[$floorId])) {
+            throw new DomainException('Die ausgewählte Etage ist für die Schließfachbuchung nicht verfügbar.');
+        }
 
+        $plan = null;
+        $selectedFloorId = $floorId;
         if ($planId !== null) {
             $candidate = $this->floorPlans->plan($planId, $schoolYearId);
             $candidateFloorId = (int) $candidate['floor_id'];
             if (!isset($floorIds[$candidateFloorId])) {
                 throw new DomainException('Der ausgewählte Lageplan gehört zu keiner aktiven Etage mit Buchungszugang.');
             }
-            $selectedFloorId = $candidateFloorId;
-            $plan = $candidate;
+            if ($selectedFloorId === null) {
+                $selectedFloorId = $candidateFloorId;
+                $plan = $candidate;
+            } elseif ($selectedFloorId === $candidateFloorId) {
+                $plan = $candidate;
+            }
+        }
+
+        if ($selectedFloorId === null) {
+            return $selection + [
+                'floors' => $floors,
+                'floor_plans' => [],
+                'selected_floor_id' => null,
+                'selected_plan_id' => null,
+                'plan' => null,
+            ];
         }
 
         $plans = $this->floorPlans->plansForFloor($selectedFloorId);
