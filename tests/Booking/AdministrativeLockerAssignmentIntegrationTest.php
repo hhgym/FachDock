@@ -108,7 +108,7 @@ final class AdministrativeLockerAssignmentIntegrationTest extends TestCase
         $this->reservations()->assignWithoutPayment(1, 1, 1, 99);
         $this->reservations()->reserve(2, 1, 2, null, true);
         $this->pdo()->exec(
-            "INSERT INTO locker_incidents (locker_id, booking_id, student_id, category, status, priority, description, reported_by_type, reported_by_id, opened_at, created_at, updated_at) "
+            'INSERT INTO locker_incidents (locker_id, booking_id, student_id, category, status, priority, description, reported_by_type, reported_by_id, opened_at, created_at, updated_at) '
             . "VALUES (4, NULL, NULL, 'damage', 'open', 'normal', 'Beschädigung gemeldet', 'staff', 99, NOW(), NOW(), NOW())"
         );
 
