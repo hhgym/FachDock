@@ -1,0 +1,139 @@
+.locker-grid-stack,
+.locker-status-module,
+.locker-management-group,
+.locker-group-views {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.locker-status-module {
+    display: grid;
+    gap: 18px;
+}
+
+.locker-management-group {
+    display: grid;
+    gap: 14px;
+}
+
+.locker-management-group > header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.locker-management-group h2 { margin: 3px 0 0; }
+.locker-group-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+.locker-group-views { display: grid; gap: 10px; }
+.locker-group-views > details {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    border: 1px solid #e5e8ee;
+    border-radius: 12px;
+    background: #fbfcfd;
+}
+.locker-group-views > details > summary { padding: 12px 14px; cursor: pointer; font-weight: 700; }
+.locker-group-view-body {
+    min-width: 0;
+    max-width: 100%;
+    padding: 14px;
+    overflow: hidden;
+    border-top: 1px solid #e5e8ee;
+}
+
+.locker-grid-scroll {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.locker-status-grid td { min-width: 108px; width: 108px; height: auto; }
+.locker-status-grid th { min-width: 78px; }
+.locker-status-cell {
+    width: 100%;
+    min-width: 0;
+    min-height: 86px;
+    display: grid;
+    align-content: start;
+    gap: 4px;
+    padding: 7px;
+    border: 1px solid;
+    border-radius: 9px;
+    font-size: .78rem;
+}
+.locker-status-cell-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.locker-status-cell code { font-size: .78rem; font-weight: 800; white-space: nowrap; }
+.locker-status-cell small { font-size: .68rem; line-height: 1.25; }
+.locker-status-person { color: inherit; }
+.locker-status-detail, .locker-status-action-note { color: inherit; opacity: .86; }
+.locker-recommendation-badge { padding: 2px 5px; font-size: .62rem; }
+
+.locker-admin-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.locker-admin-actions form { margin: 0; }
+.locker-admin-actions .button { padding: 5px 7px; border-radius: 7px; font-size: .68rem; }
+.locker-admin-actions .button-secondary { background: rgba(255, 255, 255, .78); }
+
+.locker-status-legend { display: flex; flex-wrap: wrap; gap: 10px; }
+.locker-status-key, .locker-list-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+.locker-status-key { font-size: .86rem; color: #526078; }
+.locker-list-state { white-space: nowrap; }
+.locker-status-dot {
+    width: 10px;
+    height: 10px;
+    flex: 0 0 auto;
+    border: 1px solid rgba(23, 32, 51, .16);
+    border-radius: 50%;
+}
+.locker-status-pill {
+    display: inline-flex;
+    width: max-content;
+    max-width: 100%;
+    padding: 2px 6px;
+    border: 1px solid;
+    border-radius: 999px;
+    font-size: .65rem;
+    font-weight: 800;
+}
+
+.locker-status-dot.is-free,
+.locker-status-cell.is-free,
+.locker-status-pill.is-free { background: #e8f7ed; border-color: #b9e2c8; color: #176238; }
+.locker-status-dot.is-reserved,
+.locker-status-cell.is-reserved,
+.locker-status-pill.is-reserved { background: #fff0dc; border-color: #f1b96a; color: #8a4b08; }
+.locker-status-dot.is-occupied,
+.locker-status-cell.is-occupied,
+.locker-status-pill.is-occupied { background: #fff0ef; border-color: #f2c4c0; color: #7e211c; }
+.locker-status-dot.is-issue,
+.locker-status-cell.is-issue,
+.locker-status-pill.is-issue { background: #fff9cc; border-color: #e5cc55; color: #655300; }
+.locker-status-dot.is-unavailable,
+.locker-status-cell.is-unavailable,
+.locker-status-pill.is-unavailable { background: #f1f3f6; border-color: #d9dee7; color: #667085; }
+
+.locker-list-status { min-width: 150px; white-space: normal; }
+.locker-list-person { min-width: 170px; white-space: normal; }
+.locker-list-actions { min-width: 190px; }
+.locker-overview-card { min-width: 0; overflow: hidden; }
+.locker-overview-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.locker-overview-stat { padding: 12px 14px; border: 1px solid #e1e5eb; border-radius: 11px; background: #fafbfc; }
+.locker-overview-stat strong { display: block; font-size: 1.35rem; }
+
+@media (max-width: 760px) {
+    .locker-overview-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .locker-group-view-body { padding: 10px; }
+    .locker-status-grid td { min-width: 96px; width: 96px; }
+    .locker-status-cell { min-height: 80px; padding: 6px; }
+    .locker-status-cell code { font-size: .73rem; }
+    .locker-admin-actions .button { padding: 4px 6px; font-size: .64rem; }
+}
