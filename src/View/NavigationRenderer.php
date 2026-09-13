@@ -105,6 +105,7 @@ final class NavigationRenderer
             [
                 'label' => 'Schließfächer',
                 'items' => [
+                    ['label' => 'Belegung & Zuweisung', 'href' => '/admin/lockers'],
                     ['label' => 'Standorte', 'href' => '/admin/locations'],
                     ['label' => 'Lagepläne', 'href' => '/admin/floorplans'],
                     ['label' => 'Betrieb & Meldungen', 'href' => '/admin/operations'],
@@ -133,7 +134,6 @@ final class NavigationRenderer
         }
 
         $groups[0]['items'][] = ['label' => 'Empfehlungen', 'href' => '/admin/recommendations'];
-        $groups[1]['items'][] = ['label' => 'Buchungsauswahl', 'href' => '/admin/booking-selection'];
         $groups[] = [
             'label' => 'Personen',
             'items' => [
