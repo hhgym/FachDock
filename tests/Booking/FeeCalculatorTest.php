@@ -23,6 +23,17 @@ final class FeeCalculatorTest extends TestCase
         self::assertSame(['months' => 12, 'charged_cents' => 12000], $result);
     }
 
+    public function testSeptemberChargesElevenTwelfthsOfAnnualFee(): void
+    {
+        $result = (new FeeCalculator())->prorate(
+            3000,
+            new DateTimeImmutable('2026-09-13'),
+            SchoolYearPeriod::fromStartYear(2026),
+        );
+
+        self::assertSame(['months' => 11, 'charged_cents' => 2750], $result);
+    }
+
     public function testMarchIncludesBookingMonthThroughJuly(): void
     {
         $result = (new FeeCalculator())->prorate(
