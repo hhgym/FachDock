@@ -44,4 +44,63 @@ final class LockerGridRendererTest extends TestCase
         self::assertStringContainsString('name="locker_id" value="10"', $html);
         self::assertStringContainsString('name="locker_id" value="11"', $html);
     }
+
+    public function testStatusViewsRenderGridListIssueAndCompactListDots(): void
+    {
+        $lockers = [
+            [
+                'locker_id' => 1,
+                'short_name' => 'A-01-1',
+                'group_code' => 'A',
+                'building_name' => 'Haus',
+                'floor_name' => 'EG',
+                'area_name' => 'Nord',
+                'availability_status' => 'occupied',
+                'occupied_student_id' => 1,
+                'occupied_first_name' => 'Max',
+                'occupied_last_name' => 'Muster',
+                'occupied_class_name' => '8-1',
+            ],
+            [
+                'locker_id' => 2,
+                'short_name' => 'A-01-2',
+                'group_code' => 'A',
+                'building_name' => 'Haus',
+                'floor_name' => 'EG',
+                'area_name' => 'Nord',
+                'availability_status' => 'reserved',
+                'reserved_student_id' => 2,
+                'reserved_first_name' => 'Anna',
+                'reserved_last_name' => 'Beispiel',
+                'reserved_class_name' => '7-1',
+            ],
+            [
+                'locker_id' => 3,
+                'short_name' => 'A-01-3',
+                'group_code' => 'A',
+                'building_name' => 'Haus',
+                'floor_name' => 'EG',
+                'area_name' => 'Nord',
+                'availability_status' => 'issue',
+                'open_issue_count' => 1,
+            ],
+        ];
+
+        $html = LockerGridRenderer::statusViews(
+            $lockers,
+            static fn (array $locker, string $view, string $status): string => $status === 'reserved'
+                ? '<button>' . $view . '</button>'
+                : '',
+        );
+
+        self::assertStringContainsString('Rasteransicht', $html);
+        self::assertStringContainsString('Listenansicht', $html);
+        self::assertStringContainsString('is-reserved', $html);
+        self::assertStringContainsString('is-issue', $html);
+        self::assertStringContainsString('locker-status-dot', $html);
+        self::assertStringContainsString('Muster, Max', $html);
+        self::assertStringContainsString('8-1', $html);
+        self::assertStringContainsString('1 offene Schadensmeldung', $html);
+        self::assertStringContainsString('<button>list</button>', $html);
+    }
 }
