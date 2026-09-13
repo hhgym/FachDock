@@ -14,10 +14,10 @@ final class StripePaymentControllerHandoffTest extends TestCase
             dirname(__DIR__, 2) . '/src/Payment/StripePaymentController.php',
         );
 
-        self::assertStringContainsString("$router->get('/parent/payment/continue'", $controller);
+        self::assertStringContainsString("\$router->get('/parent/payment/continue'", $controller);
         self::assertStringContainsString('CHECKOUT_HANDOFF_KEY', $controller);
         self::assertStringContainsString("'<meta http-equiv=\"refresh\" content=\"0;url='", $controller);
-        self::assertStringContainsString("$continueUrl = '/parent/payment/continue';", $controller);
+        self::assertStringContainsString("\$continueUrl = '/parent/payment/continue';", $controller);
         self::assertStringContainsString('return $this->checkoutHandoff($parent, $result->checkoutUrl());', $controller);
         self::assertStringNotContainsString('Response::redirect($result->checkoutUrl(), 303)', $controller);
     }
