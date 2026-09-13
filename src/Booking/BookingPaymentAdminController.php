@@ -89,7 +89,8 @@ final class BookingPaymentAdminController
             return $staff;
         }
 
-        $schoolYearId = $this->optionalPositiveInt($this->queryString($request, 'school_year_id'));
+        $schoolYears = $this->service->schoolYears();
+        $schoolYearId = $this->schoolYearFilter($request, $schoolYears);
         $status = $this->bookingStatus($this->queryString($request, 'status'));
         $query = mb_substr($this->queryString($request, 'q'), 0, 120);
         $page = $this->optionalPositiveInt($this->queryString($request, 'page')) ?? 1;
@@ -97,7 +98,7 @@ final class BookingPaymentAdminController
 
         return Response::html($this->views->render('admin-bookings.php', [
             'staff' => $staff,
-            'schoolYears' => $this->service->schoolYears(),
+            'schoolYears' => $schoolYears,
             'bookings' => $pagination['items'],
             'pagination' => $pagination,
             'selectedSchoolYearId' => $schoolYearId,
@@ -313,7 +314,8 @@ final class BookingPaymentAdminController
             return $staff;
         }
 
-        $schoolYearId = $this->optionalPositiveInt($this->queryString($request, 'school_year_id'));
+        $schoolYears = $this->service->schoolYears();
+        $schoolYearId = $this->schoolYearFilter($request, $schoolYears);
         $status = $this->paymentStatus($this->queryString($request, 'status'));
         $query = mb_substr($this->queryString($request, 'q'), 0, 120);
         $page = $this->optionalPositiveInt($this->queryString($request, 'page')) ?? 1;
@@ -321,7 +323,7 @@ final class BookingPaymentAdminController
 
         return Response::html($this->views->render('admin-payments.php', [
             'staff' => $staff,
-            'schoolYears' => $this->service->schoolYears(),
+            'schoolYears' => $schoolYears,
             'payments' => $pagination['items'],
             'pagination' => $pagination,
             'selectedSchoolYearId' => $schoolYearId,
@@ -444,6 +446,24 @@ final class BookingPaymentAdminController
         }
 
         return $staff;
+    }
+
+    /**
+     * @param list<array{id:int,label:string,status:string}> $schoolYears
+     */
+    private function schoolYearFilter(Request $request, array $schoolYears): ?int
+    {
+        if (array_key_exists('school_year_id', $request->query())) {
+            return $this->optionalPositiveInt($this->queryString($request, 'school_year_id'));
+        }
+
+        foreach ($schoolYears as $schoolYear) {
+            if ((string) $schoolYear['status'] === 'current') {
+                return (int) $schoolYear['id'];
+            }
+        }
+
+        return null;
     }
 
     private function queryString(Request $request, string $key): string
