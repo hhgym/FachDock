@@ -103,10 +103,14 @@ final class AdministrativeLockerAssignmentIntegrationTest extends TestCase
         self::assertSame(0, (int) $this->pdo()->query('SELECT COUNT(*) FROM reservation_slots')->fetchColumn());
     }
 
-    public function testOverviewDistinguishesOccupiedReservedFreeAndUnavailableLockers(): void
+    public function testOverviewDistinguishesOccupiedReservedFreeIssueAndUnavailableLockers(): void
     {
         $this->reservations()->assignWithoutPayment(1, 1, 1, 99);
         $this->reservations()->reserve(2, 1, 2, null, true);
+        $this->pdo()->exec(
+            "INSERT INTO locker_incidents (locker_id, booking_id, student_id, category, status, priority, description, reported_by_type, reported_by_id, opened_at, created_at, updated_at) "
+            . "VALUES (4, NULL, NULL, 'damage', 'open', 'normal', 'Beschädigung gemeldet', 'staff', 99, NOW(), NOW(), NOW())"
+        );
 
         $overview = $this->recommendations()->lockerOverview(1);
         $byId = [];
@@ -125,7 +129,10 @@ final class AdministrativeLockerAssignmentIntegrationTest extends TestCase
         self::assertSame('7-1', $byId[2]['reserved_class_name']);
 
         self::assertSame('free', $byId[3]['availability_status']);
-        self::assertSame('unavailable', $byId[4]['availability_status']);
+        self::assertSame('issue', $byId[4]['availability_status']);
+        self::assertSame(1, $byId[4]['open_issue_count']);
+        self::assertNotNull($byId[4]['latest_issue_id']);
+        self::assertSame('unavailable', $byId[5]['availability_status']);
     }
 
     public function testStudentWithExistingBookingCannotReceiveAnotherReservation(): void
@@ -182,13 +189,17 @@ final class AdministrativeLockerAssignmentIntegrationTest extends TestCase
         $pdo->exec("INSERT INTO areas (id, floor_id, code, name, active, created_at, updated_at) VALUES (1, 1, 'N', 'Nord', 1, NOW(), NOW())");
         $pdo->exec("INSERT INTO corpus_types (id, code, name, compartment_count, active, created_at, updated_at) VALUES (1, 'T4', 'Vierer', 4, 1, NOW(), NOW())");
         $pdo->exec("INSERT INTO cabinet_groups (id, area_id, code, active, created_at, updated_at) VALUES (1, 1, 'A', 1, NOW(), NOW())");
-        $pdo->exec('INSERT INTO corpuses (id, cabinet_group_id, corpus_type_id, position_no, active, created_at, updated_at) VALUES (1, 1, 1, 1, 1, NOW(), NOW())');
+        $pdo->exec(
+            'INSERT INTO corpuses (id, cabinet_group_id, corpus_type_id, position_no, active, created_at, updated_at) VALUES '
+            . '(1, 1, 1, 1, 1, NOW(), NOW()), (2, 1, 1, 2, 1, NOW(), NOW())'
+        );
         $pdo->exec(
             'INSERT INTO lockers (id, corpus_id, position_no, short_name, barrier_friendly, bookable, active, operating_status, created_at, updated_at) VALUES '
             . "(1, 1, 1, 'A-01-1', 0, 1, 1, 'operational', NOW(), NOW()), "
             . "(2, 1, 2, 'A-01-2', 0, 1, 1, 'operational', NOW(), NOW()), "
             . "(3, 1, 3, 'A-01-3', 1, 1, 1, 'operational', NOW(), NOW()), "
-            . "(4, 1, 4, 'A-01-4', 0, 0, 1, 'operational', NOW(), NOW())"
+            . "(4, 1, 4, 'A-01-4', 0, 0, 1, 'operational', NOW(), NOW()), "
+            . "(5, 2, 1, 'A-02-1', 0, 0, 1, 'blocked', NOW(), NOW())"
         );
         $pdo->exec(
             'INSERT INTO students (id, matrikelnummer, first_name, last_name, class_name, grade, active, created_at, updated_at) VALUES '
