@@ -21,6 +21,8 @@ use UnexpectedValueException;
 
 final class StripePaymentController
 {
+    private const CHECKOUT_HANDOFF_KEY = 'stripe_checkout_handoff';
+
     public function __construct(
         private readonly StripePaymentService $payments,
         private readonly BookingDueStripePaymentService $bookingPayments,
@@ -36,6 +38,7 @@ final class StripePaymentController
     public function register(Router $router): void
     {
         $router->post('/parent/payment/start', fn (Request $request): Response => $this->start($request));
+        $router->get('/parent/payment/continue', fn (Request $request): Response => $this->continueCheckout($request));
         $router->get('/parent/payment/return', fn (Request $request): Response => $this->returnFromStripe($request));
         $router->post('/webhooks/stripe', fn (Request $request): Response => $this->webhook($request));
     }
@@ -60,7 +63,7 @@ final class StripePaymentController
                     'booking_id' => $bookingId,
                 ]);
 
-                return Response::redirect($result->checkoutUrl(), 303);
+                return $this->checkoutHandoff($parent, $result->checkoutUrl());
             }
 
             $reservationId = $this->positiveInt($request->postString('reservation_id'), 'Reservierung');
@@ -80,7 +83,7 @@ final class StripePaymentController
                 'reservation_id' => $reservationId,
             ]);
 
-            return Response::redirect($result->checkoutUrl(), 303);
+            return $this->checkoutHandoff($parent, $result->checkoutUrl());
         } catch (DomainException $exception) {
             return $this->errorPage($parent, $exception->getMessage(), 422);
         } catch (Throwable $exception) {
@@ -97,6 +100,32 @@ final class StripePaymentController
                 500,
             );
         }
+    }
+
+    private function continueCheckout(Request $request): Response
+    {
+        unset($request);
+        $parent = $this->parent();
+        if ($parent instanceof Response) {
+            return $parent;
+        }
+
+        $handoff = $_SESSION[self::CHECKOUT_HANDOFF_KEY] ?? null;
+        unset($_SESSION[self::CHECKOUT_HANDOFF_KEY]);
+        if (!is_array($handoff)) {
+            return $this->errorPage($parent, 'Der Stripe-Zahlungsübergang ist nicht mehr gültig. Bitte starten Sie die Zahlung erneut.', 422);
+        }
+
+        $parentId = $handoff['parent_contact_id'] ?? null;
+        $checkoutUrl = $handoff['checkout_url'] ?? null;
+        $expiresAt = $handoff['expires_at'] ?? null;
+        if (!is_int($parentId) || $parentId !== $parent->id
+            || !is_string($checkoutUrl) || !$this->validCheckoutUrl($checkoutUrl)
+            || !is_int($expiresAt) || $expiresAt < time()) {
+            return $this->errorPage($parent, 'Der Stripe-Zahlungsübergang ist ungültig oder abgelaufen. Bitte starten Sie die Zahlung erneut.', 422);
+        }
+
+        return Response::redirect($checkoutUrl);
     }
 
     private function returnFromStripe(Request $request): Response
@@ -170,6 +199,45 @@ final class StripePaymentController
         }
 
         return $parent;
+    }
+
+    private function checkoutHandoff(AuthenticatedParent $parent, string $checkoutUrl): Response
+    {
+        if (!$this->validCheckoutUrl($checkoutUrl)) {
+            throw new DomainException('Stripe hat keine gültige HTTPS-Checkout-Adresse geliefert.');
+        }
+
+        $_SESSION[self::CHECKOUT_HANDOFF_KEY] = [
+            'parent_contact_id' => $parent->id,
+            'checkout_url' => $checkoutUrl,
+            'expires_at' => time() + 300,
+        ];
+
+        $continueUrl = '/parent/payment/continue';
+
+        return Response::html(
+            '<!doctype html><html lang="de"><head><meta charset="utf-8">'
+            . '<meta name="viewport" content="width=device-width, initial-scale=1">'
+            . '<meta http-equiv="refresh" content="0;url=' . $continueUrl . '">'
+            . '<title>Zahlung starten · FachDock</title></head><body>'
+            . '<main><h1>Zahlung wird gestartet</h1>'
+            . '<p>Sie werden zur sicheren Stripe-Zahlungsseite weitergeleitet.</p>'
+            . '<p><a href="' . $continueUrl . '">Weiter zu Stripe</a></p>'
+            . '</main></body></html>',
+        );
+    }
+
+    private function validCheckoutUrl(string $url): bool
+    {
+        if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+            return false;
+        }
+
+        $parts = parse_url($url);
+
+        return is_array($parts)
+            && strtolower((string) ($parts['scheme'] ?? '')) === 'https'
+            && trim((string) ($parts['host'] ?? '')) !== '';
     }
 
     private function errorPage(AuthenticatedParent $parent, string $message, int $status): Response
