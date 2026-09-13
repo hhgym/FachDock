@@ -38,13 +38,21 @@ final class LockerRecommendationAdminController
 
         $studentValue = $this->queryString($request, 'student_id');
         $yearValue = $this->queryString($request, 'school_year_id');
-        if ($studentValue === '' && $yearValue === '') {
-            return $this->page($staff);
+        $defaultSchoolYearId = $this->defaultSchoolYearId();
+        if ($studentValue === '') {
+            return $this->page($staff, [], 200, null, $yearValue !== ''
+                ? $this->positiveInt($yearValue, 'Schuljahr')
+                : $defaultSchoolYearId);
         }
 
         try {
             $studentId = $this->positiveInt($studentValue, 'Schüler');
-            $schoolYearId = $this->positiveInt($yearValue, 'Schuljahr');
+            $schoolYearId = $yearValue !== ''
+                ? $this->positiveInt($yearValue, 'Schuljahr')
+                : $defaultSchoolYearId;
+            if ($schoolYearId === null) {
+                throw new DomainException('Es ist kein auswählbares Schuljahr vorhanden.');
+            }
             $student = $this->recommendations->student($studentId);
             $available = $this->recommendations->availableForStudent(
                 $studentId,
@@ -71,7 +79,7 @@ final class LockerRecommendationAdminController
                 $available,
             );
         } catch (DomainException $exception) {
-            return $this->page($staff, [$exception->getMessage()], 422);
+            return $this->page($staff, [$exception->getMessage()], 422, null, $defaultSchoolYearId);
         }
     }
 
@@ -115,6 +123,23 @@ final class LockerRecommendationAdminController
             'recommended' => $recommended,
             'available' => $available,
         ]), $status);
+    }
+
+    private function defaultSchoolYearId(): ?int
+    {
+        $years = $this->schoolYears->all();
+        foreach ($years as $year) {
+            if ((string) $year['status'] === 'current') {
+                return (int) $year['id'];
+            }
+        }
+        foreach ($years as $year) {
+            if ((string) $year['status'] !== 'closed') {
+                return (int) $year['id'];
+            }
+        }
+
+        return null;
     }
 
     private function queryString(Request $request, string $key): string
