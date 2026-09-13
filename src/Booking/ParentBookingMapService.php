@@ -49,12 +49,12 @@ final class ParentBookingMapService
         }
 
         $recommendedFloorIds = $this->recommendedFloorIds($selection['available'], $floorIdsByLocation);
-        $floors = array_values(array_map(
+        $floors = array_map(
             static fn (array $floor): array => $floor + [
                 'recommended' => in_array((int) $floor['id'], $recommendedFloorIds, true),
             ],
             $floors,
-        ));
+        );
 
         $base = [
             'floors' => $floors,
@@ -173,9 +173,6 @@ final class ParentBookingMapService
         $bestScore = null;
         $ids = [];
         foreach ($available as $locker) {
-            if (!is_array($locker)) {
-                continue;
-            }
             $key = $this->floorLocationKey(
                 (string) ($locker['building_code'] ?? ''),
                 (string) ($locker['floor_code'] ?? ''),
@@ -196,7 +193,7 @@ final class ParentBookingMapService
         $result = array_map('intval', array_keys($ids));
         sort($result, SORT_NUMERIC);
 
-        return array_values($result);
+        return $result;
     }
 
     /**
@@ -209,7 +206,7 @@ final class ParentBookingMapService
         $areas = [];
         $bestScore = null;
         foreach ($available as $locker) {
-            if (!is_array($locker) || !$this->lockerMatchesFloor($locker, $floor)) {
+            if (!$this->lockerMatchesFloor($locker, $floor)) {
                 continue;
             }
             $code = (string) ($locker['area_code'] ?? '');
@@ -373,7 +370,10 @@ final class ParentBookingMapService
         return $plan;
     }
 
-    /** @param array<string, mixed> $locker @param array<string, mixed> $floor */
+    /**
+     * @param array<string, mixed> $locker
+     * @param array<string, mixed> $floor
+     */
     private function lockerMatchesFloor(array $locker, array $floor): bool
     {
         return (string) ($locker['building_code'] ?? '') === (string) ($floor['building_code'] ?? '')
