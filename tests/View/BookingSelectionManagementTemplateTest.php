@@ -37,6 +37,28 @@ final class BookingSelectionManagementTemplateTest extends TestCase
         self::assertStringContainsString('overflow-x: auto', $styles);
     }
 
+    public function testLockerManagementRequiresFloorAndCabinetGroupBeforeShowingGrid(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $template = (string) file_get_contents($root . '/templates/locker-management.php');
+        $controller = (string) file_get_contents($root . '/src/Booking/BookingSelectionAdminController.php');
+        $styles = (string) file_get_contents($root . '/public/assets/locker-grid.css');
+
+        self::assertStringContainsString('Schritt 1 · Etage', $template);
+        self::assertStringContainsString('Bitte Etage auswählen', $template);
+        self::assertStringContainsString('Schritt 2 · Schrankgruppe', $template);
+        self::assertStringContainsString('data-admin-locker-map-canvas', $template);
+        self::assertStringContainsString('Schritt 3 · Schließfach', $template);
+        self::assertStringContainsString('$selectedGroupOverview', $template);
+        self::assertStringContainsString("'floor_id'", $controller);
+        self::assertStringContainsString("'plan_id'", $controller);
+        self::assertStringContainsString("'group_id'", $controller);
+        self::assertStringContainsString('selected_group_overview', $controller);
+        self::assertStringContainsString("'#locker-group'", $controller);
+        self::assertStringContainsString('.locker-admin-group-selected', $styles);
+        self::assertStringContainsString('.locker-admin-floorplan .floorplan-marker-warning', $styles);
+    }
+
     public function testBookingDetailReusesLockerGridRenderer(): void
     {
         $template = (string) file_get_contents(dirname(__DIR__, 2) . '/templates/admin-booking-detail.php');

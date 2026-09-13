@@ -139,6 +139,13 @@
 .locker-overview-stat { padding: 12px 14px; border: 1px solid #e1e5eb; border-radius: 11px; background: #fafbfc; }
 .locker-overview-stat strong { display: block; font-size: 1.35rem; }
 
+.locker-admin-floorplan .floorplan-marker,
+.locker-admin-floorplan .floorplan-group-row { text-decoration: none; }
+.locker-admin-floorplan .floorplan-marker-warning { background: rgba(213, 185, 0, .94); color: #2c2600; }
+.locker-admin-floorplan .floorplan-dot-warning { background: #d5b900; }
+.locker-admin-group-selected { outline: 3px solid #263f8f; outline-offset: 2px; }
+.floorplan-group-row.locker-admin-group-selected { background: #eef1f7; outline-offset: 0; }
+
 .locker-parent-grid-legend {
     display: flex;
     flex-wrap: wrap;

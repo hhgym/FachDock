@@ -8,6 +8,9 @@ use DomainException;
 use FachDock\Audit\AuditLogger;
 use FachDock\Auth\AuthenticatedStaff;
 use FachDock\Auth\StaffSessionService;
+use FachDock\Config\Config;
+use FachDock\Database\ConnectionFactory;
+use FachDock\FloorPlan\FloorPlanService;
 use FachDock\Http\Request;
 use FachDock\Http\Response;
 use FachDock\Http\Router;
@@ -21,6 +24,8 @@ final class BookingSelectionAdminController
 {
     private const BASE_PATH = '/admin/lockers';
 
+    private ?FloorPlanService $resolvedFloorPlans = null;
+
     public function __construct(
         private readonly LockerRecommendationService $recommendations,
         private readonly ReservationService $reservations,
@@ -31,6 +36,7 @@ final class BookingSelectionAdminController
         private readonly ViewRenderer $views,
         private readonly Csrf $csrf,
         private readonly int $recommendationCount = 3,
+        private readonly ?FloorPlanService $floorPlans = null,
     ) {
     }
 
@@ -69,12 +75,24 @@ final class BookingSelectionAdminController
                 ? $this->positiveInt($yearValue, 'Schuljahr')
                 : $this->defaultSchoolYearId();
             $studentId = $studentValue !== '' ? $this->positiveInt($studentValue, 'Schüler') : null;
+            $floorId = $this->optionalPositiveInt($this->queryString($request, 'floor_id'), 'Etage');
+            $planId = $this->optionalPositiveInt($this->queryString($request, 'plan_id'), 'Lageplan');
+            $groupId = $this->optionalPositiveInt($this->queryString($request, 'group_id'), 'Schrankgruppe');
 
             if ($schoolYearId === null) {
                 return $this->page($staff);
             }
 
-            return $this->managementPage($staff, $schoolYearId, $studentId);
+            return $this->managementPage(
+                $staff,
+                $schoolYearId,
+                $studentId,
+                [],
+                200,
+                $floorId,
+                $planId,
+                $groupId,
+            );
         } catch (DomainException $exception) {
             return $this->page($staff, [$exception->getMessage()], 422);
         }
@@ -92,10 +110,16 @@ final class BookingSelectionAdminController
 
         $studentId = 0;
         $schoolYearId = 0;
+        $floorId = null;
+        $planId = null;
+        $groupId = null;
         try {
             $studentId = $this->positiveInt($request->postString('student_id'), 'Schüler');
             $schoolYearId = $this->positiveInt($request->postString('school_year_id'), 'Schuljahr');
             $lockerId = $this->positiveInt($request->postString('locker_id'), 'Schließfach');
+            $floorId = $this->optionalPositiveInt($request->postString('floor_id'), 'Etage');
+            $planId = $this->optionalPositiveInt($request->postString('plan_id'), 'Lageplan');
+            $groupId = $this->optionalPositiveInt($request->postString('group_id'), 'Schrankgruppe');
 
             $reservationId = $this->reservations->reserve(
                 $studentId,
@@ -114,11 +138,34 @@ final class BookingSelectionAdminController
             ]);
             $this->csrf->rotate();
 
-            return Response::redirect($this->selectionUrl($studentId, $schoolYearId, 'reserved'));
+            return Response::redirect($this->selectionUrl(
+                $studentId,
+                $schoolYearId,
+                'reserved',
+                $floorId,
+                $planId,
+                $groupId,
+            ));
         } catch (DomainException $exception) {
-            return $this->actionError($staff, $exception, $studentId, $schoolYearId);
+            return $this->actionError(
+                $staff,
+                $exception,
+                $studentId,
+                $schoolYearId,
+                $floorId,
+                $planId,
+                $groupId,
+            );
         } catch (Throwable $exception) {
-            return $this->failure($staff, $exception, $studentId, $schoolYearId);
+            return $this->failure(
+                $staff,
+                $exception,
+                $studentId,
+                $schoolYearId,
+                $floorId,
+                $planId,
+                $groupId,
+            );
         }
     }
 
@@ -134,10 +181,16 @@ final class BookingSelectionAdminController
 
         $studentId = 0;
         $schoolYearId = 0;
+        $floorId = null;
+        $planId = null;
+        $groupId = null;
         try {
             $studentId = $this->positiveInt($request->postString('student_id'), 'Schüler');
             $schoolYearId = $this->positiveInt($request->postString('school_year_id'), 'Schuljahr');
             $lockerId = $this->positiveInt($request->postString('locker_id'), 'Schließfach');
+            $floorId = $this->optionalPositiveInt($request->postString('floor_id'), 'Etage');
+            $planId = $this->optionalPositiveInt($request->postString('plan_id'), 'Lageplan');
+            $groupId = $this->optionalPositiveInt($request->postString('group_id'), 'Schrankgruppe');
             $bookingId = $this->reservations->assignWithoutPayment(
                 $studentId,
                 $schoolYearId,
@@ -154,11 +207,34 @@ final class BookingSelectionAdminController
             ]);
             $this->csrf->rotate();
 
-            return Response::redirect($this->selectionUrl($studentId, $schoolYearId, 'assigned'));
+            return Response::redirect($this->selectionUrl(
+                $studentId,
+                $schoolYearId,
+                'assigned',
+                $floorId,
+                $planId,
+                $groupId,
+            ));
         } catch (DomainException $exception) {
-            return $this->actionError($staff, $exception, $studentId, $schoolYearId);
+            return $this->actionError(
+                $staff,
+                $exception,
+                $studentId,
+                $schoolYearId,
+                $floorId,
+                $planId,
+                $groupId,
+            );
         } catch (Throwable $exception) {
-            return $this->failure($staff, $exception, $studentId, $schoolYearId);
+            return $this->failure(
+                $staff,
+                $exception,
+                $studentId,
+                $schoolYearId,
+                $floorId,
+                $planId,
+                $groupId,
+            );
         }
     }
 
@@ -174,10 +250,16 @@ final class BookingSelectionAdminController
 
         $studentId = 0;
         $schoolYearId = 0;
+        $floorId = null;
+        $planId = null;
+        $groupId = null;
         try {
             $studentId = $this->positiveInt($request->postString('student_id'), 'Schüler');
             $schoolYearId = $this->positiveInt($request->postString('school_year_id'), 'Schuljahr');
             $reservationId = $this->positiveInt($request->postString('reservation_id'), 'Reservierung');
+            $floorId = $this->optionalPositiveInt($request->postString('floor_id'), 'Etage');
+            $planId = $this->optionalPositiveInt($request->postString('plan_id'), 'Lageplan');
+            $groupId = $this->optionalPositiveInt($request->postString('group_id'), 'Schrankgruppe');
 
             $active = $this->reservations->activeForStudent($studentId, $schoolYearId);
             if ($active === null || $active['reservation_id'] !== $reservationId) {
@@ -193,11 +275,34 @@ final class BookingSelectionAdminController
             ]);
             $this->csrf->rotate();
 
-            return Response::redirect($this->selectionUrl($studentId, $schoolYearId, 'cancelled'));
+            return Response::redirect($this->selectionUrl(
+                $studentId,
+                $schoolYearId,
+                'cancelled',
+                $floorId,
+                $planId,
+                $groupId,
+            ));
         } catch (DomainException $exception) {
-            return $this->actionError($staff, $exception, $studentId, $schoolYearId);
+            return $this->actionError(
+                $staff,
+                $exception,
+                $studentId,
+                $schoolYearId,
+                $floorId,
+                $planId,
+                $groupId,
+            );
         } catch (Throwable $exception) {
-            return $this->failure($staff, $exception, $studentId, $schoolYearId);
+            return $this->failure(
+                $staff,
+                $exception,
+                $studentId,
+                $schoolYearId,
+                $floorId,
+                $planId,
+                $groupId,
+            );
         }
     }
 
@@ -208,6 +313,9 @@ final class BookingSelectionAdminController
         ?int $studentId = null,
         array $errors = [],
         int $status = 200,
+        ?int $floorId = null,
+        ?int $planId = null,
+        ?int $groupId = null,
     ): Response {
         $this->reservations->expireStale();
         $overview = $this->recommendations->lockerOverview($schoolYearId);
@@ -269,6 +377,8 @@ final class BookingSelectionAdminController
             }
         }
 
+        $locationContext = $this->locationContext($schoolYearId, $overview, $floorId, $planId, $groupId);
+
         return $this->page(
             $staff,
             $errors,
@@ -285,7 +395,128 @@ final class BookingSelectionAdminController
             $recommendedLockerIds,
             $scores,
             $counts,
+            $locationContext,
         );
+    }
+
+    /**
+     * @param list<array<string, mixed>> $overview
+     * @return array<string, mixed>
+     */
+    private function locationContext(
+        int $schoolYearId,
+        array $overview,
+        ?int $floorId,
+        ?int $planId,
+        ?int $groupId,
+    ): array {
+        $service = $this->floorPlanService();
+        $floors = array_values(array_filter(
+            $service->floors(),
+            static fn (array $floor): bool => (int) $floor['plan_count'] > 0,
+        ));
+
+        $empty = [
+            'floors' => $floors,
+            'floor_plans' => [],
+            'selected_floor_id' => null,
+            'selected_plan_id' => null,
+            'plan' => null,
+            'selected_group_id' => null,
+            'selected_group' => null,
+            'selected_group_overview' => [],
+        ];
+        if ($floorId === null) {
+            return $empty;
+        }
+
+        $floorKnown = false;
+        foreach ($floors as $floor) {
+            if ((int) $floor['id'] === $floorId) {
+                $floorKnown = true;
+                break;
+            }
+        }
+        if (!$floorKnown) {
+            throw new DomainException('Die ausgewählte Etage hat keinen aktiven Lageplan.');
+        }
+
+        $plans = $service->plansForFloor($floorId);
+        if ($plans === []) {
+            return array_replace($empty, ['selected_floor_id' => $floorId]);
+        }
+
+        $selectedPlanId = null;
+        if ($planId !== null) {
+            foreach ($plans as $candidate) {
+                if ((int) $candidate['id'] === $planId) {
+                    $selectedPlanId = $planId;
+                    break;
+                }
+            }
+        }
+        $selectedPlanId ??= (int) $plans[0]['id'];
+        $plan = $service->plan($selectedPlanId, $schoolYearId);
+
+        $countsByGroup = [];
+        foreach ($overview as $locker) {
+            $currentGroupId = (int) ($locker['cabinet_group_id'] ?? 0);
+            if ($currentGroupId < 1) {
+                continue;
+            }
+            $countsByGroup[$currentGroupId] ??= [
+                'free' => 0,
+                'reserved' => 0,
+                'occupied' => 0,
+                'issue' => 0,
+                'unavailable' => 0,
+            ];
+            $availability = (string) ($locker['availability_status'] ?? 'unavailable');
+            if (isset($countsByGroup[$currentGroupId][$availability])) {
+                ++$countsByGroup[$currentGroupId][$availability];
+            }
+        }
+
+        $selectedGroup = null;
+        foreach ($plan['groups'] as $index => $group) {
+            if (!is_array($group)) {
+                continue;
+            }
+            $currentGroupId = (int) ($group['id'] ?? 0);
+            $group['admin_counts'] = $countsByGroup[$currentGroupId] ?? [
+                'free' => 0,
+                'reserved' => 0,
+                'occupied' => 0,
+                'issue' => 0,
+                'unavailable' => 0,
+            ];
+            $plan['groups'][$index] = $group;
+            if ($groupId !== null && $currentGroupId === $groupId) {
+                $selectedGroup = $group;
+            }
+        }
+
+        if ($groupId !== null && $selectedGroup === null) {
+            throw new DomainException('Die ausgewählte Schrankgruppe gehört nicht zu dieser Etage.');
+        }
+
+        $selectedGroupOverview = $groupId === null
+            ? []
+            : array_values(array_filter(
+                $overview,
+                static fn (array $locker): bool => (int) ($locker['cabinet_group_id'] ?? 0) === $groupId,
+            ));
+
+        return [
+            'floors' => $floors,
+            'floor_plans' => $plans,
+            'selected_floor_id' => $floorId,
+            'selected_plan_id' => $selectedPlanId,
+            'plan' => $plan,
+            'selected_group_id' => $groupId,
+            'selected_group' => $selectedGroup,
+            'selected_group_overview' => $selectedGroupOverview,
+        ];
     }
 
     /**
@@ -298,6 +529,7 @@ final class BookingSelectionAdminController
      * @param array<int, bool> $recommendedLockerIds
      * @param array<int, int> $scores
      * @param array{free:int,reserved:int,occupied:int,issue:int,unavailable:int} $counts
+     * @param array<string, mixed> $locationContext
      */
     private function page(
         AuthenticatedStaff $staff,
@@ -315,6 +547,7 @@ final class BookingSelectionAdminController
         array $recommendedLockerIds = [],
         array $scores = [],
         array $counts = ['free' => 0, 'reserved' => 0, 'occupied' => 0, 'issue' => 0, 'unavailable' => 0],
+        array $locationContext = [],
     ): Response {
         return Response::html($this->views->render('locker-management.php', [
             'staff' => $staff,
@@ -334,6 +567,7 @@ final class BookingSelectionAdminController
             'recommendedLockerIds' => $recommendedLockerIds,
             'scores' => $scores,
             'counts' => $counts,
+            'locationContext' => $locationContext,
         ]), $status);
     }
 
@@ -369,6 +603,9 @@ final class BookingSelectionAdminController
         DomainException $exception,
         int $studentId,
         int $schoolYearId,
+        ?int $floorId,
+        ?int $planId,
+        ?int $groupId,
     ): Response {
         if ($schoolYearId > 0) {
             return $this->managementPage(
@@ -377,6 +614,9 @@ final class BookingSelectionAdminController
                 $studentId > 0 ? $studentId : null,
                 [$exception->getMessage()],
                 422,
+                $floorId,
+                $planId,
+                $groupId,
             );
         }
 
@@ -388,6 +628,9 @@ final class BookingSelectionAdminController
         Throwable $exception,
         int $studentId,
         int $schoolYearId,
+        ?int $floorId,
+        ?int $planId,
+        ?int $groupId,
     ): Response {
         $errorId = bin2hex(random_bytes(6));
         $this->logger->error('Locker management administration failed', [
@@ -395,6 +638,9 @@ final class BookingSelectionAdminController
             'staff_user_id' => $staff->id,
             'student_id' => $studentId > 0 ? $studentId : null,
             'school_year_id' => $schoolYearId > 0 ? $schoolYearId : null,
+            'floor_id' => $floorId,
+            'plan_id' => $planId,
+            'group_id' => $groupId,
             'exception' => $exception,
         ]);
         $errors = ['Die Aktion konnte nicht abgeschlossen werden. Fehler-ID: ' . $errorId];
@@ -407,6 +653,9 @@ final class BookingSelectionAdminController
                     $studentId > 0 ? $studentId : null,
                     $errors,
                     500,
+                    $floorId,
+                    $planId,
+                    $groupId,
                 );
             } catch (Throwable) {
                 // Fall through to the generic page if the selected state can no longer be loaded.
@@ -423,6 +672,11 @@ final class BookingSelectionAdminController
         return is_scalar($value) ? trim((string) $value) : '';
     }
 
+    private function optionalPositiveInt(string $value, string $label): ?int
+    {
+        return trim($value) === '' ? null : $this->positiveInt($value, $label);
+    }
+
     private function positiveInt(string $value, string $label): int
     {
         if (!preg_match('/^\d+$/', trim($value)) || (int) $value < 1) {
@@ -432,13 +686,49 @@ final class BookingSelectionAdminController
         return (int) $value;
     }
 
-    private function selectionUrl(int $studentId, int $schoolYearId, string $action = ''): string
-    {
-        $url = self::BASE_PATH . '?school_year_id=' . $schoolYearId . '&student_id=' . $studentId;
+    private function selectionUrl(
+        int $studentId,
+        int $schoolYearId,
+        string $action = '',
+        ?int $floorId = null,
+        ?int $planId = null,
+        ?int $groupId = null,
+    ): string {
+        $query = [
+            'school_year_id' => $schoolYearId,
+            'student_id' => $studentId,
+        ];
+        if ($floorId !== null) {
+            $query['floor_id'] = $floorId;
+        }
+        if ($planId !== null) {
+            $query['plan_id'] = $planId;
+        }
+        if ($groupId !== null) {
+            $query['group_id'] = $groupId;
+        }
         if ($action !== '') {
-            $url .= '&action=' . rawurlencode($action);
+            $query['action'] = $action;
         }
 
-        return $url;
+        return self::BASE_PATH . '?' . http_build_query($query) . ($groupId !== null ? '#locker-group' : '');
+    }
+
+    private function floorPlanService(): FloorPlanService
+    {
+        if ($this->floorPlans !== null) {
+            return $this->floorPlans;
+        }
+        if ($this->resolvedFloorPlans !== null) {
+            return $this->resolvedFloorPlans;
+        }
+
+        $root = dirname(__DIR__, 2);
+        $this->resolvedFloorPlans = new FloorPlanService(
+            ConnectionFactory::fromConfig(Config::load($root)),
+            $root,
+        );
+
+        return $this->resolvedFloorPlans;
     }
 }
