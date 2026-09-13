@@ -36,6 +36,7 @@ final class ParentBookingController
     public function register(Router $router): void
     {
         $router->get('/parent/booking', fn (Request $request): Response => $this->index($request));
+        $router->get('/parent/booking/summary', fn (Request $request): Response => $this->summary($request));
         $router->post('/parent/booking/reserve', fn (Request $request): Response => $this->reserve($request));
         $router->post('/parent/booking/cancel', fn (Request $request): Response => $this->cancel($request));
     }
@@ -70,6 +71,45 @@ final class ParentBookingController
         }
     }
 
+    private function summary(Request $request): Response
+    {
+        $parent = $this->parent();
+        if ($parent instanceof Response) {
+            return $parent;
+        }
+
+        $studentId = 0;
+        $schoolYearId = 0;
+        try {
+            $studentId = $this->positiveInt($this->queryString($request, 'student_id'), 'Schüler');
+            $schoolYearId = $this->positiveInt($this->queryString($request, 'school_year_id'), 'Schuljahr');
+            $selection = $this->bookings->selection(
+                $parent,
+                $studentId,
+                $schoolYearId,
+                $this->recommendationCount,
+            );
+            $active = $selection['active_reservation'] ?? null;
+            if (!is_array($active)) {
+                throw new DomainException('Für diese Buchung besteht keine aktive Reservierung mehr. Bitte wählen Sie erneut ein Schließfach aus.');
+            }
+
+            return Response::html($this->views->render('parent-booking-summary.php', [
+                'parent' => $parent,
+                'child' => $selection['child'],
+                'schoolYear' => $selection['school_year'],
+                'reservation' => $active,
+                'stripeCheckoutAvailable' => $this->stripe->checkoutAvailable(),
+                'stripeMode' => $this->stripe->mode,
+                'csrfToken' => $this->csrf->token(),
+            ]));
+        } catch (DomainException $exception) {
+            return $this->selectionFailure($parent, $studentId, $schoolYearId, $exception->getMessage(), 422);
+        } catch (Throwable $exception) {
+            return $this->technicalFailure($parent, $studentId, $schoolYearId, $exception);
+        }
+    }
+
     private function reserve(Request $request): Response
     {
         $parent = $this->parent();
@@ -95,7 +135,7 @@ final class ParentBookingController
             ]);
             $this->csrf->rotate();
 
-            return Response::redirect($this->selectionUrl($studentId, $schoolYearId));
+            return Response::redirect($this->summaryUrl($studentId, $schoolYearId));
         } catch (DomainException $exception) {
             return $this->selectionFailure($parent, $studentId, $schoolYearId, $exception->getMessage(), 422);
         } catch (Throwable $exception) {
@@ -268,5 +308,10 @@ final class ParentBookingController
     private function selectionUrl(int $studentId, int $schoolYearId): string
     {
         return '/parent/booking?student_id=' . $studentId . '&school_year_id=' . $schoolYearId;
+    }
+
+    private function summaryUrl(int $studentId, int $schoolYearId): string
+    {
+        return '/parent/booking/summary?student_id=' . $studentId . '&school_year_id=' . $schoolYearId;
     }
 }
