@@ -39,20 +39,19 @@ final class LockerRecommendationAdminController
         $studentValue = $this->queryString($request, 'student_id');
         $yearValue = $this->queryString($request, 'school_year_id');
         $defaultSchoolYearId = $this->defaultSchoolYearId();
-        if ($studentValue === '') {
-            return $this->page($staff, [], 200, null, $yearValue !== ''
-                ? $this->positiveInt($yearValue, 'Schuljahr')
-                : $defaultSchoolYearId);
-        }
 
         try {
-            $studentId = $this->positiveInt($studentValue, 'Schüler');
             $schoolYearId = $yearValue !== ''
                 ? $this->positiveInt($yearValue, 'Schuljahr')
                 : $defaultSchoolYearId;
+            if ($studentValue === '') {
+                return $this->page($staff, [], 200, null, $schoolYearId);
+            }
             if ($schoolYearId === null) {
                 throw new DomainException('Es ist kein auswählbares Schuljahr vorhanden.');
             }
+
+            $studentId = $this->positiveInt($studentValue, 'Schüler');
             $student = $this->recommendations->student($studentId);
             $available = $this->recommendations->availableForStudent(
                 $studentId,
