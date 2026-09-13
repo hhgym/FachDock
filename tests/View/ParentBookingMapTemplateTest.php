@@ -28,19 +28,32 @@ final class ParentBookingMapTemplateTest extends TestCase
         self::assertStringContainsString('background: #fff0ef;', $css);
     }
 
-    public function testBookingFlowRequiresFloorBeforePlanAndGroupSelection(): void
+    public function testBookingFlowGuidesThroughRecommendedFloorAndAreaBeforeGroupSelection(): void
     {
         $template = (string) file_get_contents(dirname(__DIR__, 2) . '/templates/parent-booking-map.php');
+        $css = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/floorplans.css');
 
         self::assertStringContainsString('Schritt 1', $template);
         self::assertStringContainsString('Etage auswählen', $template);
         self::assertStringContainsString('<option value="" <?= $selectedFloorId === null ? \'selected\' : \'\' ?>>Bitte Etage auswählen</option>', $template);
         self::assertStringContainsString('<?php if ($selectedFloorId === null): ?>', $template);
-        self::assertStringContainsString('Bitte zuerst eine Etage auswählen', $template);
+        self::assertStringContainsString('Bitte eine Etage auswählen', $template);
+        self::assertStringContainsString('· empfohlen', $template);
+
         self::assertStringContainsString('Schritt 2', $template);
+        self::assertStringContainsString('Bereich auswählen', $template);
+        self::assertStringContainsString('name="area_code"', $template);
+        self::assertStringContainsString('<?php if ($selectedAreaCode === null): ?>', $template);
+        self::assertStringContainsString('Bitte einen Bereich auswählen', $template);
+
+        self::assertStringContainsString('Schritt 3', $template);
         self::assertStringContainsString('Schrankgruppe auswählen', $template);
-        self::assertStringContainsString('Schritt 3 · Schrankgruppe', $template);
+        self::assertStringContainsString('Schritt 4 · Schrankgruppe', $template);
         self::assertStringContainsString('Schließfach auswählen', $template);
+        self::assertStringContainsString('Empfohlen', $template);
+
+        self::assertStringContainsString('.floorplan-marker-recommended', $css);
+        self::assertStringContainsString('.locker-parent-availability-cell.is-recommended', $css);
     }
 
     public function testLockerListViewKeepsHorizontalScrollContainer(): void
